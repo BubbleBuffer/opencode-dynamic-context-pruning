@@ -468,7 +468,7 @@ export class Janitor {
         
         // Add session totals if there's been more than one pruning run
         if (sessionStats.totalToolsPruned > totalPruned) {
-            message += ` │ Session: ${sessionStats.totalToolsPruned} tools, ~${formatTokenCount(sessionStats.totalTokensSaved)} tokens`
+            message += ` │ Session: ~${formatTokenCount(sessionStats.totalTokensSaved)} tokens, ${sessionStats.totalToolsPruned} tools`
         }
 
         await this.sendIgnoredMessage(sessionID, message)
@@ -503,7 +503,7 @@ export class Janitor {
         
         // Add session totals if there's been more than one pruning run
         if (sessionStats.totalToolsPruned > deduplicatedIds.length) {
-            message += ` │ Session: ${sessionStats.totalToolsPruned} tools, ~${formatTokenCount(sessionStats.totalTokensSaved)} tokens`
+            message += ` │ Session: ~${formatTokenCount(sessionStats.totalTokensSaved)} tokens, ${sessionStats.totalToolsPruned} tools`
         }
         message += '\n'
 
@@ -570,7 +570,7 @@ export class Janitor {
         
         // Add session totals if there's been more than one pruning run
         if (sessionStats.totalToolsPruned > totalPruned) {
-            message += ` │ Session: ${sessionStats.totalToolsPruned} tools, ~${formatTokenCount(sessionStats.totalTokensSaved)} tokens`
+            message += ` │ Session: ~${formatTokenCount(sessionStats.totalTokensSaved)} tokens, ${sessionStats.totalToolsPruned} tools`
         }
         message += '\n'
 

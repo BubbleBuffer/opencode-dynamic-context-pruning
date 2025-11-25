@@ -129,6 +129,12 @@ export class Janitor {
             const deduplicatedIds = dedupeResult.duplicateIds
             const deduplicationDetails = dedupeResult.deduplicationDetails
 
+            // Calculate candidates available for pruning (excludes protected tools)
+            const candidateCount = unprunedToolCallIds.filter(id => {
+                const metadata = toolMetadata.get(id)
+                return !metadata || !this.protectedTools.includes(metadata.tool)
+            }).length
+
             // ============================================================
             // PHASE 2: LLM ANALYSIS (only runs in "smart" mode)
             // ============================================================
@@ -288,11 +294,12 @@ export class Janitor {
             await this.stateManager.set(sessionID, allPrunedIds)
 
             // Log final summary
-            // Format: "Pruned 2/6 tools (~4.2K tokens)" or "Pruned 2/6 tools (1 duplicate, 1 llm) (~4.2K tokens)"
+            // Format: "Pruned 5/5 tools (~4.2K tokens), 0 kept" or with breakdown if both duplicate and llm
             const prunedCount = finalNewlyPrunedIds.length
+            const keptCount = candidateCount - prunedCount
             const hasBoth = deduplicatedIds.length > 0 && llmPrunedIds.length > 0
             const breakdown = hasBoth ? ` (${deduplicatedIds.length} duplicate, ${llmPrunedIds.length} llm)` : ""
-            this.logger.info("janitor", `Pruned ${prunedCount}/${toolCallIds.length} tools${breakdown} (~${formatTokenCount(tokensSaved)} tokens)`)
+            this.logger.info("janitor", `Pruned ${prunedCount}/${candidateCount} tools${breakdown}, ${keptCount} kept (~${formatTokenCount(tokensSaved)} tokens)`)
 
         } catch (error: any) {
             this.logger.error("janitor", "Analysis failed", {

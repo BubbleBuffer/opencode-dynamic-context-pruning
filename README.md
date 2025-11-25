@@ -31,6 +31,13 @@ Restart OpenCode. The plugin will automatically start optimizing your sessions.
 
 ## Configuration
 
+DCP uses its own configuration file, separate from OpenCode's `opencode.json`:
+
+- **Global:** `~/.config/opencode/dcp.jsonc`
+- **Project:** `.opencode/dcp.jsonc`
+
+The global config is automatically created on first run. Create a project config to override settings per-project.
+
 ### Available Options
 
 - **`enabled`** (boolean, default: `true`) - Enable/disable the plugin
@@ -60,9 +67,7 @@ Example configuration:
 
 ### Configuration Hierarchy
 
-1. **Built-in defaults** → 2. **Global config** (`~/.config/opencode/dcp.jsonc`) → 3. **Project config** (`.opencode/dcp.jsonc`)
-
-The global config is automatically created on first run. Create project configs manually to override settings per-project:
+Settings are merged in order: **Built-in defaults** → **Global config** → **Project config**
 
 After modifying configuration, restart OpenCode for changes to take effect.
 

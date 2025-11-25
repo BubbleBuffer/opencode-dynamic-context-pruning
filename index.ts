@@ -206,11 +206,12 @@ const plugin: Plugin = (async (ctx) => {
                         }
                     } else if (shouldLogAllRequests) {
                         // Log requests with NO tool messages (e.g., janitor's shadow inference)
-                        // Detect if this is a janitor request by checking the prompt content
-                        const isJanitorRequest = body.messages.length === 1 && 
-                            body.messages[0]?.role === 'user' &&
-                            typeof body.messages[0]?.content === 'string' &&
-                            body.messages[0].content.includes('conversation analyzer that identifies obsolete tool outputs')
+                        // Detect if this is a janitor request by checking any message for the janitor prompt
+                        // Note: AI SDK may add system messages for JSON schema, so we check all messages
+                        const isJanitorRequest = body.messages.some((m: any) => 
+                            typeof m.content === 'string' &&
+                            m.content.includes('conversation analyzer that identifies obsolete tool outputs')
+                        )
                         
                         const sessionId = isJanitorRequest ? "janitor-shadow" : "global"
                         
@@ -331,140 +332,9 @@ const plugin: Plugin = (async (ctx) => {
             // Skip pruning for subagent sessions
             if (await isSubagentSession(ctx.client, sessionId, logger)) return
 
-            logger.debug("chat.params", "Wrapping fetch for session", {
-                sessionID: sessionId,
-                hasFetch: !!(output.options as any).fetch,
-                fetchType: (output.options as any).fetch ? typeof (output.options as any).fetch : "none"
-            })
-
-            // Get the existing fetch - this might be from auth provider or globalThis
-            const existingFetch = (output.options as any).fetch ?? globalThis.fetch
-
-            logger.debug("chat.params", "Existing fetch captured", {
-                sessionID: sessionId,
-                isGlobalFetch: existingFetch === globalThis.fetch
-            })
-
-            // Wrap the existing fetch with our pruning logic
-            ;(output.options as any).fetch = async (fetchInput: any, init?: any) => {
-                logger.info("pruning-fetch", "🔥 FETCH WRAPPER CALLED!", {
-                    sessionId,
-                    url: typeof fetchInput === 'string' ? fetchInput.substring(0, 100) : 'URL object'
-                })
-                logger.debug("pruning-fetch", "Request intercepted", { sessionId })
-
-                // Retrieve the list of pruned tool call IDs from state
-                const prunedIds = await stateManager.get(sessionId)
-                logger.debug("pruning-fetch", "Retrieved pruned IDs", {
-                    sessionId,
-                    prunedCount: prunedIds.length,
-                    prunedIds: prunedIds.length > 0 ? prunedIds : undefined
-                })
-
-                // Parse the request body once if possible for logging, caching, and filtering
-                let parsedBody: any | undefined
-                if (init?.body && typeof init.body === 'string') {
-                    try {
-                        parsedBody = JSON.parse(init.body)
-                    } catch (e) {
-                        // Ignore parse errors; we'll skip caching/filtering in this case
-                    }
-                }
-
-                if (parsedBody?.messages) {
-                    const toolMessages = parsedBody.messages.filter((m: any) => m.role === 'tool') || []
-                    logger.debug("pruning-fetch", "Request body before filtering", {
-                        sessionId,
-                        totalMessages: parsedBody.messages.length,
-                        toolMessages: toolMessages.length,
-                        toolCallIds: toolMessages.map((m: any) => m.tool_call_id)
-                    })
-
-                    // Capture tool call parameters from assistant messages so Janitor toast metadata stays rich
-                    cacheToolParameters(parsedBody.messages, "pruning-fetch")
-                }
-
-                // Reset the count for this request
-                let prunedThisRequest = 0
-
-                // Only attempt filtering if there are pruned IDs and a request body exists
-                if (prunedIds.length > 0 && init?.body) {
-                    let body = parsedBody
-
-                    if (!body && typeof init.body === 'string') {
-                        try {
-                            body = JSON.parse(init.body)
-                        } catch (error: any) {
-                            logger.error("pruning-fetch", "Failed to parse/filter request body", {
-                                sessionId,
-                                error: error.message,
-                                stack: error.stack
-                            })
-                            return existingFetch(fetchInput, init)
-                        }
-                    }
-
-                    if (body?.messages && Array.isArray(body.messages)) {
-                        const originalMessageCount = body.messages.length
-
-                        // Replace tool response messages whose tool_call_id is in the pruned list
-                        // with a short placeholder message instead of removing them entirely.
-                        // This preserves the message structure and avoids API validation errors.
-                        body.messages = body.messages.map((m: any) => {
-                            if (m.role === 'tool' && prunedIds.includes(m.tool_call_id)) {
-                                prunedThisRequest++
-                                return {
-                                    ...m,
-                                    content: '[Output removed to save context - information superseded or no longer needed]'
-                                }
-                            }
-                            return m
-                        })
-
-                        if (prunedThisRequest > 0) {
-                            logger.info("pruning-fetch", "Replaced pruned tool messages", {
-                                sessionId,
-                                totalMessages: originalMessageCount,
-                                replacedCount: prunedThisRequest,
-                                prunedIds
-                            })
-
-                            // Log remaining tool messages
-                            const remainingToolMessages = body.messages.filter((m: any) => m.role === 'tool')
-                            logger.debug("pruning-fetch", "Tool messages after replacement", {
-                                sessionId,
-                                totalToolCount: remainingToolMessages.length,
-                                toolCallIds: remainingToolMessages.map((m: any) => m.tool_call_id)
-                            })
-
-                            // Save wrapped context to file if debug is enabled
-                            await logger.saveWrappedContext(
-                                sessionId,
-                                body.messages,
-                                {
-                                    url: typeof fetchInput === 'string' ? fetchInput : 'URL object',
-                                    totalMessages: originalMessageCount,
-                                    replacedCount: prunedThisRequest,
-                                    prunedIds,
-                                    wrapper: 'session-specific'
-                                }
-                            )
-
-                            // Update the request body with modified messages
-                            init.body = JSON.stringify(body)
-                            parsedBody = body
-                        } else {
-                            logger.debug("pruning-fetch", "No messages replaced", {
-                                sessionId,
-                                messageCount: originalMessageCount
-                            })
-                        }
-                    }
-                }
-
-                // Call the EXISTING fetch (which might be from auth provider) with potentially modified body
-                return existingFetch(fetchInput, init)
-            }
+            // Note: Pruning is handled by the global fetch wrapper (lines 95-239)
+            // which intercepts all AI requests and replaces pruned tool outputs.
+            // The global wrapper uses case-insensitive matching and queries all sessions.
         },
     }
 }) satisfies Plugin

@@ -332,6 +332,23 @@ export class Janitor {
                     // Lazy import - only load the 2.8MB ai package when actually needed
                     const { generateObject } = await import('ai')
 
+                    // Build the prompt for analysis
+                    const analysisPrompt = buildAnalysisPrompt(prunableToolCallIds, sanitizedMessages, this.protectedTools, allPrunedSoFar, protectedToolCallIds)
+
+                    // Save janitor shadow context directly (auth providers may bypass globalThis.fetch)
+                    await this.logger.saveWrappedContext(
+                        "janitor-shadow",
+                        [{ role: "user", content: analysisPrompt }],
+                        {
+                            sessionID,
+                            modelProvider: modelSelection.modelInfo.providerID,
+                            modelID: modelSelection.modelInfo.modelID,
+                            candidateToolCount: prunableToolCallIds.length,
+                            alreadyPrunedCount: allPrunedSoFar.length,
+                            protectedToolCount: protectedToolCallIds.length
+                        }
+                    )
+
                     // Analyze which tool calls are obsolete
                     const result = await generateObject({
                         model: modelSelection.model,
@@ -339,7 +356,7 @@ export class Janitor {
                             pruned_tool_call_ids: z.array(z.string()),
                             reasoning: z.string(),
                         }),
-                        prompt: buildAnalysisPrompt(prunableToolCallIds, sanitizedMessages, this.protectedTools, allPrunedSoFar, protectedToolCallIds)
+                        prompt: analysisPrompt
                     })
 
                     // Filter LLM results to only include IDs that were actually candidates

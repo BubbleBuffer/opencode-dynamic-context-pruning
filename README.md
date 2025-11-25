@@ -8,6 +8,8 @@ Automatically reduces token usage in OpenCode by removing obsolete tool outputs 
 
 This plugin automatically optimizes token usage by identifying and removing redundant or obsolete tool outputs from your conversation history.
 
+![DCP in action](dcp-demo.png)
+
 ## Installation
 
 Add to your OpenCode configuration:

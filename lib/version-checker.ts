@@ -12,10 +12,12 @@ const __dirname = dirname(__filename)
 
 /**
  * Gets the local package version from package.json
+ * Note: In compiled output, this file is at dist/lib/version-checker.js
+ * so we need to go up two levels to reach package.json
  */
 export function getLocalVersion(): string {
     try {
-        const pkgPath = join(__dirname, '../package.json')
+        const pkgPath = join(__dirname, '../../package.json')
         const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'))
         return pkg.version
     } catch {

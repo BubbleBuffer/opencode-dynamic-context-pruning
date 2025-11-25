@@ -147,7 +147,7 @@ const plugin: Plugin = (async (ctx) => {
     })
 
     // Check for updates on launch (fire and forget)
-    checkForUpdates(ctx.client).catch(() => {})
+    checkForUpdates(ctx.client, logger).catch(() => {})
 
     return {
         /**

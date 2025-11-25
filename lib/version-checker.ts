@@ -65,14 +65,22 @@ export function isOutdated(local: string, remote: string): boolean {
  * Checks for updates and shows a toast if outdated.
  * Fire-and-forget: does not throw, logs errors silently.
  */
-export async function checkForUpdates(client: any): Promise<void> {
+export async function checkForUpdates(client: any, logger?: { info: (component: string, message: string, data?: any) => void }): Promise<void> {
     try {
         const local = getLocalVersion()
         const npm = await getNpmVersion()
 
-        if (!npm || !isOutdated(local, npm)) {
-            return // Up to date or couldn't fetch
+        if (!npm) {
+            logger?.info("version", "Version check skipped", { reason: "npm fetch failed" })
+            return
         }
+
+        if (!isOutdated(local, npm)) {
+            logger?.info("version", "Up to date", { local, npm })
+            return
+        }
+
+        logger?.info("version", "Update available", { local, npm })
 
         await client.tui.showToast({
             body: {

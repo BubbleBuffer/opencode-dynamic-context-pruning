@@ -1,6 +1,6 @@
 import { z } from "zod"
 import type { Logger } from "./logger"
-import type { StateManager } from "./state"
+import type { StateManager, SessionStats } from "./state"
 import { buildAnalysisPrompt } from "./prompt"
 import { selectModel, extractModelFromSession } from "./model-selector"
 import { estimateTokensBatch, formatTokenCount } from "./tokenizer"
@@ -268,12 +268,16 @@ export class Janitor {
             // Calculate token savings once (used by both notification and log)
             const tokensSaved = await this.calculateTokensSaved(finalNewlyPrunedIds, toolOutputs)
 
+            // Accumulate session stats (for showing cumulative totals in UI)
+            const sessionStats = await this.stateManager.addStats(sessionID, finalNewlyPrunedIds.length, tokensSaved)
+
             if (this.pruningMode === "auto") {
                 await this.sendAutoModeNotification(
                     sessionID,
                     deduplicatedIds,
                     deduplicationDetails,
-                    tokensSaved
+                    tokensSaved,
+                    sessionStats
                 )
             } else {
                 await this.sendSmartModeNotification(
@@ -282,7 +286,8 @@ export class Janitor {
                     deduplicationDetails,
                     llmPrunedIds,
                     toolMetadata,
-                    tokensSaved
+                    tokensSaved,
+                    sessionStats
                 )
             }
 
@@ -451,14 +456,20 @@ export class Janitor {
     private async sendMinimalNotification(
         sessionID: string,
         totalPruned: number,
-        tokensSaved: number
+        tokensSaved: number,
+        sessionStats: SessionStats
     ) {
         if (totalPruned === 0) return
 
         const tokensFormatted = formatTokenCount(tokensSaved)
         const toolText = totalPruned === 1 ? 'tool' : 'tools'
 
-        const message = `🧹 DCP: Saved ~${tokensFormatted} tokens (${totalPruned} ${toolText} pruned)`
+        let message = `🧹 DCP: Saved ~${tokensFormatted} tokens (${totalPruned} ${toolText} pruned)`
+        
+        // Add session totals if there's been more than one pruning run
+        if (sessionStats.totalToolsPruned > totalPruned) {
+            message += ` │ Session: ${sessionStats.totalToolsPruned} tools, ~${formatTokenCount(sessionStats.totalTokensSaved)} tokens`
+        }
 
         await this.sendIgnoredMessage(sessionID, message)
     }
@@ -470,7 +481,8 @@ export class Janitor {
         sessionID: string,
         deduplicatedIds: string[],
         deduplicationDetails: Map<string, any>,
-        tokensSaved: number
+        tokensSaved: number,
+        sessionStats: SessionStats
     ) {
         if (deduplicatedIds.length === 0) return
 
@@ -479,7 +491,7 @@ export class Janitor {
 
         // Send minimal notification if configured
         if (this.pruningSummary === 'minimal') {
-            await this.sendMinimalNotification(sessionID, deduplicatedIds.length, tokensSaved)
+            await this.sendMinimalNotification(sessionID, deduplicatedIds.length, tokensSaved, sessionStats)
             return
         }
 
@@ -487,7 +499,13 @@ export class Janitor {
         const tokensFormatted = formatTokenCount(tokensSaved)
 
         const toolText = deduplicatedIds.length === 1 ? 'tool' : 'tools'
-        let message = `🧹 DCP: Saved ~${tokensFormatted} tokens (${deduplicatedIds.length} duplicate ${toolText} removed)\n`
+        let message = `🧹 DCP: Saved ~${tokensFormatted} tokens (${deduplicatedIds.length} duplicate ${toolText} removed)`
+        
+        // Add session totals if there's been more than one pruning run
+        if (sessionStats.totalToolsPruned > deduplicatedIds.length) {
+            message += ` │ Session: ${sessionStats.totalToolsPruned} tools, ~${formatTokenCount(sessionStats.totalTokensSaved)} tokens`
+        }
+        message += '\n'
 
         // Group by tool type
         const grouped = new Map<string, Array<{count: number, key: string}>>()
@@ -530,7 +548,8 @@ export class Janitor {
         deduplicationDetails: Map<string, any>,
         llmPrunedIds: string[],
         toolMetadata: Map<string, any>,
-        tokensSaved: number
+        tokensSaved: number,
+        sessionStats: SessionStats
     ) {
         const totalPruned = deduplicatedIds.length + llmPrunedIds.length
         if (totalPruned === 0) return
@@ -540,14 +559,20 @@ export class Janitor {
 
         // Send minimal notification if configured
         if (this.pruningSummary === 'minimal') {
-            await this.sendMinimalNotification(sessionID, totalPruned, tokensSaved)
+            await this.sendMinimalNotification(sessionID, totalPruned, tokensSaved, sessionStats)
             return
         }
 
         // Otherwise send detailed notification
         const tokensFormatted = formatTokenCount(tokensSaved)
 
-        let message = `🧹 DCP: Saved ~${tokensFormatted} tokens (${totalPruned} tool${totalPruned > 1 ? 's' : ''} pruned)\n`
+        let message = `🧹 DCP: Saved ~${tokensFormatted} tokens (${totalPruned} tool${totalPruned > 1 ? 's' : ''} pruned)`
+        
+        // Add session totals if there's been more than one pruning run
+        if (sessionStats.totalToolsPruned > totalPruned) {
+            message += ` │ Session: ${sessionStats.totalToolsPruned} tools, ~${formatTokenCount(sessionStats.totalTokensSaved)} tokens`
+        }
+        message += '\n'
 
         // Section 1: Deduplicated tools
         if (deduplicatedIds.length > 0 && deduplicationDetails) {

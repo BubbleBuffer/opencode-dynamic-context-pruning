@@ -7,7 +7,7 @@ import { Logger } from './logger'
 import type { PluginInput } from '@opencode-ai/plugin'
 
 // Pruning strategy types
-export type PruningStrategy = "deduplication" | "llm-analysis"
+export type PruningStrategy = "deduplication" | "ai-analysis"
 
 export interface PluginConfig {
     enabled: boolean
@@ -37,7 +37,7 @@ const defaultConfig: PluginConfig = {
     pruning_summary: 'detailed', // Default to detailed summary
     strategies: {
         // Default: Full analysis on idle (like previous "smart" mode)
-        onIdle: ['deduplication', 'llm-analysis'],
+        onIdle: ['deduplication', 'ai-analysis'],
         // Default: Only deduplication when AI calls the tool (faster, no extra LLM cost)
         onTool: ['deduplication']
     }
@@ -136,11 +136,11 @@ function createDefaultConfig(): void {
   "showModelErrorToasts": true,
 
   // Pruning strategies configuration
-  // Available strategies: "deduplication", "llm-analysis"
+  // Available strategies: "deduplication", "ai-analysis"
   // Empty array = disabled
   "strategies": {
     // Strategies to run when session goes idle (automatic)
-    "onIdle": ["deduplication", "llm-analysis"],
+    "onIdle": ["deduplication", "ai-analysis"],
     
     // Strategies to run when AI calls the context_pruning tool
     // Empty array = tool not exposed to AI

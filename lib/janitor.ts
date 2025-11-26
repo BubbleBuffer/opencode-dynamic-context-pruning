@@ -109,7 +109,8 @@ export class Janitor {
                             toolCallIds.push(normalizedId)
 
                             const cachedData = this.toolParametersCache.get(part.callID) || this.toolParametersCache.get(normalizedId)
-                            const parameters = cachedData?.parameters || part.parameters
+                            // Session messages store input in part.state.input, not part.parameters
+                            const parameters = cachedData?.parameters ?? part.state?.input ?? part.parameters
 
                             toolMetadata.set(normalizedId, {
                                 tool: part.tool,

@@ -35,23 +35,19 @@ export class Janitor {
         private toolParametersCache: Map<string, any>,
         private protectedTools: string[],
         private modelCache: Map<string, { providerID: string; modelID: string }>,
-        private configModel?: string, // Format: "provider/model"
-        private showModelErrorToasts: boolean = true, // Whether to show toast for model errors
-        private pruningSummary: "off" | "minimal" | "detailed" = "detailed", // UI summary display mode
-        private workingDirectory?: string // Current working directory for relative path display
+        private configModel?: string,
+        private showModelErrorToasts: boolean = true,
+        private strictModelSelection: boolean = false,
+        private pruningSummary: "off" | "minimal" | "detailed" = "detailed",
+        private workingDirectory?: string
     ) { }
 
-    /**
-     * Sends an ignored message to the session UI (user sees it, AI doesn't)
-     */
     private async sendIgnoredMessage(sessionID: string, text: string) {
         try {
             await this.client.session.prompt({
-                path: {
-                    id: sessionID
-                },
+                path: { id: sessionID },
                 body: {
-                    noReply: true, // Don't wait for AI response
+                    noReply: true,
                     parts: [{
                         type: 'text',
                         text: text,
@@ -60,23 +56,14 @@ export class Janitor {
                 }
             })
         } catch (error: any) {
-            this.logger.error("janitor", "Failed to send notification", {
-                error: error.message
-            })
+            this.logger.error("janitor", "Failed to send notification", { error: error.message })
         }
     }
 
-    /**
-     * Convenience method for idle-triggered pruning (sends notification automatically)
-     */
     async runOnIdle(sessionID: string, strategies: PruningStrategy[]): Promise<void> {
         await this.runWithStrategies(sessionID, strategies, { trigger: 'idle' })
-        // Notification is handled inside runWithStrategies
     }
 
-    /**
-     * Convenience method for tool-triggered pruning (returns result for tool output)
-     */
     async runForTool(
         sessionID: string,
         strategies: PruningStrategy[],
@@ -85,78 +72,59 @@ export class Janitor {
         return await this.runWithStrategies(sessionID, strategies, { trigger: 'tool', reason })
     }
 
-    /**
-     * Core pruning method that accepts strategies and options
-     */
     async runWithStrategies(
         sessionID: string,
         strategies: PruningStrategy[],
         options: PruningOptions
     ): Promise<PruningResult | null> {
         try {
-            // Skip if no strategies configured
             if (strategies.length === 0) {
                 return null
             }
 
-            // Fetch session info and messages from OpenCode API
             const [sessionInfoResponse, messagesResponse] = await Promise.all([
                 this.client.session.get({ path: { id: sessionID } }),
                 this.client.session.messages({ path: { id: sessionID }, query: { limit: 100 } })
             ])
 
             const sessionInfo = sessionInfoResponse.data
-            // Handle the response format - it should be { data: Array<{info, parts}> } or just the array
             const messages = messagesResponse.data || messagesResponse
 
-            // If there are no messages or very few, skip analysis
             if (!messages || messages.length < 3) {
                 return null
             }
 
-            // Extract tool call IDs from the session and track their output sizes
-            // Also track batch tool relationships and tool metadata
             const toolCallIds: string[] = []
             const toolOutputs = new Map<string, string>()
-            const toolMetadata = new Map<string, { tool: string, parameters?: any }>() // callID -> {tool, parameters}
-            const batchToolChildren = new Map<string, string[]>() // batchID -> [childIDs]
+            const toolMetadata = new Map<string, { tool: string, parameters?: any }>()
+            const batchToolChildren = new Map<string, string[]>()
             let currentBatchId: string | null = null
 
             for (const msg of messages) {
                 if (msg.parts) {
                     for (const part of msg.parts) {
                         if (part.type === "tool" && part.callID) {
-                            // Normalize tool call IDs to lowercase for consistent comparison
                             const normalizedId = part.callID.toLowerCase()
                             toolCallIds.push(normalizedId)
 
-                            // Try to get parameters from cache first, fall back to part.parameters
-                            // Cache might have either case, so check both
                             const cachedData = this.toolParametersCache.get(part.callID) || this.toolParametersCache.get(normalizedId)
                             const parameters = cachedData?.parameters || part.parameters
 
-                            // Track tool metadata (name and parameters)
                             toolMetadata.set(normalizedId, {
                                 tool: part.tool,
                                 parameters: parameters
                             })
 
-                            // Track the output content for size calculation
                             if (part.state?.status === "completed" && part.state.output) {
                                 toolOutputs.set(normalizedId, part.state.output)
                             }
 
-                            // Check if this is a batch tool by looking at the tool name
                             if (part.tool === "batch") {
                                 currentBatchId = normalizedId
                                 batchToolChildren.set(normalizedId, [])
-                            }
-                            // If we're inside a batch and this is a prt_ (parallel) tool call, it's a child
-                            else if (currentBatchId && normalizedId.startsWith('prt_')) {
+                            } else if (currentBatchId && normalizedId.startsWith('prt_')) {
                                 batchToolChildren.get(currentBatchId)!.push(normalizedId)
-                            }
-                            // If we hit a non-batch, non-prt_ tool, we're out of the batch
-                            else if (currentBatchId && !normalizedId.startsWith('prt_')) {
+                            } else if (currentBatchId && !normalizedId.startsWith('prt_')) {
                                 currentBatchId = null
                             }
                         }
@@ -164,18 +132,14 @@ export class Janitor {
                 }
             }
 
-            // Get already pruned IDs to filter them out
             const alreadyPrunedIds = this.prunedIdsState.get(sessionID) ?? []
             const unprunedToolCallIds = toolCallIds.filter(id => !alreadyPrunedIds.includes(id))
 
-            // If there are no unpruned tool calls, skip analysis
             if (unprunedToolCallIds.length === 0) {
                 return null
             }
 
-            // ============================================================
-            // PHASE 1: DUPLICATE DETECTION (if enabled)
-            // ============================================================
+            // PHASE 1: DUPLICATE DETECTION
             let deduplicatedIds: string[] = []
             let deduplicationDetails = new Map<string, any>()
 
@@ -185,25 +149,19 @@ export class Janitor {
                 deduplicationDetails = dedupeResult.deduplicationDetails
             }
 
-            // Calculate candidates available for pruning (excludes protected tools)
             const candidateCount = unprunedToolCallIds.filter(id => {
                 const metadata = toolMetadata.get(id)
                 return !metadata || !this.protectedTools.includes(metadata.tool)
             }).length
 
-            // ============================================================
-            // PHASE 2: LLM ANALYSIS (if enabled)
-            // ============================================================
+            // PHASE 2: LLM ANALYSIS
             let llmPrunedIds: string[] = []
 
             if (strategies.includes('ai-analysis')) {
-                // Filter out duplicates and protected tools
                 const protectedToolCallIds: string[] = []
                 const prunableToolCallIds = unprunedToolCallIds.filter(id => {
-                    // Skip already deduplicated
                     if (deduplicatedIds.includes(id)) return false
 
-                    // Skip protected tools
                     const metadata = toolMetadata.get(id)
                     if (metadata && this.protectedTools.includes(metadata.tool)) {
                         protectedToolCallIds.push(id)
@@ -213,9 +171,7 @@ export class Janitor {
                     return true
                 })
 
-                // Run LLM analysis only if there are prunable tools
                 if (prunableToolCallIds.length > 0) {
-                    // Select appropriate model with intelligent fallback
                     const cachedModelInfo = this.modelCache.get(sessionID)
                     const sessionModelInfo = extractModelFromSession(sessionInfo, this.logger)
                     const currentModelInfo = cachedModelInfo || sessionModelInfo
@@ -226,94 +182,88 @@ export class Janitor {
                         source: modelSelection.source
                     })
 
-                    // Show toast if we had to fallback from a failed model
                     if (modelSelection.failedModel && this.showModelErrorToasts) {
+                        const skipAi = modelSelection.source === 'fallback' && this.strictModelSelection
                         try {
                             await this.client.tui.showToast({
                                 body: {
-                                    title: "DCP: Model fallback",
-                                    message: `${modelSelection.failedModel.providerID}/${modelSelection.failedModel.modelID} failed\nUsing ${modelSelection.modelInfo.providerID}/${modelSelection.modelInfo.modelID}`,
+                                    title: skipAi ? "DCP: AI analysis skipped" : "DCP: Model fallback",
+                                    message: skipAi
+                                        ? `${modelSelection.failedModel.providerID}/${modelSelection.failedModel.modelID} failed\nAI analysis skipped (strictModelSelection enabled)`
+                                        : `${modelSelection.failedModel.providerID}/${modelSelection.failedModel.modelID} failed\nUsing ${modelSelection.modelInfo.providerID}/${modelSelection.modelInfo.modelID}`,
                                     variant: "info",
                                     duration: 5000
                                 }
                             })
                         } catch (toastError: any) {
-                            // Don't fail the whole operation if toast fails
                         }
                     }
 
-                    // Lazy import - only load the 2.8MB ai package when actually needed
-                    const { generateObject } = await import('ai')
+                    if (modelSelection.source === 'fallback' && this.strictModelSelection) {
+                        this.logger.info("janitor", "Skipping AI analysis (fallback model, strictModelSelection enabled)")
+                    } else {
+                        const { generateObject } = await import('ai')
 
-                    // Replace already-pruned tool outputs to save tokens in janitor context
-                    const allPrunedSoFar = [...alreadyPrunedIds, ...deduplicatedIds]
-                    const sanitizedMessages = this.replacePrunedToolOutputs(messages, allPrunedSoFar)
+                        const allPrunedSoFar = [...alreadyPrunedIds, ...deduplicatedIds]
+                        const sanitizedMessages = this.replacePrunedToolOutputs(messages, allPrunedSoFar)
 
-                    // Build the prompt for analysis (pass reason if provided)
-                    const analysisPrompt = buildAnalysisPrompt(
-                        prunableToolCallIds,
-                        sanitizedMessages,
-                        allPrunedSoFar,
-                        protectedToolCallIds,
-                        options.reason
-                    )
+                        const analysisPrompt = buildAnalysisPrompt(
+                            prunableToolCallIds,
+                            sanitizedMessages,
+                            allPrunedSoFar,
+                            protectedToolCallIds,
+                            options.reason
+                        )
 
-                    // Save janitor shadow context directly (auth providers may bypass globalThis.fetch)
-                    await this.logger.saveWrappedContext(
-                        "janitor-shadow",
-                        [{ role: "user", content: analysisPrompt }],
-                        {
-                            sessionID,
-                            modelProvider: modelSelection.modelInfo.providerID,
-                            modelID: modelSelection.modelInfo.modelID,
-                            candidateToolCount: prunableToolCallIds.length,
-                            alreadyPrunedCount: allPrunedSoFar.length,
-                            protectedToolCount: protectedToolCallIds.length,
-                            trigger: options.trigger,
-                            reason: options.reason
+                        await this.logger.saveWrappedContext(
+                            "janitor-shadow",
+                            [{ role: "user", content: analysisPrompt }],
+                            {
+                                sessionID,
+                                modelProvider: modelSelection.modelInfo.providerID,
+                                modelID: modelSelection.modelInfo.modelID,
+                                candidateToolCount: prunableToolCallIds.length,
+                                alreadyPrunedCount: allPrunedSoFar.length,
+                                protectedToolCount: protectedToolCallIds.length,
+                                trigger: options.trigger,
+                                reason: options.reason
+                            }
+                        )
+
+                        const result = await generateObject({
+                            model: modelSelection.model,
+                            schema: z.object({
+                                pruned_tool_call_ids: z.array(z.string()),
+                                reasoning: z.string(),
+                            }),
+                            prompt: analysisPrompt
+                        })
+
+                        const rawLlmPrunedIds = result.object.pruned_tool_call_ids
+                        llmPrunedIds = rawLlmPrunedIds.filter(id =>
+                            prunableToolCallIds.includes(id.toLowerCase())
+                        )
+
+                        if (llmPrunedIds.length > 0) {
+                            const reasoning = result.object.reasoning.replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim()
+                            this.logger.info("janitor", `LLM reasoning: ${reasoning.substring(0, 200)}${reasoning.length > 200 ? '...' : ''}`)
                         }
-                    )
-
-                    // Analyze which tool calls are obsolete
-                    const result = await generateObject({
-                        model: modelSelection.model,
-                        schema: z.object({
-                            pruned_tool_call_ids: z.array(z.string()),
-                            reasoning: z.string(),
-                        }),
-                        prompt: analysisPrompt
-                    })
-
-                    // Filter LLM results to only include IDs that were actually candidates
-                    // (LLM sometimes returns duplicate IDs that were already filtered out)
-                    const rawLlmPrunedIds = result.object.pruned_tool_call_ids
-                    llmPrunedIds = rawLlmPrunedIds.filter(id =>
-                        prunableToolCallIds.includes(id.toLowerCase())
-                    )
-
-                    if (llmPrunedIds.length > 0) {
-                        const reasoning = result.object.reasoning.replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim()
-                        this.logger.info("janitor", `LLM reasoning: ${reasoning.substring(0, 200)}${reasoning.length > 200 ? '...' : ''}`)
                     }
                 }
             }
 
-            // ============================================================
             // PHASE 3: COMBINE & EXPAND
-            // ============================================================
             const newlyPrunedIds = [...deduplicatedIds, ...llmPrunedIds]
 
             if (newlyPrunedIds.length === 0) {
                 return null
             }
 
-            // Helper to expand batch tool IDs to include their children
             const expandBatchIds = (ids: string[]): string[] => {
                 const expanded = new Set<string>()
                 for (const id of ids) {
                     const normalizedId = id.toLowerCase()
                     expanded.add(normalizedId)
-                    // If this is a batch tool, add all its children
                     const children = batchToolChildren.get(normalizedId)
                     if (children) {
                         children.forEach(childId => expanded.add(childId))
@@ -322,25 +272,14 @@ export class Janitor {
                 return Array.from(expanded)
             }
 
-            // Expand batch tool IDs to include their children
             const expandedPrunedIds = new Set(expandBatchIds(newlyPrunedIds))
-
-            // Expand llmPrunedIds for UI display (so batch children show instead of "unknown metadata")
             const expandedLlmPrunedIds = expandBatchIds(llmPrunedIds)
-
-            // Calculate which IDs are actually NEW (not already pruned)
             const finalNewlyPrunedIds = Array.from(expandedPrunedIds).filter(id => !alreadyPrunedIds.includes(id))
-
-            // finalPrunedIds includes everything (new + already pruned) for logging
             const finalPrunedIds = Array.from(expandedPrunedIds)
 
-            // ============================================================
             // PHASE 4: CALCULATE STATS & NOTIFICATION
-            // ============================================================
-            // Calculate token savings once (used by both notification and log)
             const tokensSaved = await this.calculateTokensSaved(finalNewlyPrunedIds, toolOutputs)
 
-            // Accumulate session stats (for showing cumulative totals in UI)
             const currentStats = this.statsState.get(sessionID) ?? { totalToolsPruned: 0, totalTokensSaved: 0 }
             const sessionStats: SessionStats = {
                 totalToolsPruned: currentStats.totalToolsPruned + finalNewlyPrunedIds.length,
@@ -348,7 +287,6 @@ export class Janitor {
             }
             this.statsState.set(sessionID, sessionStats)
 
-            // Determine notification mode based on which strategies ran
             const hasLlmAnalysis = strategies.includes('ai-analysis')
 
             if (hasLlmAnalysis) {
@@ -371,21 +309,15 @@ export class Janitor {
                 )
             }
 
-            // ============================================================
             // PHASE 5: STATE UPDATE
-            // ============================================================
-            // Merge newly pruned IDs with existing ones (using expanded IDs)
             const allPrunedIds = [...new Set([...alreadyPrunedIds, ...finalPrunedIds])]
             this.prunedIdsState.set(sessionID, allPrunedIds)
 
-            // Log final summary
-            // Format: "Pruned 5/5 tools (~4.2K tokens), 0 kept" or with breakdown if both duplicate and llm
             const prunedCount = finalNewlyPrunedIds.length
             const keptCount = candidateCount - prunedCount
             const hasBoth = deduplicatedIds.length > 0 && llmPrunedIds.length > 0
             const breakdown = hasBoth ? ` (${deduplicatedIds.length} duplicate, ${llmPrunedIds.length} llm)` : ""
 
-            // Build log metadata
             const logMeta: Record<string, any> = { trigger: options.trigger }
             if (options.reason) {
                 logMeta.reason = options.reason
@@ -408,18 +340,11 @@ export class Janitor {
                 error: error.message,
                 trigger: options.trigger
             })
-            // Don't throw - this is a fire-and-forget background process
-            // Silently fail and try again on next idle event
             return null
         }
     }
 
-    /**
-     * Helper function to shorten paths for display
-     */
     private shortenPath(input: string): string {
-        // Handle compound strings like: "pattern" in /absolute/path
-        // Extract and shorten just the path portion
         const inPathMatch = input.match(/^(.+) in (.+)$/)
         if (inPathMatch) {
             const prefix = inPathMatch[1]
@@ -431,35 +356,27 @@ export class Janitor {
         return this.shortenSinglePath(input)
     }
 
-    /**
-     * Shorten a single path string
-     */
     private shortenSinglePath(path: string): string {
         const homeDir = require('os').homedir()
 
-        // Strip working directory FIRST (before ~ replacement) for cleaner relative paths
         if (this.workingDirectory) {
             if (path.startsWith(this.workingDirectory + '/')) {
                 return path.slice(this.workingDirectory.length + 1)
             }
-            // Exact match (the directory itself)
             if (path === this.workingDirectory) {
                 return '.'
             }
         }
 
-        // Replace home directory with ~
         if (path.startsWith(homeDir)) {
             path = '~' + path.slice(homeDir.length)
         }
 
-        // Shorten node_modules paths: show package + file only
         const nodeModulesMatch = path.match(/node_modules\/(@[^\/]+\/[^\/]+|[^\/]+)\/(.*)/)
         if (nodeModulesMatch) {
             return `${nodeModulesMatch[1]}/${nodeModulesMatch[2]}`
         }
 
-        // Try matching against ~ version of working directory (for paths already with ~)
         if (this.workingDirectory) {
             const workingDirWithTilde = this.workingDirectory.startsWith(homeDir)
                 ? '~' + this.workingDirectory.slice(homeDir.length)
@@ -476,11 +393,6 @@ export class Janitor {
         return path
     }
 
-    /**
-     * Replace pruned tool outputs with placeholder text to save tokens in janitor context
-     * This applies the same replacement logic as the global fetch wrapper, but for the
-     * janitor's shadow inference to avoid sending already-pruned content to the LLM
-     */
     private replacePrunedToolOutputs(messages: any[], prunedIds: string[]): any[] {
         if (prunedIds.length === 0) return messages
 
@@ -496,7 +408,6 @@ export class Janitor {
                         part.callID &&
                         prunedIdsSet.has(part.callID.toLowerCase()) &&
                         part.state?.output) {
-                        // Replace with the same placeholder used by the global fetch wrapper
                         return {
                             ...part,
                             state: {
@@ -511,9 +422,6 @@ export class Janitor {
         })
     }
 
-    /**
-     * Helper function to calculate token savings from tool outputs
-     */
     private async calculateTokensSaved(prunedIds: string[], toolOutputs: Map<string, string>): Promise<number> {
         const outputsToTokenize: string[] = []
 
@@ -525,7 +433,6 @@ export class Janitor {
         }
 
         if (outputsToTokenize.length > 0) {
-            // Use batch tokenization for efficiency (lazy loads gpt-tokenizer)
             const tokenCounts = await estimateTokensBatch(outputsToTokenize)
             return tokenCounts.reduce((sum, count) => sum + count, 0)
         }
@@ -533,42 +440,29 @@ export class Janitor {
         return 0
     }
 
-    /**
-     * Build a summary of tools by grouping them
-     * Uses shared extractParameterKey logic for consistent parameter extraction
-     * 
-     * Note: prunedIds may be in original case (from LLM) but toolMetadata uses lowercase keys
-     */
     private buildToolsSummary(prunedIds: string[], toolMetadata: Map<string, { tool: string, parameters?: any }>): Map<string, string[]> {
         const toolsSummary = new Map<string, string[]>()
 
-        // Helper function to truncate long strings
         const truncate = (str: string, maxLen: number = 60): string => {
             if (str.length <= maxLen) return str
             return str.slice(0, maxLen - 3) + '...'
         }
 
         for (const prunedId of prunedIds) {
-            // Normalize ID to lowercase for lookup (toolMetadata uses lowercase keys)
             const normalizedId = prunedId.toLowerCase()
             const metadata = toolMetadata.get(normalizedId)
             if (metadata) {
                 const toolName = metadata.tool
-                // Skip 'batch' tool in UI summary - it's a wrapper and its children are shown individually
                 if (toolName === 'batch') continue
                 if (!toolsSummary.has(toolName)) {
                     toolsSummary.set(toolName, [])
                 }
 
-                // Use shared parameter extraction logic
                 const paramKey = extractParameterKey(metadata)
                 if (paramKey) {
-                    // Apply path shortening and truncation for display
                     const displayKey = truncate(this.shortenPath(paramKey), 80)
                     toolsSummary.get(toolName)!.push(displayKey)
                 } else {
-                    // For tools with no extractable parameter key, add a placeholder
-                    // This ensures the tool still shows up in the summary
                     toolsSummary.get(toolName)!.push('(default)')
                 }
             }
@@ -577,10 +471,6 @@ export class Janitor {
         return toolsSummary
     }
 
-    /**
-     * Group deduplication details by tool type
-     * Shared helper used by notifications and tool output formatting
-     */
     private groupDeduplicationDetails(
         deduplicationDetails: Map<string, any>
     ): Map<string, Array<{ count: number, key: string }>> {
@@ -588,7 +478,6 @@ export class Janitor {
 
         for (const [_, details] of deduplicationDetails) {
             const { toolName, parameterKey, duplicateCount } = details
-            // Skip 'batch' tool in UI summary - it's a wrapper and its children are shown individually
             if (toolName === 'batch') continue
             if (!grouped.has(toolName)) {
                 grouped.set(toolName, [])
@@ -602,10 +491,6 @@ export class Janitor {
         return grouped
     }
 
-    /**
-     * Format grouped deduplication results as lines
-     * Shared helper for building deduplication summaries
-     */
     private formatDeduplicationLines(
         grouped: Map<string, Array<{ count: number, key: string }>>,
         indent: string = '  '
@@ -622,10 +507,6 @@ export class Janitor {
         return lines
     }
 
-    /**
-     * Format tool summary (from buildToolsSummary) as lines
-     * Shared helper for building LLM-pruned summaries
-     */
     private formatToolSummaryLines(
         toolsSummary: Map<string, string[]>,
         indent: string = '  '
@@ -646,9 +527,6 @@ export class Janitor {
         return lines
     }
 
-    /**
-     * Send minimal summary notification (just tokens saved and count)
-     */
     private async sendMinimalNotification(
         sessionID: string,
         totalPruned: number,
@@ -662,7 +540,6 @@ export class Janitor {
 
         let message = `🧹 DCP: Saved ~${tokensFormatted} tokens (${totalPruned} ${toolText} pruned)`
 
-        // Add session totals if there's been more than one pruning run
         if (sessionStats.totalToolsPruned > totalPruned) {
             message += ` │ Session: ~${formatTokenCount(sessionStats.totalTokensSaved)} tokens, ${sessionStats.totalToolsPruned} tools`
         }
@@ -670,9 +547,6 @@ export class Janitor {
         await this.sendIgnoredMessage(sessionID, message)
     }
 
-    /**
-     * Auto mode notification - shows only deduplication results
-     */
     private async sendAutoModeNotification(
         sessionID: string,
         deduplicatedIds: string[],
@@ -681,32 +555,24 @@ export class Janitor {
         sessionStats: SessionStats
     ) {
         if (deduplicatedIds.length === 0) return
-
-        // Check if notifications are disabled
         if (this.pruningSummary === 'off') return
 
-        // Send minimal notification if configured
         if (this.pruningSummary === 'minimal') {
             await this.sendMinimalNotification(sessionID, deduplicatedIds.length, tokensSaved, sessionStats)
             return
         }
 
-        // Otherwise send detailed notification
         const tokensFormatted = formatTokenCount(tokensSaved)
-
         const toolText = deduplicatedIds.length === 1 ? 'tool' : 'tools'
         let message = `🧹 DCP: Saved ~${tokensFormatted} tokens (${deduplicatedIds.length} duplicate ${toolText} removed)`
 
-        // Add session totals if there's been more than one pruning run
         if (sessionStats.totalToolsPruned > deduplicatedIds.length) {
             message += ` │ Session: ~${formatTokenCount(sessionStats.totalTokensSaved)} tokens, ${sessionStats.totalToolsPruned} tools`
         }
         message += '\n'
 
-        // Group by tool type using shared helper
         const grouped = this.groupDeduplicationDetails(deduplicationDetails)
 
-        // Display grouped results (with UI-specific formatting: total dupes header, limit to 5)
         for (const [toolName, items] of grouped.entries()) {
             const totalDupes = items.reduce((sum, item) => sum + (item.count - 1), 0)
             message += `\n${toolName} (${totalDupes} duplicate${totalDupes > 1 ? 's' : ''}):\n`
@@ -724,16 +590,11 @@ export class Janitor {
         await this.sendIgnoredMessage(sessionID, message.trim())
     }
 
-    /**
-     * Format pruning result for tool output (returned to AI)
-     * Uses shared helpers for consistency with UI notifications
-     */
     formatPruningResultForTool(result: PruningResult): string {
         const lines: string[] = []
         lines.push(`Context pruning complete. Pruned ${result.prunedCount} tool outputs.`)
         lines.push('')
 
-        // Section 1: Deduplicated tools
         if (result.deduplicatedIds.length > 0 && result.deduplicationDetails.size > 0) {
             lines.push(`Duplicates removed (${result.deduplicatedIds.length}):`)
             const grouped = this.groupDeduplicationDetails(result.deduplicationDetails)
@@ -741,7 +602,6 @@ export class Janitor {
             lines.push('')
         }
 
-        // Section 2: LLM-pruned tools
         if (result.llmPrunedIds.length > 0) {
             lines.push(`Semantically pruned (${result.llmPrunedIds.length}):`)
             const toolsSummary = this.buildToolsSummary(result.llmPrunedIds, result.toolMetadata)
@@ -751,9 +611,6 @@ export class Janitor {
         return lines.join('\n').trim()
     }
 
-    /**
-     * Smart mode notification - shows both deduplication and LLM analysis results
-     */
     private async sendSmartModeNotification(
         sessionID: string,
         deduplicatedIds: string[],
@@ -765,28 +622,22 @@ export class Janitor {
     ) {
         const totalPruned = deduplicatedIds.length + llmPrunedIds.length
         if (totalPruned === 0) return
-
-        // Check if notifications are disabled
         if (this.pruningSummary === 'off') return
 
-        // Send minimal notification if configured
         if (this.pruningSummary === 'minimal') {
             await this.sendMinimalNotification(sessionID, totalPruned, tokensSaved, sessionStats)
             return
         }
 
-        // Otherwise send detailed notification
         const tokensFormatted = formatTokenCount(tokensSaved)
 
         let message = `🧹 DCP: Saved ~${tokensFormatted} tokens (${totalPruned} tool${totalPruned > 1 ? 's' : ''} pruned)`
 
-        // Add session totals if there's been more than one pruning run
         if (sessionStats.totalToolsPruned > totalPruned) {
             message += ` │ Session: ~${formatTokenCount(sessionStats.totalTokensSaved)} tokens, ${sessionStats.totalToolsPruned} tools`
         }
         message += '\n'
 
-        // Section 1: Deduplicated tools
         if (deduplicatedIds.length > 0 && deduplicationDetails) {
             message += `\n📦 Duplicates removed (${deduplicatedIds.length}):\n`
             const grouped = this.groupDeduplicationDetails(deduplicationDetails)
@@ -794,13 +645,12 @@ export class Janitor {
             for (const [toolName, items] of grouped.entries()) {
                 message += `  ${toolName}:\n`
                 for (const item of items) {
-                    const removedCount = item.count - 1  // Total occurrences minus the one we kept
+                    const removedCount = item.count - 1
                     message += `    ${item.key} (${removedCount}× duplicate)\n`
                 }
             }
         }
 
-        // Section 2: LLM-pruned tools
         if (llmPrunedIds.length > 0) {
             message += `\n🤖 LLM analysis (${llmPrunedIds.length}):\n`
             const toolsSummary = this.buildToolsSummary(llmPrunedIds, toolMetadata)
@@ -814,7 +664,6 @@ export class Janitor {
                 }
             }
 
-            // Handle any tools that weren't found in metadata (edge case)
             const foundToolNames = new Set(toolsSummary.keys())
             const missingTools = llmPrunedIds.filter(id => {
                 const normalizedId = id.toLowerCase()

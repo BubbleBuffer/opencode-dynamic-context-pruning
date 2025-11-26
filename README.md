@@ -6,14 +6,6 @@ Automatically reduces token usage in OpenCode by removing obsolete tool outputs 
 
 ![DCP in action](dcp-demo.png)
 
-## Pruning Strategies
-
-DCP implements two complementary strategies:
-
-**Deduplication** — Fast, zero-cost pruning that identifies repeated tool calls (e.g., reading the same file multiple times) and keeps only the most recent output. Runs instantly with no LLM calls.
-
-**AI Analysis** — Uses a language model to semantically analyze conversation context and identify tool outputs that are no longer relevant to the current task. More thorough but incurs LLM cost.
-
 ## Installation
 
 Add to your OpenCode config:
@@ -21,7 +13,7 @@ Add to your OpenCode config:
 ```jsonc
 // opencode.jsonc
 {
-  "plugins": ["@tarquinen/opencode-dcp@0.3.17"]
+  "plugins": ["@tarquinen/opencode-dcp@0.3.18"]
 }
 ```
 
@@ -29,8 +21,13 @@ When a new version is available, DCP will show a toast notification. Update by c
 
 Restart OpenCode. The plugin will automatically start optimizing your sessions.
 
-> **Note:** Project `plugin` arrays override global completely—include all desired plugins in project config if using both.
+## Pruning Strategies
 
+DCP implements two complementary strategies:
+
+**Deduplication** — Fast, zero-cost pruning that identifies repeated tool calls (e.g., reading the same file multiple times) and keeps only the most recent output. Runs instantly with no LLM calls.
+
+**AI Analysis** — Uses a language model to semantically analyze conversation context and identify tool outputs that are no longer relevant to the current task. More thorough but incurs LLM cost.
 ## How It Works
 
 DCP is **non-destructive**—pruning state is kept in memory only. When requests go to your LLM, DCP replaces pruned outputs with a placeholder; original session data stays intact.

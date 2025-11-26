@@ -1,3 +1,5 @@
+import { extractParameterKey } from "./display-utils"
+
 export interface DuplicateDetectionResult {
     duplicateIds: string[]  // IDs to prune (older duplicates)
     deduplicationDetails: Map<string, {
@@ -84,77 +86,4 @@ function sortObjectKeys(obj: any): any {
         sorted[key] = sortObjectKeys(obj[key])
     }
     return sorted
-}
-
-export function extractParameterKey(metadata: { tool: string, parameters?: any }): string {
-    if (!metadata.parameters) return ''
-
-    const { tool, parameters } = metadata
-
-    if (tool === "read" && parameters.filePath) {
-        return parameters.filePath
-    }
-    if (tool === "write" && parameters.filePath) {
-        return parameters.filePath
-    }
-    if (tool === "edit" && parameters.filePath) {
-        return parameters.filePath
-    }
-
-    if (tool === "list") {
-        return parameters.path || '(current directory)'
-    }
-    if (tool === "glob") {
-        if (parameters.pattern) {
-            const pathInfo = parameters.path ? ` in ${parameters.path}` : ""
-            return `"${parameters.pattern}"${pathInfo}`
-        }
-        return '(unknown pattern)'
-    }
-    if (tool === "grep") {
-        if (parameters.pattern) {
-            const pathInfo = parameters.path ? ` in ${parameters.path}` : ""
-            return `"${parameters.pattern}"${pathInfo}`
-        }
-        return '(unknown pattern)'
-    }
-
-    if (tool === "bash") {
-        if (parameters.description) return parameters.description
-        if (parameters.command) {
-            return parameters.command.length > 50
-                ? parameters.command.substring(0, 50) + "..."
-                : parameters.command
-        }
-    }
-
-    if (tool === "webfetch" && parameters.url) {
-        return parameters.url
-    }
-    if (tool === "websearch" && parameters.query) {
-        return `"${parameters.query}"`
-    }
-    if (tool === "codesearch" && parameters.query) {
-        return `"${parameters.query}"`
-    }
-
-    if (tool === "todowrite") {
-        return `${parameters.todos?.length || 0} todos`
-    }
-    if (tool === "todoread") {
-        return "read todo list"
-    }
-
-    if (tool === "task" && parameters.description) {
-        return parameters.description
-    }
-    if (tool === "batch") {
-        return `${parameters.tool_calls?.length || 0} parallel tools`
-    }
-
-    const paramStr = JSON.stringify(parameters)
-    if (paramStr === '{}' || paramStr === '[]' || paramStr === 'null') {
-        return ''
-    }
-    return paramStr.substring(0, 50)
 }

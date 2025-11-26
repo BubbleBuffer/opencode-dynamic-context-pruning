@@ -4,7 +4,8 @@ import type { PruningStrategy } from "./config"
 import { buildAnalysisPrompt } from "./prompt"
 import { selectModel, extractModelFromSession } from "./model-selector"
 import { estimateTokensBatch, formatTokenCount } from "./tokenizer"
-import { detectDuplicates, extractParameterKey } from "./deduplicator"
+import { detectDuplicates } from "./deduplicator"
+import { extractParameterKey } from "./display-utils"
 
 export interface SessionStats {
     totalToolsPruned: number
@@ -108,7 +109,7 @@ export class Janitor {
                             toolCallIds.push(normalizedId)
 
                             const cachedData = this.toolParametersCache.get(part.callID) || this.toolParametersCache.get(normalizedId)
-                            const parameters = cachedData?.parameters || part.parameters
+                            const parameters = cachedData?.parameters ?? part.state?.input ?? part.parameters
 
                             toolMetadata.set(normalizedId, {
                                 tool: part.tool,
@@ -668,6 +669,7 @@ export class Janitor {
             const missingTools = llmPrunedIds.filter(id => {
                 const normalizedId = id.toLowerCase()
                 const metadata = toolMetadata.get(normalizedId)
+                if (metadata?.tool === 'batch') return false
                 return !metadata || !foundToolNames.has(metadata.tool)
             })
 

@@ -36,6 +36,7 @@ DCP uses its own config file (`~/.config/opencode/dcp.jsonc` or `.opencode/dcp.j
 | `debug` | `false` | Log to `~/.config/opencode/logs/dcp/` |
 | `model` | (session) | Model for analysis (e.g., `"anthropic/claude-haiku-4-5"`) |
 | `showModelErrorToasts` | `true` | Show notifications on model fallback |
+| `strictModelSelection` | `false` | Only run AI analysis with session or configured model (disables fallback models) |
 | `pruning_summary` | `"detailed"` | `"off"`, `"minimal"`, or `"detailed"` |
 | `protectedTools` | `["task", "todowrite", "todoread", "context_pruning"]` | Tools that are never pruned |
 | `strategies.onIdle` | `["deduplication", "ai-analysis"]` | Strategies for automatic pruning |

@@ -1,10 +1,13 @@
 // lib/config.ts
-import { readFileSync, writeFileSync, existsSync, mkdirSync, statSync } from 'fs'
+import { readFileSync, writeFileSync, existsSync, mkdirSync, statSync, copyFileSync } from 'fs'
 import { join, dirname } from 'path'
 import { homedir } from 'os'
 import { parse } from 'jsonc-parser'
 import { Logger } from './logger'
 import type { PluginInput } from '@opencode-ai/plugin'
+
+// Pruning strategy types
+export type PruningStrategy = "deduplication" | "ai-analysis"
 
 export interface PluginConfig {
     enabled: boolean
@@ -12,18 +15,44 @@ export interface PluginConfig {
     protectedTools: string[]
     model?: string // Format: "provider/model" (e.g., "anthropic/claude-haiku-4-5")
     showModelErrorToasts?: boolean // Show toast notifications when model selection fails
-    pruningMode: "auto" | "smart" // Pruning strategy: auto (deduplication only) or smart (deduplication + LLM analysis)
     pruning_summary: "off" | "minimal" | "detailed" // UI summary display mode
+    strategies: {
+        // Strategies for automatic pruning (on session idle). Empty array = idle pruning disabled
+        onIdle: PruningStrategy[]
+        // Strategies for the AI-callable tool. Empty array = tool not exposed to AI
+        onTool: PruningStrategy[]
+    }
+}
+
+export interface ConfigResult {
+    config: PluginConfig
+    migrations: string[] // List of migration messages to show user
 }
 
 const defaultConfig: PluginConfig = {
     enabled: true, // Plugin is enabled by default
     debug: false, // Disable debug logging by default
-    protectedTools: ['task', 'todowrite', 'todoread'], // Tools that should never be pruned (including stateful tools)
+    protectedTools: ['task', 'todowrite', 'todoread', 'context_pruning'], // Tools that should never be pruned
     showModelErrorToasts: true, // Show model error toasts by default
-    pruningMode: 'smart', // Default to smart mode (deduplication + LLM analysis)
-    pruning_summary: 'detailed' // Default to detailed summary
+    pruning_summary: 'detailed', // Default to detailed summary
+    strategies: {
+        // Default: Full analysis on idle (like previous "smart" mode)
+        onIdle: ['deduplication', 'ai-analysis'],
+        // Default: Only deduplication when AI calls the tool (faster, no extra LLM cost)
+        onTool: ['deduplication']
+    }
 }
+
+// Valid top-level keys in the current config schema
+const VALID_CONFIG_KEYS = new Set([
+    'enabled',
+    'debug',
+    'protectedTools',
+    'model',
+    'showModelErrorToasts',
+    'pruning_summary',
+    'strategies'
+])
 
 const GLOBAL_CONFIG_DIR = join(homedir(), '.config', 'opencode')
 const GLOBAL_CONFIG_PATH_JSONC = join(GLOBAL_CONFIG_DIR, 'dcp.jsonc')
@@ -106,10 +135,17 @@ function createDefaultConfig(): void {
   // Set to false to disable these informational toasts
   "showModelErrorToasts": true,
 
-  // Pruning strategy:
-  // "auto": Automatic duplicate removal only (fast, no LLM cost)
-  // "smart": Deduplication + AI analysis for intelligent pruning (recommended)
-  "pruningMode": "smart",
+  // Pruning strategies configuration
+  // Available strategies: "deduplication", "ai-analysis"
+  // Empty array = disabled
+  "strategies": {
+    // Strategies to run when session goes idle (automatic)
+    "onIdle": ["deduplication", "ai-analysis"],
+    
+    // Strategies to run when AI calls the context_pruning tool
+    // Empty array = tool not exposed to AI
+    "onTool": ["deduplication"]
+  },
 
   // Pruning summary display mode:
   // "off": No UI summary (silent pruning)
@@ -120,7 +156,8 @@ function createDefaultConfig(): void {
   // List of tools that should never be pruned from context
   // "task": Each subagent invocation is intentional
   // "todowrite"/"todoread": Stateful tools where each call matters
-  "protectedTools": ["task", "todowrite", "todoread"]
+  // "context_pruning": The pruning tool itself
+  "protectedTools": ["task", "todowrite", "todoread", "context_pruning"]
 }
 `
 
@@ -130,12 +167,62 @@ function createDefaultConfig(): void {
 /**
  * Loads a single config file and parses it
  */
-function loadConfigFile(configPath: string): Partial<PluginConfig> | null {
+function loadConfigFile(configPath: string): Record<string, any> | null {
     try {
         const fileContent = readFileSync(configPath, 'utf-8')
-        return parse(fileContent) as Partial<PluginConfig>
+        return parse(fileContent)
     } catch (error: any) {
         return null
+    }
+}
+
+/**
+ * Check if config has any unknown or deprecated keys
+ */
+function getInvalidKeys(config: Record<string, any>): string[] {
+    const invalidKeys: string[] = []
+    for (const key of Object.keys(config)) {
+        if (!VALID_CONFIG_KEYS.has(key)) {
+            invalidKeys.push(key)
+        }
+    }
+    return invalidKeys
+}
+
+/**
+ * Backs up existing config and creates fresh default config
+ * Returns the backup path if successful, null if failed
+ */
+function backupAndResetConfig(configPath: string, logger: Logger): string | null {
+    try {
+        const backupPath = configPath + '.bak'
+        
+        // Create backup
+        copyFileSync(configPath, backupPath)
+        logger.info('config', 'Created config backup', { backup: backupPath })
+        
+        // Write fresh default config
+        createDefaultConfig()
+        logger.info('config', 'Created fresh default config', { path: GLOBAL_CONFIG_PATH_JSONC })
+        
+        return backupPath
+    } catch (error: any) {
+        logger.error('config', 'Failed to backup/reset config', { error: error.message })
+        return null
+    }
+}
+
+/**
+ * Merge strategies config, handling partial overrides
+ */
+function mergeStrategies(
+    base: PluginConfig['strategies'],
+    override?: Partial<PluginConfig['strategies']>
+): PluginConfig['strategies'] {
+    if (!override) return base
+    return {
+        onIdle: override.onIdle ?? base.onIdle,
+        onTool: override.onTool ?? base.onTool
     }
 }
 
@@ -147,30 +234,47 @@ function loadConfigFile(configPath: string): Partial<PluginConfig> | null {
  * 2. Merge with global config (~/.config/opencode/dcp.jsonc)
  * 3. Merge with project config (.opencode/dcp.jsonc) if found
  * 
+ * If config has invalid/deprecated keys, backs up and resets to defaults.
+ * 
  * Project config overrides global config, which overrides defaults.
  * 
  * @param ctx - Plugin input context (optional). If provided, will search for project-level config.
- * @returns Merged configuration
+ * @returns ConfigResult with merged configuration and any migration messages
  */
-export function getConfig(ctx?: PluginInput): PluginConfig {
-    let config = { ...defaultConfig }
+export function getConfig(ctx?: PluginInput): ConfigResult {
+    let config = { ...defaultConfig, protectedTools: [...defaultConfig.protectedTools] }
     const configPaths = getConfigPaths(ctx)
     const logger = new Logger(true) // Always log config loading
+    const migrations: string[] = []
 
     // 1. Load global config
     if (configPaths.global) {
         const globalConfig = loadConfigFile(configPaths.global)
         if (globalConfig) {
-            config = {
-                enabled: globalConfig.enabled ?? config.enabled,
-                debug: globalConfig.debug ?? config.debug,
-                protectedTools: globalConfig.protectedTools ?? config.protectedTools,
-                model: globalConfig.model ?? config.model,
-                showModelErrorToasts: globalConfig.showModelErrorToasts ?? config.showModelErrorToasts,
-                pruningMode: globalConfig.pruningMode ?? config.pruningMode,
-                pruning_summary: globalConfig.pruning_summary ?? config.pruning_summary
+            // Check for invalid keys
+            const invalidKeys = getInvalidKeys(globalConfig)
+            
+            if (invalidKeys.length > 0) {
+                // Config has deprecated/unknown keys - backup and reset
+                logger.info('config', 'Found invalid config keys', { keys: invalidKeys })
+                const backupPath = backupAndResetConfig(configPaths.global, logger)
+                if (backupPath) {
+                    migrations.push(`Old config backed up to ${backupPath}`)
+                }
+                // Config is now reset to defaults, no need to merge
+            } else {
+                // Valid config - merge with defaults
+                config = {
+                    enabled: globalConfig.enabled ?? config.enabled,
+                    debug: globalConfig.debug ?? config.debug,
+                    protectedTools: globalConfig.protectedTools ?? config.protectedTools,
+                    model: globalConfig.model ?? config.model,
+                    showModelErrorToasts: globalConfig.showModelErrorToasts ?? config.showModelErrorToasts,
+                    strategies: mergeStrategies(config.strategies, globalConfig.strategies as any),
+                    pruning_summary: globalConfig.pruning_summary ?? config.pruning_summary
+                }
+                logger.info('config', 'Loaded global config', { path: configPaths.global })
             }
-            logger.info('config', 'Loaded global config', { path: configPaths.global })
         }
     } else {
         // Create default global config if it doesn't exist
@@ -182,20 +286,32 @@ export function getConfig(ctx?: PluginInput): PluginConfig {
     if (configPaths.project) {
         const projectConfig = loadConfigFile(configPaths.project)
         if (projectConfig) {
-            config = {
-                enabled: projectConfig.enabled ?? config.enabled,
-                debug: projectConfig.debug ?? config.debug,
-                protectedTools: projectConfig.protectedTools ?? config.protectedTools,
-                model: projectConfig.model ?? config.model,
-                showModelErrorToasts: projectConfig.showModelErrorToasts ?? config.showModelErrorToasts,
-                pruningMode: projectConfig.pruningMode ?? config.pruningMode,
-                pruning_summary: projectConfig.pruning_summary ?? config.pruning_summary
+            // Check for invalid keys
+            const invalidKeys = getInvalidKeys(projectConfig)
+            
+            if (invalidKeys.length > 0) {
+                // Project config has deprecated/unknown keys - just warn, don't reset project configs
+                logger.warn('config', 'Project config has invalid keys (ignored)', { 
+                    path: configPaths.project,
+                    keys: invalidKeys 
+                })
+            } else {
+                // Valid config - merge with current config
+                config = {
+                    enabled: projectConfig.enabled ?? config.enabled,
+                    debug: projectConfig.debug ?? config.debug,
+                    protectedTools: projectConfig.protectedTools ?? config.protectedTools,
+                    model: projectConfig.model ?? config.model,
+                    showModelErrorToasts: projectConfig.showModelErrorToasts ?? config.showModelErrorToasts,
+                    strategies: mergeStrategies(config.strategies, projectConfig.strategies as any),
+                    pruning_summary: projectConfig.pruning_summary ?? config.pruning_summary
+                }
+                logger.info('config', 'Loaded project config (overrides global)', { path: configPaths.project })
             }
-            logger.info('config', 'Loaded project config (overrides global)', { path: configPaths.project })
         }
     } else if (ctx?.directory) {
         logger.debug('config', 'No project config found', { searchedFrom: ctx.directory })
     }
 
-    return config
+    return { config, migrations }
 }

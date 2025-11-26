@@ -103,7 +103,13 @@ function minimizeMessages(messages: any[], alreadyPrunedIds?: string[], protecte
     })
 }
 
-export function buildAnalysisPrompt(unprunedToolCallIds: string[], messages: any[], protectedTools: string[], alreadyPrunedIds?: string[], protectedToolCallIds?: string[]): string {
+export function buildAnalysisPrompt(
+    unprunedToolCallIds: string[],
+    messages: any[],
+    alreadyPrunedIds?: string[],
+    protectedToolCallIds?: string[],
+    reason?: string  // Optional reason from tool call
+): string {
     // Minimize messages to reduce token usage, passing already-pruned and protected IDs for replacement
     const minimizedMessages = minimizeMessages(messages, alreadyPrunedIds, protectedToolCallIds)
 
@@ -111,8 +117,13 @@ export function buildAnalysisPrompt(unprunedToolCallIds: string[], messages: any
     // This makes the logged prompts much more readable
     const messagesJson = JSON.stringify(minimizedMessages, null, 2).replace(/\\n/g, '\n')
 
-    return `You are a conversation analyzer that identifies obsolete tool outputs in a coding session.
+    // Build optional context section if reason provided
+    const reasonContext = reason
+        ? `\nContext: The AI has requested pruning with the following reason: "${reason}"\nUse this context to inform your decisions about what is most relevant to keep.`
+        : ''
 
+    return `You are a conversation analyzer that identifies obsolete tool outputs in a coding session.
+${reasonContext}
 Your task: Analyze the session history and identify tool call IDs whose outputs are NO LONGER RELEVANT to the current conversation context.
 
 Guidelines for identifying obsolete tool calls:

@@ -127,7 +127,9 @@ const plugin: Plugin = (async (ctx) => {
         model: config.model || "auto"
     })
 
-    checkForUpdates(ctx.client, logger).catch(() => { })
+    setTimeout(() => {
+        checkForUpdates(ctx.client, logger).catch(() => { })
+    }, 5000)
 
     if (migrations.length > 0) {
         setTimeout(async () => {

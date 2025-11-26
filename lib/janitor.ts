@@ -4,7 +4,8 @@ import type { PruningStrategy } from "./config"
 import { buildAnalysisPrompt } from "./prompt"
 import { selectModel, extractModelFromSession } from "./model-selector"
 import { estimateTokensBatch, formatTokenCount } from "./tokenizer"
-import { detectDuplicates, extractParameterKey } from "./deduplicator"
+import { detectDuplicates } from "./deduplicator"
+import { extractParameterKey } from "./display-utils"
 
 export interface SessionStats {
     totalToolsPruned: number

@@ -59,7 +59,7 @@ Settings merge: **Defaults** → **Global** → **Project**. Restart OpenCode af
 ### Version Pinning
 
 ```json
-{ "plugin": ["@tarquinen/opencode-dcp@0.3.15"] }
+{ "plugin": ["@tarquinen/opencode-dcp@0.3.16"] }
 ```
 
 ## License

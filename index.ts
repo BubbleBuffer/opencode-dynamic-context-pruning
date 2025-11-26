@@ -1,8 +1,10 @@
 // index.ts - Main plugin entry point for Dynamic Context Pruning
 import type { Plugin } from "@opencode-ai/plugin"
+import { tool } from "@opencode-ai/plugin"
 import { getConfig } from "./lib/config"
 import { Logger } from "./lib/logger"
 import { Janitor, type SessionStats } from "./lib/janitor"
+import { formatTokenCount } from "./lib/tokenizer"
 import { checkForUpdates } from "./lib/version-checker"
 
 /**
@@ -20,7 +22,7 @@ async function isSubagentSession(client: any, sessionID: string): Promise<boolea
 }
 
 const plugin: Plugin = (async (ctx) => {
-    const config = getConfig(ctx)
+    const { config, migrations } = getConfig(ctx)
 
     // Exit early if plugin is disabled
     if (!config.enabled) {
@@ -38,7 +40,7 @@ const plugin: Plugin = (async (ctx) => {
     const statsState = new Map<string, SessionStats>()
     const toolParametersCache = new Map<string, any>() // callID -> parameters
     const modelCache = new Map<string, { providerID: string; modelID: string }>() // sessionID -> model info
-    const janitor = new Janitor(ctx.client, prunedIdsState, statsState, logger, toolParametersCache, config.protectedTools, modelCache, config.model, config.showModelErrorToasts, config.pruningMode, config.pruning_summary, ctx.directory)
+    const janitor = new Janitor(ctx.client, prunedIdsState, statsState, logger, toolParametersCache, config.protectedTools, modelCache, config.model, config.showModelErrorToasts, config.pruning_summary, ctx.directory)
 
     const cacheToolParameters = (messages: any[]) => {
         for (const message of messages) {
@@ -142,12 +144,30 @@ const plugin: Plugin = (async (ctx) => {
     }
 
     logger.info("plugin", "DCP initialized", {
-        mode: config.pruningMode,
+        strategies: config.strategies,
         model: config.model || "auto"
     })
 
     // Check for updates on launch (fire and forget)
     checkForUpdates(ctx.client, logger).catch(() => {})
+
+    // Show migration toast if config was migrated (delayed to not overlap with version toast)
+    if (migrations.length > 0) {
+        setTimeout(async () => {
+            try {
+                await ctx.client.tui.showToast({
+                    body: {
+                        title: "DCP: Config upgraded",
+                        message: migrations.join('\n'),
+                        variant: "info",
+                        duration: 8000
+                    }
+                })
+            } catch {
+                // Silently fail - toast is non-critical
+            }
+        }, 7000) // 7s delay to show after version toast (6s) completes
+    }
 
     return {
         /**
@@ -157,9 +177,12 @@ const plugin: Plugin = (async (ctx) => {
             if (event.type === "session.status" && event.properties.status.type === "idle") {
                 // Skip pruning for subagent sessions
                 if (await isSubagentSession(ctx.client, event.properties.sessionID)) return
+                
+                // Skip if no idle strategies configured
+                if (config.strategies.onIdle.length === 0) return
 
                 // Fire and forget the janitor - don't block the event handler
-                janitor.run(event.properties.sessionID).catch(err => {
+                janitor.runOnIdle(event.properties.sessionID, config.strategies.onIdle).catch(err => {
                     logger.error("janitor", "Failed", { error: err.message })
                 })
             }
@@ -188,6 +211,37 @@ const plugin: Plugin = (async (ctx) => {
                 })
             }
         },
+
+        /**
+         * Tool Hook: Exposes context_pruning tool to AI (if configured)
+         */
+        tool: config.strategies.onTool.length > 0 ? {
+            context_pruning: tool({
+                description: "Performs semantic pruning on session tool outputs that are no longer " +
+                    "relevant to the current task. Use this to declutter the conversation context and " +
+                    "filter signal from noise when you notice the context is getting cluttered with " +
+                    "outdated information (e.g., after completing a debugging session, switching to a " +
+                    "new task, or when old file reads are no longer needed).",
+                args: {
+                    reason: tool.schema.string().optional().describe(
+                        "Brief reason for triggering pruning (e.g., 'task complete', 'switching focus')"
+                    ),
+                },
+                async execute(args, ctx) {
+                    const result = await janitor.runForTool(
+                        ctx.sessionID,
+                        config.strategies.onTool,
+                        args.reason
+                    )
+
+                    if (!result || result.prunedCount === 0) {
+                        return "No prunable tool outputs found. Context is already optimized."
+                    }
+
+                    return `Context pruning complete. Pruned ${result.prunedCount} tool outputs (~${formatTokenCount(result.tokensSaved)} tokens saved).`
+                },
+            }),
+        } : undefined,
     }
 }) satisfies Plugin
 

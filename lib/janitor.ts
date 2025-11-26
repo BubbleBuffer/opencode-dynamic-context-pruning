@@ -307,18 +307,26 @@ export class Janitor {
                 return null
             }
 
-            // Expand batch tool IDs to include their children
-            const expandedPrunedIds = new Set<string>()
-            for (const prunedId of newlyPrunedIds) {
-                const normalizedId = prunedId.toLowerCase()
-                expandedPrunedIds.add(normalizedId)
-
-                // If this is a batch tool, add all its children
-                const children = batchToolChildren.get(normalizedId)
-                if (children) {
-                    children.forEach(childId => expandedPrunedIds.add(childId))
+            // Helper to expand batch tool IDs to include their children
+            const expandBatchIds = (ids: string[]): string[] => {
+                const expanded = new Set<string>()
+                for (const id of ids) {
+                    const normalizedId = id.toLowerCase()
+                    expanded.add(normalizedId)
+                    // If this is a batch tool, add all its children
+                    const children = batchToolChildren.get(normalizedId)
+                    if (children) {
+                        children.forEach(childId => expanded.add(childId))
+                    }
                 }
+                return Array.from(expanded)
             }
+
+            // Expand batch tool IDs to include their children
+            const expandedPrunedIds = new Set(expandBatchIds(newlyPrunedIds))
+
+            // Expand llmPrunedIds for UI display (so batch children show instead of "unknown metadata")
+            const expandedLlmPrunedIds = expandBatchIds(llmPrunedIds)
 
             // Calculate which IDs are actually NEW (not already pruned)
             const finalNewlyPrunedIds = Array.from(expandedPrunedIds).filter(id => !alreadyPrunedIds.includes(id))
@@ -348,7 +356,7 @@ export class Janitor {
                     sessionID,
                     deduplicatedIds,
                     deduplicationDetails,
-                    llmPrunedIds,
+                    expandedLlmPrunedIds,
                     toolMetadata,
                     tokensSaved,
                     sessionStats
@@ -389,7 +397,7 @@ export class Janitor {
                 prunedCount: finalNewlyPrunedIds.length,
                 tokensSaved,
                 deduplicatedIds,
-                llmPrunedIds,
+                llmPrunedIds: expandedLlmPrunedIds,
                 deduplicationDetails,
                 toolMetadata,
                 sessionStats

@@ -669,7 +669,6 @@ export class Janitor {
             const missingTools = llmPrunedIds.filter(id => {
                 const normalizedId = id.toLowerCase()
                 const metadata = toolMetadata.get(normalizedId)
-                // batch tools are intentionally excluded from the summary, so don't count them as missing
                 if (metadata?.tool === 'batch') return false
                 return !metadata || !foundToolNames.has(metadata.tool)
             })

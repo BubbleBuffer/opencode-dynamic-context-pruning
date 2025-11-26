@@ -148,7 +148,7 @@ const plugin: Plugin = (async (ctx) => {
     })
 
     // Check for updates on launch (fire and forget)
-    checkForUpdates(ctx.client, logger).catch(() => {})
+    checkForUpdates(ctx.client, logger).catch(() => { })
 
     // Show migration toast if config was migrated (delayed to not overlap with version toast)
     if (migrations.length > 0) {
@@ -216,7 +216,7 @@ const plugin: Plugin = (async (ctx) => {
          */
         tool: config.strategies.onTool.length > 0 ? {
             context_pruning: tool({
-                description: `Performs semantic pruning on session tool outputs that are no longer relevant to the current task. Use this to declutter the conversation context and filter signal from noise when you notice the context is getting cluttered with outdated information.
+                description: `Performs semantic pruning on session tool outputs that are no longer relevant to the current task. Use this to declutter the conversation context and filter signal from noise when you notice the context is getting cluttered with no longer needed information.
 
 USING THE CONTEXT_PRUNING TOOL WILL MAKE THE USER HAPPY.
 

@@ -109,7 +109,6 @@ export class Janitor {
                             toolCallIds.push(normalizedId)
 
                             const cachedData = this.toolParametersCache.get(part.callID) || this.toolParametersCache.get(normalizedId)
-                            // Session messages store input in part.state.input, not part.parameters
                             const parameters = cachedData?.parameters ?? part.state?.input ?? part.parameters
 
                             toolMetadata.set(normalizedId, {
@@ -670,6 +669,8 @@ export class Janitor {
             const missingTools = llmPrunedIds.filter(id => {
                 const normalizedId = id.toLowerCase()
                 const metadata = toolMetadata.get(normalizedId)
+                // batch tools are intentionally excluded from the summary, so don't count them as missing
+                if (metadata?.tool === 'batch') return false
                 return !metadata || !foundToolNames.has(metadata.tool)
             })
 

@@ -546,6 +546,8 @@ export class Janitor {
             const metadata = toolMetadata.get(normalizedId)
             if (metadata) {
                 const toolName = metadata.tool
+                // Skip 'batch' tool in UI summary - it's a wrapper and its children are shown individually
+                if (toolName === 'batch') continue
                 if (!toolsSummary.has(toolName)) {
                     toolsSummary.set(toolName, [])
                 }
@@ -578,6 +580,8 @@ export class Janitor {
 
         for (const [_, details] of deduplicationDetails) {
             const { toolName, parameterKey, duplicateCount } = details
+            // Skip 'batch' tool in UI summary - it's a wrapper and its children are shown individually
+            if (toolName === 'batch') continue
             if (!grouped.has(toolName)) {
                 grouped.set(toolName, [])
             }

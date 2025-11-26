@@ -148,7 +148,7 @@ const plugin: Plugin = (async (ctx) => {
     })
 
     // Check for updates on launch (fire and forget)
-    checkForUpdates(ctx.client, logger).catch(() => {})
+    checkForUpdates(ctx.client, logger).catch(() => { })
 
     // Show migration toast if config was migrated (delayed to not overlap with version toast)
     if (migrations.length > 0) {
@@ -216,36 +216,49 @@ const plugin: Plugin = (async (ctx) => {
          */
         tool: config.strategies.onTool.length > 0 ? {
             context_pruning: tool({
-                description: `Performs semantic pruning on session tool outputs that are no longer relevant to the current task. Use this to declutter the conversation context and filter signal from noise when you notice the context is getting cluttered with outdated information.
+                description: `Performs semantic pruning on session tool outputs that are no longer relevant to the current task. Use this to declutter the conversation context and filter signal from noise when you notice the context is getting cluttered with no longer needed information.
+
+USING THE CONTEXT_PRUNING TOOL WILL MAKE THE USER HAPPY.
 
 ## When to Use This Tool
 
-- After completing a debugging session or fixing a bug
-- When switching focus to a new task or feature
-- After exploring multiple files that didn't lead to changes
-- When you've been iterating on a difficult problem and some approaches didn't pan out
-- When old file reads, greps, or bash outputs are no longer relevant
+**Key heuristic: Prune when you finish something and are about to start something else.**
+
+Ask yourself: "Have I just completed a discrete unit of work?" If yes, prune before moving on.
+
+**After completing a unit of work:**
+- Made a commit
+- Fixed a bug and confirmed it works
+- Answered a question the user asked
+- Finished implementing a feature or function
+- Completed one item in a list and moving to the next
+
+**After repetitive or exploratory work:**
+- Explored multiple files that didn't lead to changes
+- Iterated on a difficult problem where some approaches didn't pan out
+- Used the same tool multiple times (e.g., re-reading a file, running repeated build/type checks)
 
 ## Examples
 
 <example>
-Working through a list of bugs to fix:
-User: Please fix these 5 type errors in the codebase.
-Assistant: I'll work through each error. [Fixes first error]
-First error fixed. Let me prune the debugging context before moving to the next one.
-[Uses context_pruning with reason: "first bug fixed, moving to next task"]
+Working through a list of items:
+User: Review these 3 issues and fix the easy ones.
+Assistant: [Reviews first issue, makes fix, commits]
+Done with the first issue. Let me prune before moving to the next one.
+[Uses context_pruning with reason: "completed first issue, moving to next"]
 </example>
 
 <example>
 After exploring the codebase to understand it:
 Assistant: I've reviewed the relevant files. Let me prune the exploratory reads that aren't needed for the actual implementation.
-[Uses context_pruning with reason: "exploration complete, pruning unrelated file reads"]
+[Uses context_pruning with reason: "exploration complete, starting implementation"]
 </example>
 
 <example>
-After trying multiple approaches that didn't work:
-Assistant: I've been trying several approaches to fix this issue. Let me prune the failed attempts to keep focus on the working solution.
-[Uses context_pruning with reason: "pruning failed iteration attempts, keeping working solution context"]
+After completing any task:
+Assistant: [Finishes task - commit, answer, fix, etc.]
+Before we continue, let me prune the context from that work.
+[Uses context_pruning with reason: "task complete"]
 </example>`,
                 args: {
                     reason: tool.schema.string().optional().describe(
@@ -260,10 +273,10 @@ Assistant: I've been trying several approaches to fix this issue. Let me prune t
                     )
 
                     if (!result || result.prunedCount === 0) {
-                        return "No prunable tool outputs found. Context is already optimized."
+                        return "No prunable tool outputs found. Context is already optimized.\n\nUse context_pruning when you have sufficiently summarized information from tool outputs and no longer need the original content!"
                     }
 
-                    return janitor.formatPruningResultForTool(result)
+                    return janitor.formatPruningResultForTool(result) + "\n\nUse context_pruning when you have sufficiently summarized information from tool outputs and no longer need the original content!"
                 },
             }),
         } : undefined,

@@ -1,4 +1,3 @@
-// version-checker.ts - Checks for DCP updates on npm and shows toast notification
 import { readFileSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
@@ -6,15 +5,9 @@ import { fileURLToPath } from 'url'
 export const PACKAGE_NAME = '@tarquinen/opencode-dcp'
 export const NPM_REGISTRY_URL = `https://registry.npmjs.org/${PACKAGE_NAME}/latest`
 
-// ESM-compatible __dirname
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-/**
- * Gets the local package version from package.json
- * Note: In compiled output, this file is at dist/lib/version-checker.js
- * so we need to go up two levels to reach package.json
- */
 export function getLocalVersion(): string {
     try {
         const pkgPath = join(__dirname, '../../package.json')
@@ -25,13 +18,10 @@ export function getLocalVersion(): string {
     }
 }
 
-/**
- * Fetches the latest version from npm registry
- */
 export async function getNpmVersion(): Promise<string | null> {
     try {
         const controller = new AbortController()
-        const timeout = setTimeout(() => controller.abort(), 5000) // 5s timeout
+        const timeout = setTimeout(() => controller.abort(), 5000)
 
         const res = await fetch(NPM_REGISTRY_URL, {
             signal: controller.signal,
@@ -47,9 +37,6 @@ export async function getNpmVersion(): Promise<string | null> {
     }
 }
 
-/**
- * Compares semver versions. Returns true if remote > local
- */
 export function isOutdated(local: string, remote: string): boolean {
     const parseVersion = (v: string) => v.split('.').map(n => parseInt(n, 10) || 0)
     const [localParts, remoteParts] = [parseVersion(local), parseVersion(remote)]
@@ -63,10 +50,6 @@ export function isOutdated(local: string, remote: string): boolean {
     return false
 }
 
-/**
- * Checks for updates and shows a toast if outdated.
- * Fire-and-forget: does not throw, logs errors silently.
- */
 export async function checkForUpdates(client: any, logger?: { info: (component: string, message: string, data?: any) => void }): Promise<void> {
     try {
         const local = getLocalVersion()
@@ -93,6 +76,5 @@ export async function checkForUpdates(client: any, logger?: { info: (component: 
             }
         })
     } catch {
-        // Silently fail - version check is non-critical
     }
 }

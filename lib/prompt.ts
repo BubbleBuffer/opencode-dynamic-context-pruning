@@ -1,9 +1,3 @@
-/**
- * Minimize message structure for AI analysis - keep only what's needed
- * to determine if tool calls are obsolete
- * Also replaces callIDs of already-pruned tools with "<already-pruned>"
- * and protected tools with "<protected>"
- */
 function minimizeMessages(messages: any[], alreadyPrunedIds?: string[], protectedToolCallIds?: string[]): any[] {
     const prunedIdsSet = alreadyPrunedIds ? new Set(alreadyPrunedIds.map(id => id.toLowerCase())) : new Set()
     const protectedIdsSet = protectedToolCallIds ? new Set(protectedToolCallIds.map(id => id.toLowerCase())) : new Set()
@@ -13,20 +7,16 @@ function minimizeMessages(messages: any[], alreadyPrunedIds?: string[], protecte
             role: msg.info?.role
         }
 
-        // Keep essential parts only
         if (msg.parts) {
             minimized.parts = msg.parts
                 .filter((part: any) => {
-                    // Completely remove step markers - they add no value for janitor
                     if (part.type === 'step-start' || part.type === 'step-finish') {
                         return false
                     }
                     return true
                 })
                 .map((part: any) => {
-                    // For text parts, keep the text content (needed for user intent & retention requests)
                     if (part.type === 'text') {
-                        // Filter out ignored messages (e.g., DCP summary UI messages)
                         if (part.ignored) {
                             return null
                         }
@@ -36,7 +26,6 @@ function minimizeMessages(messages: any[], alreadyPrunedIds?: string[], protecte
                         }
                     }
 
-                    // For tool parts, keep what's needed for pruning decisions
                     if (part.type === 'tool') {
                         const callIDLower = part.callID?.toLowerCase()
                         const isAlreadyPruned = prunedIdsSet.has(callIDLower)
@@ -55,33 +44,25 @@ function minimizeMessages(messages: any[], alreadyPrunedIds?: string[], protecte
                             tool: part.tool
                         }
 
-                        // Keep the actual output - janitor needs to see what was returned
                         if (part.state?.output) {
                             toolPart.output = part.state.output
                         }
 
-                        // Include minimal input for deduplication context
-                        // Only keep resource identifiers, not full nested structures
                         if (part.state?.input) {
                             const input = part.state.input
 
-                            // For write/edit tools, keep file path AND content (what was changed matters)
-                            // These tools: write, edit, multiedit, patch
                             if (input.filePath && (part.tool === 'write' || part.tool === 'edit' || part.tool === 'multiedit' || part.tool === 'patch')) {
-                                toolPart.input = input // Keep full input (content, oldString, newString, etc.)
+                                toolPart.input = input
                             }
-                            // For read-only file operations, just keep the file path
                             else if (input.filePath) {
                                 toolPart.input = { filePath: input.filePath }
                             }
-                            // For batch operations, summarize instead of full array
                             else if (input.tool_calls && Array.isArray(input.tool_calls)) {
                                 toolPart.input = {
                                     batch_summary: `${input.tool_calls.length} tool calls`,
                                     tools: input.tool_calls.map((tc: any) => tc.tool)
                                 }
                             }
-                            // For other operations, keep minimal input
                             else {
                                 toolPart.input = input
                             }
@@ -90,15 +71,13 @@ function minimizeMessages(messages: any[], alreadyPrunedIds?: string[], protecte
                         return toolPart
                     }
 
-                    // Skip all other part types (they're not relevant to pruning)
                     return null
                 })
-                .filter(Boolean) // Remove nulls
+                .filter(Boolean)
         }
 
         return minimized
     }).filter(msg => {
-        // Filter out messages that have no parts (e.g., only contained ignored messages)
         return msg.parts && msg.parts.length > 0
     })
 }
@@ -108,16 +87,12 @@ export function buildAnalysisPrompt(
     messages: any[],
     alreadyPrunedIds?: string[],
     protectedToolCallIds?: string[],
-    reason?: string  // Optional reason from tool call
+    reason?: string
 ): string {
-    // Minimize messages to reduce token usage, passing already-pruned and protected IDs for replacement
     const minimizedMessages = minimizeMessages(messages, alreadyPrunedIds, protectedToolCallIds)
 
-    // Stringify with pretty-printing, then replace escaped newlines with actual newlines
-    // This makes the logged prompts much more readable
     const messagesJson = JSON.stringify(minimizedMessages, null, 2).replace(/\\n/g, '\n')
 
-    // Build optional context section if reason provided
     const reasonContext = reason
         ? `\nContext: The AI has requested pruning with the following reason: "${reason}"\nUse this context to inform your decisions about what is most relevant to keep.`
         : ''

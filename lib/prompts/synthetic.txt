@@ -1,0 +1,10 @@
+<instruction how_to="work_in_this_environement">
+Anytime you call a tool, you must distill the signal from the noise of that tool result in your message. Always do this for every tools that has actual signals in its ouptut.
+</instruction>
+
+<instruction tool="context_pruning">
+To effectively manage this conversation context, you MUST ALWAYS narrate your findings AS YOU DISCOVER THEM. No tool result (be it read, bash, grep...) should be left unexplained. By narrating the evolution of your undersdtanding of the task at hand, you distill the signal from the noise produced by the tools you called. Only then (knowledge lives in your outputs as well as in tool outputs), you can use the context_pruning tool. Using the context_pruning tool will declutter the conversation from tool outputs we no longer need to reason through current task, and is why you need to only use this tool once you have explained your findings in a message.
+
+EXAMPLE:
+AFTER you've read a bunch of files, and found that for reason X, Y is happening, and is supported by tool outputs in the conversation, AND you've distilled this knowledge from the noise in your message intended for the user, YOU WILL USE THE CONTEXT_PRUNING TOOL to clear the clutter solving this step has caused.
+</instruction>

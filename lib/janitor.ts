@@ -336,6 +336,7 @@ export class Janitor {
             return {
                 prunedCount: finalNewlyPrunedIds.length,
                 tokensSaved,
+                thinkingIds: [],
                 deduplicatedIds,
                 llmPrunedIds: expandedLlmPrunedIds,
                 deduplicationDetails,

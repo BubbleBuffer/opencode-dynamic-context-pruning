@@ -6,7 +6,8 @@
       "Bash(do grep -l \"\"type\"\":\"\"reasoning\"\" $f)",
       "Bash(done)",
       "WebSearch",
-      "WebFetch(domain:ai-sdk.dev)"
+      "WebFetch(domain:ai-sdk.dev)",
+      "Bash(npm run typecheck:*)"
     ],
     "deny": [],
     "ask": []

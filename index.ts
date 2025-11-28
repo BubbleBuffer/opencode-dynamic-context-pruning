@@ -63,10 +63,21 @@ const plugin: Plugin = (async (ctx) => {
         if (init?.body && typeof init.body === 'string') {
             try {
                 const body = JSON.parse(init.body)
+
                 if (body.messages && Array.isArray(body.messages)) {
                     cacheToolParameters(body.messages)
 
-                    const toolMessages = body.messages.filter((m: any) => m.role === 'tool')
+                    const toolMessages = body.messages.filter((m: any) => {
+                        if (m.role === 'tool') return true;
+                        if (m.role === 'assistant') {
+                            if (Array.isArray(m.content)) {
+                                for (const part of m.content) {
+                                    if (part.type === 'tool_use') return true;
+                                }
+                            }
+                        }
+                        return false;
+                    });
 
                     const allSessions = await ctx.client.session.list()
                     const allPrunedIds = new Set<string>()
@@ -93,6 +104,7 @@ const plugin: Plugin = (async (ctx) => {
                             return m
                         })
 
+                        console.log(replacedCount);
                         if (replacedCount > 0) {
                             logger.info("fetch", "Replaced pruned tool outputs", {
                                 replaced: replacedCount,

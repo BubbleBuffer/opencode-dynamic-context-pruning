@@ -78,12 +78,15 @@ export async function handleGemini(
                         contentModified = true
                         replacedCount++
                         // Preserve thoughtSignature if present (required for Gemini 3 Pro)
-                        // Only replace the response content, not the structure
+                        // response must be a Struct (object), not a plain string
                         return {
                             ...part,
                             functionResponse: {
                                 ...part.functionResponse,
-                                response: PRUNED_CONTENT_MESSAGE
+                                response: {
+                                    name: part.functionResponse.name,
+                                    content: PRUNED_CONTENT_MESSAGE
+                                }
                             }
                         }
                     }

@@ -31,5 +31,3 @@ EXAMPLE WORKFLOW:
 >YOU MUST ALWAYS THINK HIGH SIGNAL LOW NOISE FOR THIS NARRATION
 4. ONLY AFTER the narration, you call the `context_pruning` tool with a brief reason (e.g. "exploration for bug X complete; moving on to next bug").
 </instruction>
-
-

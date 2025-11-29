@@ -254,14 +254,13 @@ const plugin: Plugin = (async (ctx) => {
                                                 if (toolCallId && allPrunedIds.has(toolCallId)) {
                                                     contentModified = true
                                                     replacedCount++
+                                                    // Preserve thoughtSignature if present (required for Gemini 3 Pro)
+                                                    // Only replace the response content, not the structure
                                                     return {
                                                         ...part,
                                                         functionResponse: {
                                                             ...part.functionResponse,
-                                                            response: {
-                                                                name: part.functionResponse.name,
-                                                                content: '[Output removed to save context - information superseded or no longer needed]'
-                                                            }
+                                                            response: '[Output removed to save context - information superseded or no longer needed]'
                                                         }
                                                     }
                                                 }

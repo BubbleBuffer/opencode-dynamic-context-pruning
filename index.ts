@@ -81,7 +81,7 @@ const plugin: Plugin = (async (ctx) => {
     }
 
     return {
-        event: createEventHandler(ctx.client, janitor, logger, config),
+        event: createEventHandler(ctx.client, janitor, logger, config, toolTracker),
         "chat.params": createChatParamsHandler(ctx.client, state, logger),
         tool: config.strategies.onTool.length > 0 ? {
             context_pruning: createPruningTool(janitor, config, toolTracker),

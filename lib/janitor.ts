@@ -62,8 +62,8 @@ export class Janitor {
         }
     }
 
-    async runOnIdle(sessionID: string, strategies: PruningStrategy[]): Promise<void> {
-        await this.runWithStrategies(sessionID, strategies, { trigger: 'idle' })
+    async runOnIdle(sessionID: string, strategies: PruningStrategy[]): Promise<PruningResult | null> {
+        return await this.runWithStrategies(sessionID, strategies, { trigger: 'idle' })
     }
 
     async runForTool(

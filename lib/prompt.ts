@@ -1,9 +1,15 @@
 import { readFileSync } from "fs"
 import { join } from "path"
 
-export function loadPrompt(name: string): string {
+export function loadPrompt(name: string, vars?: Record<string, string>): string {
     const filePath = join(__dirname, "prompts", `${name}.txt`)
-    return readFileSync(filePath, "utf8").trim()
+    let content = readFileSync(filePath, "utf8").trim()
+    if (vars) {
+        for (const [key, value] of Object.entries(vars)) {
+            content = content.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value)
+        }
+    }
+    return content
 }
 
 function minimizeMessages(messages: any[], alreadyPrunedIds?: string[], protectedToolCallIds?: string[]): any[] {
@@ -120,41 +126,15 @@ export function buildAnalysisPrompt(
     reason?: string
 ): string {
     const minimizedMessages = minimizeMessages(messages, alreadyPrunedIds, protectedToolCallIds)
-
     const messagesJson = JSON.stringify(minimizedMessages, null, 2).replace(/\\n/g, '\n')
 
     const reasonContext = reason
         ? `\nContext: The AI has requested pruning with the following reason: "${reason}"\nUse this context to inform your decisions about what is most relevant to keep.`
         : ''
 
-    return `You are a conversation analyzer that identifies obsolete tool outputs in a coding session.
-${reasonContext}
-Your task: Analyze the session history and identify tool call IDs whose outputs are NO LONGER RELEVANT to the current conversation context.
-
-Guidelines for identifying obsolete tool calls:
-1. Exploratory reads that didn't lead to actual edits or meaningful discussion AND were not explicitly requested to be retained
-2. Tool outputs from debugging/fixing an error that has now been resolved
-3. Failed or incorrect tool attempts that were immediately corrected (e.g., reading a file from the wrong path, then reading from the correct path)
-
-DO NOT prune:
-- Tool calls whose outputs are actively being discussed
-- Tool calls that produced errors still being debugged
-- Tool calls that are the MOST RECENT activity in the conversation (these may be intended for future use)
-
-IMPORTANT: Available tool call IDs for analysis: ${unprunedToolCallIds.join(", ")}
-
-The session history below may contain tool calls with IDs not in the available list above, these cannot be pruned. These are either:
-1. Protected tools (marked with toolCallID "<protected>")
-2. Already-pruned tools (marked with toolCallID "<already-pruned>")
-
-ONLY return IDs from the available list above.
-
-Session history (each tool call has a "toolCallID" field):
-${messagesJson}
-
-You MUST respond with valid JSON matching this exact schema:
-{
-  "pruned_tool_call_ids": ["id1", "id2", ...],
-  "reasoning": "explanation of why these IDs were selected"
-}`
+    return loadPrompt("pruning", {
+        reason_context: reasonContext,
+        available_tool_call_ids: unprunedToolCallIds.join(", "),
+        session_history: messagesJson
+    })
 }

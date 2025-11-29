@@ -1,16 +1,16 @@
-export interface ToolResultTracker {
+export interface ToolTracker {
     seenToolResultIds: Set<string>
     toolResultCount: number
 }
 
-export function createToolResultTracker(): ToolResultTracker {
+export function createToolTracker(): ToolTracker {
     return {
         seenToolResultIds: new Set(),
         toolResultCount: 0
     }
 }
 
-function countNewToolResults(messages: any[], tracker: ToolResultTracker): number {
+function countToolResults(messages: any[], tracker: ToolTracker): number {
     let newCount = 0
 
     for (const m of messages) {
@@ -41,13 +41,13 @@ function countNewToolResults(messages: any[], tracker: ToolResultTracker): numbe
  * Counts new tool results and injects nudge instruction every 5th tool result.
  * Returns true if injection happened.
  */
-export function maybeInjectToolResultNudge(
+export function injectNudge(
     messages: any[],
-    tracker: ToolResultTracker,
+    tracker: ToolTracker,
     nudgeText: string
 ): boolean {
     const prevCount = tracker.toolResultCount
-    const newCount = countNewToolResults(messages, tracker)
+    const newCount = countToolResults(messages, tracker)
     
     if (newCount > 0) {
         // Check if we crossed a multiple of 5
@@ -55,7 +55,7 @@ export function maybeInjectToolResultNudge(
         const newBucket = Math.floor(tracker.toolResultCount / 5)
         if (newBucket > prevBucket) {
             // Inject at the END of messages so it's in immediate context
-            return injectNudgeAtEnd(messages, nudgeText)
+            return appendNudge(messages, nudgeText)
         }
     }
     return false
@@ -82,10 +82,10 @@ export function isIgnoredUserMessage(msg: any): boolean {
 }
 
 /**
- * Injects a nudge message at the END of the messages array as a new user message.
+ * Appends a nudge message at the END of the messages array as a new user message.
  * This ensures it's in the model's immediate context, not buried in old messages.
  */
-export function injectNudgeAtEnd(messages: any[], nudgeText: string): boolean {
+function appendNudge(messages: any[], nudgeText: string): boolean {
     messages.push({
         role: 'user',
         content: nudgeText,
@@ -94,7 +94,7 @@ export function injectNudgeAtEnd(messages: any[], nudgeText: string): boolean {
     return true
 }
 
-export function injectSynthInstruction(messages: any[], instruction: string): boolean {
+export function injectSynth(messages: any[], instruction: string): boolean {
     // Find the last user message that is not ignored
     for (let i = messages.length - 1; i >= 0; i--) {
         const msg = messages[i]

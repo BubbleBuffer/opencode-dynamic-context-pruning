@@ -38,21 +38,22 @@ function countToolResults(messages: any[], tracker: ToolTracker): number {
 }
 
 /**
- * Counts new tool results and injects nudge instruction every 5th tool result.
+ * Counts new tool results and injects nudge instruction every N tool results.
  * Returns true if injection happened.
  */
 export function injectNudge(
     messages: any[],
     tracker: ToolTracker,
-    nudgeText: string
+    nudgeText: string,
+    freq: number
 ): boolean {
     const prevCount = tracker.toolResultCount
     const newCount = countToolResults(messages, tracker)
     
     if (newCount > 0) {
-        // Check if we crossed a multiple of 5
-        const prevBucket = Math.floor(prevCount / 5)
-        const newBucket = Math.floor(tracker.toolResultCount / 5)
+        // Check if we crossed a multiple of freq
+        const prevBucket = Math.floor(prevCount / freq)
+        const newBucket = Math.floor(tracker.toolResultCount / freq)
         if (newBucket > prevBucket) {
             // Inject at the END of messages so it's in immediate context
             return appendNudge(messages, nudgeText)

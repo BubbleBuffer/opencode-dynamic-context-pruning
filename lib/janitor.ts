@@ -1,12 +1,14 @@
 import { z } from "zod"
 import type { Logger } from "./logger"
 import type { PruningStrategy } from "./config"
+import type { PluginState } from "./state"
 import { buildAnalysisPrompt } from "./prompt"
 import { selectModel, extractModelFromSession } from "./model-selector"
 import { estimateTokensBatch, formatTokenCount } from "./tokenizer"
 import { detectDuplicates } from "./deduplicator"
 import { extractParameterKey } from "./display-utils"
 import { saveSessionState } from "./state-persistence"
+import { ensureSessionRestored } from "./state"
 
 export interface SessionStats {
     totalToolsPruned: number
@@ -30,20 +32,28 @@ export interface PruningOptions {
 }
 
 export class Janitor {
+    private prunedIdsState: Map<string, string[]>
+    private statsState: Map<string, SessionStats>
+    private toolParametersCache: Map<string, any>
+    private modelCache: Map<string, { providerID: string; modelID: string }>
+
     constructor(
         private client: any,
-        private prunedIdsState: Map<string, string[]>,
-        private statsState: Map<string, SessionStats>,
+        private state: PluginState,
         private logger: Logger,
-        private toolParametersCache: Map<string, any>,
         private protectedTools: string[],
-        private modelCache: Map<string, { providerID: string; modelID: string }>,
         private configModel?: string,
         private showModelErrorToasts: boolean = true,
         private strictModelSelection: boolean = false,
         private pruningSummary: "off" | "minimal" | "detailed" = "detailed",
         private workingDirectory?: string
-    ) { }
+    ) {
+        // Bind state references for convenience
+        this.prunedIdsState = state.prunedIds
+        this.statsState = state.stats
+        this.toolParametersCache = state.toolParameters
+        this.modelCache = state.model
+    }
 
     private async sendIgnoredMessage(sessionID: string, text: string, agent?: string) {
         try {
@@ -85,6 +95,9 @@ export class Janitor {
             if (strategies.length === 0) {
                 return null
             }
+
+            // Ensure persisted state is restored before processing
+            await ensureSessionRestored(this.state, sessionID, this.logger)
 
             const [sessionInfoResponse, messagesResponse] = await Promise.all([
                 this.client.session.get({ path: { id: sessionID } }),

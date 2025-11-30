@@ -28,12 +28,9 @@ const plugin: Plugin = (async (ctx) => {
 
     const janitor = new Janitor(
         ctx.client,
-        state.prunedIds,
-        state.stats,
+        state,
         logger,
-        state.toolParameters,
         config.protectedTools,
-        state.model,
         config.model,
         config.showModelErrorToasts,
         config.strictModelSelection,

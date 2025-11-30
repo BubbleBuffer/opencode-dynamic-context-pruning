@@ -27,6 +27,9 @@ export function createPruningTool(janitor: Janitor, config: PluginConfig, toolTr
                 args.reason
             )
 
+            // Skip next idle pruning since we just pruned
+            toolTracker.skipNextIdle = true
+
             // Reset nudge counter to prevent immediate re-nudging after pruning
             if (config.nudge_freq > 0) {
                 resetToolTrackerCount(toolTracker, config.nudge_freq)

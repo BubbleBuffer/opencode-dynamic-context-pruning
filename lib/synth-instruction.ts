@@ -1,10 +1,11 @@
 export interface ToolTracker {
     seenToolResultIds: Set<string>
     toolResultCount: number
+    skipNextIdle: boolean
 }
 
 export function createToolTracker(): ToolTracker {
-    return { seenToolResultIds: new Set(), toolResultCount: 0 }
+    return { seenToolResultIds: new Set(), toolResultCount: 0, skipNextIdle: false }
 }
 
 export function resetToolTrackerCount(tracker: ToolTracker, freq: number): void {
@@ -52,6 +53,10 @@ const openaiAdapter: MessageFormatAdapter = {
                 if (!tracker.seenToolResultIds.has(id)) {
                     tracker.seenToolResultIds.add(id)
                     newCount++
+                    // Reset skipNextIdle if this isn't our pruning tool
+                    if (m.name !== 'context_pruning') {
+                        tracker.skipNextIdle = false
+                    }
                 }
             } else if (m.role === 'user' && Array.isArray(m.content)) {
                 for (const part of m.content) {
@@ -60,6 +65,10 @@ const openaiAdapter: MessageFormatAdapter = {
                         if (!tracker.seenToolResultIds.has(id)) {
                             tracker.seenToolResultIds.add(id)
                             newCount++
+                            // Reset skipNextIdle if this isn't our pruning tool
+                            if (part.name !== 'context_pruning') {
+                                tracker.skipNextIdle = false
+                            }
                         }
                     }
                 }
@@ -122,6 +131,10 @@ const geminiAdapter: MessageFormatAdapter = {
                     if (!tracker.seenToolResultIds.has(pseudoId)) {
                         tracker.seenToolResultIds.add(pseudoId)
                         newCount++
+                        // Reset skipNextIdle if this isn't our pruning tool
+                        if (funcName !== 'context_pruning') {
+                            tracker.skipNextIdle = false
+                        }
                     }
                 }
             }
@@ -166,6 +179,10 @@ const responsesAdapter: MessageFormatAdapter = {
                 if (!tracker.seenToolResultIds.has(id)) {
                     tracker.seenToolResultIds.add(id)
                     newCount++
+                    // Reset skipNextIdle if this isn't our pruning tool
+                    if (item.name !== 'context_pruning') {
+                        tracker.skipNextIdle = false
+                    }
                 }
             }
         }

@@ -28,6 +28,8 @@ export async function handleOpenAIChatAndAnthropic(
 
     // Inject synthetic instructions if onTool strategies are enabled
     if (ctx.config.strategies.onTool.length > 0) {
+        const skipIdleBefore = ctx.toolTracker.skipNextIdle
+
         // Inject periodic nudge based on tool result count
         if (ctx.config.nudge_freq > 0) {
             if (injectNudge(body.messages, ctx.toolTracker, ctx.prompts.nudgeInstruction, ctx.config.nudge_freq)) {
@@ -36,7 +38,10 @@ export async function handleOpenAIChatAndAnthropic(
             }
         }
 
-        // Inject synthetic instruction into last user message
+        if (skipIdleBefore && !ctx.toolTracker.skipNextIdle) {
+            ctx.logger.debug("fetch", "skipNextIdle was reset by new tool results")
+        }
+
         if (injectSynth(body.messages, ctx.prompts.synthInstruction)) {
             ctx.logger.info("fetch", "Injected synthetic instruction")
             modified = true

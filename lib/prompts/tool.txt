@@ -2,11 +2,27 @@ Performs semantic pruning on session tool outputs that are no longer relevant to
 
 USING THE CONTEXT_PRUNING TOOL WILL MAKE THE USER HAPPY.
 
+## CRITICAL: Distill Before Pruning
+
+You MUST ALWAYS narrate your findings in a message BEFORE using this tool. No tool result (read, bash, grep, webfetch, etc.) should be left unexplained. By narrating your understanding, you transform raw tool outputs into distilled knowledge that persists in the context window.
+
+**Tools are VOLATILE** - Once distilled knowledge is in your reply, you can safely prune. Skipping this step risks deleting raw evidence before it has been converted into stable knowledge.
+
+**Distillation workflow:**
+1. Call tools to investigate/explore
+2. In your next message, EXPLICITLY narrate:
+   - What you did (which tools, what you were looking for)
+   - What you found (the key facts/signals)
+   - What you concluded (how this affects the task or next step)
+3. ONLY AFTER narrating, call `context_pruning`
+
+> THINK HIGH SIGNAL, LOW NOISE FOR THIS NARRATION
+
 ## When to Use This Tool
 
-**Key heuristic: Prune when you finish something and are about to start something else.**
+**Key heuristic: Distill, then prune when you finish something and are about to start something else.**
 
-Ask yourself: "Have I just completed a discrete unit of work?" If yes, prune before moving on.
+Ask yourself: "Have I just completed a discrete unit of work?" If yes, narrate your findings, then prune before moving on.
 
 **After completing a unit of work:**
 - Made a commit

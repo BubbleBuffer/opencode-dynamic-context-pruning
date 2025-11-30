@@ -1,11 +1,10 @@
 import type { PluginState } from "./state"
 import type { Logger } from "./logger"
 import type { Janitor } from "./janitor"
-import type { PluginConfig } from "./config"
+import type { PluginConfig, PruningStrategy } from "./config"
+import type { ToolTracker } from "./synth-instruction"
+import { resetToolTrackerCount } from "./synth-instruction"
 
-/**
- * Checks if a session is a subagent session.
- */
 export async function isSubagentSession(client: any, sessionID: string): Promise<boolean> {
     try {
         const result = await client.session.get({ path: { id: sessionID } })
@@ -15,23 +14,43 @@ export async function isSubagentSession(client: any, sessionID: string): Promise
     }
 }
 
-/**
- * Creates the event handler for session status changes.
- */
+function toolStrategiesCoveredByIdle(onIdle: PruningStrategy[], onTool: PruningStrategy[]): boolean {
+    return onTool.every(strategy => onIdle.includes(strategy))
+}
+
 export function createEventHandler(
     client: any,
     janitor: Janitor,
     logger: Logger,
-    config: PluginConfig
+    config: PluginConfig,
+    toolTracker?: ToolTracker
 ) {
     return async ({ event }: { event: any }) => {
         if (event.type === "session.status" && event.properties.status.type === "idle") {
             if (await isSubagentSession(client, event.properties.sessionID)) return
             if (config.strategies.onIdle.length === 0) return
 
-            janitor.runOnIdle(event.properties.sessionID, config.strategies.onIdle).catch(err => {
+            // Skip idle pruning if the last tool used was context_pruning
+            // and idle strategies cover the same work as tool strategies
+            if (toolTracker?.skipNextIdle) {
+                toolTracker.skipNextIdle = false
+                if (toolStrategiesCoveredByIdle(config.strategies.onIdle, config.strategies.onTool)) {
+                    return
+                }
+            }
+
+            try {
+                const result = await janitor.runOnIdle(event.properties.sessionID, config.strategies.onIdle)
+
+                // Reset nudge counter if idle pruning succeeded and covers tool strategies
+                if (result && result.prunedCount > 0 && toolTracker && config.nudge_freq > 0) {
+                    if (toolStrategiesCoveredByIdle(config.strategies.onIdle, config.strategies.onTool)) {
+                        resetToolTrackerCount(toolTracker, config.nudge_freq)
+                    }
+                }
+            } catch (err: any) {
                 logger.error("janitor", "Failed", { error: err.message })
-            })
+            }
         }
     }
 }

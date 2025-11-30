@@ -13,7 +13,7 @@ Add to your OpenCode config:
 ```jsonc
 // opencode.jsonc
 {
-  "plugin": ["@tarquinen/opencode-dcp@0.3.24"]
+  "plugin": ["@tarquinen/opencode-dcp@0.3.25"]
 }
 ```
 
@@ -31,13 +31,19 @@ DCP implements two complementary strategies:
 
 ## Context Pruning Tool
 
-When `strategies.onTool` is enabled, DCP exposes a `context_pruning` tool to Opencode that the AI can call to trigger pruning on demand. To help the AI use this tool effectively, DCP also injects guidance.
+When `strategies.onTool` is enabled, DCP exposes a `context_pruning` tool to Opencode that the AI can call to trigger pruning on demand.
 
 When `nudge_freq` is enabled, injects reminders (every `nudge_freq` tool results) prompting the AI to consider pruning when appropriate.
 
 ## How It Works
 
-DCP is **non-destructive**—pruning state is kept in memory only. When requests go to your LLM, DCP replaces pruned outputs with a placeholder; original session data stays intact.
+Your session history is never modified. DCP replaces pruned outputs with a placeholder before sending requests to your LLM.
+
+## Impact on Prompt Caching
+
+LLM providers like Anthropic and OpenAI cache prompts based on exact prefix matching. When DCP prunes a tool output, it changes the message content, which invalidates cached prefixes from that point forward.
+
+**Trade-off:** You lose some cache read benefits but gain larger token savings from reduced context size. In most cases, the token savings outweigh the cache miss cost—especially in long sessions where context bloat becomes significant.
 
 ## Configuration
 
@@ -53,7 +59,7 @@ DCP uses its own config file (`~/.config/opencode/dcp.jsonc` or `.opencode/dcp.j
 | `showModelErrorToasts` | `true` | Show notifications on model fallback |
 | `strictModelSelection` | `false` | Only run AI analysis with session or configured model (disables fallback models) |
 | `pruning_summary` | `"detailed"` | `"off"`, `"minimal"`, or `"detailed"` |
-| `nudge_freq` | `5` | Remind AI to prune every N tool results (0 = disabled) |
+| `nudge_freq` | `10` | How often to remind AI to prune (lower = more frequent) |
 | `protectedTools` | `["task", "todowrite", "todoread", "context_pruning"]` | Tools that are never pruned |
 | `strategies.onIdle` | `["deduplication", "ai-analysis"]` | Strategies for automatic pruning |
 | `strategies.onTool` | `["deduplication", "ai-analysis"]` | Strategies when AI calls `context_pruning` |

@@ -23,6 +23,8 @@ export async function handleGemini(
 
     // Inject synthetic instructions if onTool strategies are enabled
     if (ctx.config.strategies.onTool.length > 0) {
+        const skipIdleBefore = ctx.toolTracker.skipNextIdle
+
         // Inject periodic nudge based on tool result count
         if (ctx.config.nudge_freq > 0) {
             if (injectNudgeGemini(body.contents, ctx.toolTracker, ctx.prompts.nudgeInstruction, ctx.config.nudge_freq)) {
@@ -31,7 +33,10 @@ export async function handleGemini(
             }
         }
 
-        // Inject synthetic instruction into last user content
+        if (skipIdleBefore && !ctx.toolTracker.skipNextIdle) {
+            ctx.logger.debug("fetch", "skipNextIdle was reset by new tool results (Gemini)")
+        }
+
         if (injectSynthGemini(body.contents, ctx.prompts.synthInstruction)) {
             ctx.logger.info("fetch", "Injected synthetic instruction (Gemini)")
             modified = true

@@ -12,6 +12,7 @@ import type { SessionStats } from "./janitor";
 import type { Logger } from "./logger";
 
 export interface PersistedSessionState {
+    sessionName?: string;
     prunedIds: string[];
     stats: SessionStats;
     lastUpdated: string;
@@ -41,12 +42,14 @@ export async function saveSessionState(
     sessionId: string,
     prunedIds: Set<string>,
     stats: SessionStats,
-    logger?: Logger
+    logger?: Logger,
+    sessionName?: string
 ): Promise<void> {
     try {
         await ensureStorageDir();
 
         const state: PersistedSessionState = {
+            ...(sessionName && { sessionName }),
             prunedIds: Array.from(prunedIds),
             stats,
             lastUpdated: new Date().toISOString(),

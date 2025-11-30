@@ -329,7 +329,8 @@ export class Janitor {
             const allPrunedIds = [...new Set([...alreadyPrunedIds, ...finalPrunedIds])]
             this.prunedIdsState.set(sessionID, allPrunedIds)
 
-            saveSessionState(sessionID, new Set(allPrunedIds), sessionStats, this.logger).catch(err => {
+            const sessionName = sessionInfo?.title
+            saveSessionState(sessionID, new Set(allPrunedIds), sessionStats, this.logger, sessionName).catch(err => {
                 this.logger.error("janitor", "Failed to persist state", { error: err.message })
             })
 

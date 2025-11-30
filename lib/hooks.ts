@@ -14,7 +14,7 @@ export async function isSubagentSession(client: any, sessionID: string): Promise
     }
 }
 
-function idleStrategiesCoverTool(onIdle: PruningStrategy[], onTool: PruningStrategy[]): boolean {
+function toolStrategiesCoveredByIdle(onIdle: PruningStrategy[], onTool: PruningStrategy[]): boolean {
     return onTool.every(strategy => onIdle.includes(strategy))
 }
 
@@ -34,7 +34,7 @@ export function createEventHandler(
             // and idle strategies cover the same work as tool strategies
             if (toolTracker?.skipNextIdle) {
                 toolTracker.skipNextIdle = false
-                if (idleStrategiesCoverTool(config.strategies.onIdle, config.strategies.onTool)) {
+                if (toolStrategiesCoveredByIdle(config.strategies.onIdle, config.strategies.onTool)) {
                     return
                 }
             }
@@ -44,7 +44,7 @@ export function createEventHandler(
 
                 // Reset nudge counter if idle pruning succeeded and covers tool strategies
                 if (result && result.prunedCount > 0 && toolTracker && config.nudge_freq > 0) {
-                    if (idleStrategiesCoverTool(config.strategies.onIdle, config.strategies.onTool)) {
+                    if (toolStrategiesCoveredByIdle(config.strategies.onIdle, config.strategies.onTool)) {
                         resetToolTrackerCount(toolTracker, config.nudge_freq)
                     }
                 }

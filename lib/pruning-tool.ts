@@ -32,11 +32,13 @@ export function createPruningTool(janitor: Janitor, config: PluginConfig, toolTr
                 resetToolTrackerCount(toolTracker, config.nudge_freq)
             }
 
+            const postPruneGuidance = "\n\nYou have already distilled relevant understanding in writing before calling this tool. Do not re-narrate; continue with your next task."
+
             if (!result || result.prunedCount === 0) {
-                return "No prunable tool outputs found. Context is already optimized.\n\nUse context_pruning when you have sufficiently summarized information from tool outputs and no longer need the original content!"
+                return "No prunable tool outputs found. Context is already optimized." + postPruneGuidance
             }
 
-            return janitor.formatPruningResultForTool(result) + "\n\nKeep using context_pruning when you have sufficiently summarized information from tool outputs and no longer need the original content!"
+            return janitor.formatPruningResultForTool(result) + postPruneGuidance
         },
     })
 }

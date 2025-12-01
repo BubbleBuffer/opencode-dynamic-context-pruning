@@ -37,7 +37,7 @@ export async function handleGemini(
             ctx.logger.debug("fetch", "skipNextIdle was reset by new tool results (Gemini)")
         }
 
-        if (injectSynthGemini(body.contents, ctx.prompts.synthInstruction)) {
+        if (injectSynthGemini(body.contents, ctx.prompts.synthInstruction, ctx.prompts.nudgeInstruction)) {
             ctx.logger.info("fetch", "Injected synthetic instruction (Gemini)")
             modified = true
         }

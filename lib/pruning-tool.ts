@@ -32,7 +32,7 @@ export function createPruningTool(janitor: Janitor, config: PluginConfig, toolTr
 
             // Reset nudge counter to prevent immediate re-nudging after pruning
             if (config.nudge_freq > 0) {
-                resetToolTrackerCount(toolTracker, config.nudge_freq)
+                resetToolTrackerCount(toolTracker)
             }
 
             const postPruneGuidance = "\n\nYou have already distilled relevant understanding in writing before calling this tool. Do not re-narrate; continue with your next task."

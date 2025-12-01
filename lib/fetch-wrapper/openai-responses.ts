@@ -42,7 +42,7 @@ export async function handleOpenAIResponses(
             ctx.logger.debug("fetch", "skipNextIdle was reset by new tool results (Responses API)")
         }
 
-        if (injectSynthResponses(body.input, ctx.prompts.synthInstruction)) {
+        if (injectSynthResponses(body.input, ctx.prompts.synthInstruction, ctx.prompts.nudgeInstruction)) {
             ctx.logger.info("fetch", "Injected synthetic instruction (Responses API)")
             modified = true
         }

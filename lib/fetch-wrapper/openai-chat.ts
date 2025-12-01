@@ -42,7 +42,7 @@ export async function handleOpenAIChatAndAnthropic(
             ctx.logger.debug("fetch", "skipNextIdle was reset by new tool results")
         }
 
-        if (injectSynth(body.messages, ctx.prompts.synthInstruction)) {
+        if (injectSynth(body.messages, ctx.prompts.synthInstruction, ctx.prompts.nudgeInstruction)) {
             ctx.logger.info("fetch", "Injected synthetic instruction")
             modified = true
         }

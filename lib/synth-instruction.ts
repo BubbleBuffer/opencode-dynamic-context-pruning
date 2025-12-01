@@ -1,6 +1,6 @@
 export interface ToolTracker {
     seenToolResultIds: Set<string>
-    toolResultCount: number
+    toolResultCount: number  // Tools since last prune
     skipNextIdle: boolean
     getToolName?: (callId: string) => string | undefined
 }
@@ -9,9 +9,9 @@ export function createToolTracker(): ToolTracker {
     return { seenToolResultIds: new Set(), toolResultCount: 0, skipNextIdle: false }
 }
 
-export function resetToolTrackerCount(tracker: ToolTracker, freq: number): void {
-    const currentBucket = Math.floor(tracker.toolResultCount / freq)
-    tracker.toolResultCount = currentBucket * freq
+/** Reset tool count to 0 (called after a prune event) */
+export function resetToolTrackerCount(tracker: ToolTracker): void {
+    tracker.toolResultCount = 0
 }
 
 /** Adapter interface for format-specific message operations */
@@ -20,7 +20,7 @@ interface MessageFormatAdapter {
     appendNudge(messages: any[], nudgeText: string): void
 }
 
-/** Generic nudge injection - counts tool results and injects nudge every N results */
+/** Generic nudge injection - nudges every fetch once tools since last prune exceeds freq */
 function injectNudgeCore(
     messages: any[],
     tracker: ToolTracker,
@@ -28,15 +28,13 @@ function injectNudgeCore(
     freq: number,
     adapter: MessageFormatAdapter
 ): boolean {
-    const prevCount = tracker.toolResultCount
-    const newCount = adapter.countToolResults(messages, tracker)
-    if (newCount > 0) {
-        const prevBucket = Math.floor(prevCount / freq)
-        const newBucket = Math.floor(tracker.toolResultCount / freq)
-        if (newBucket > prevBucket) {
-            adapter.appendNudge(messages, nudgeText)
-            return true
-        }
+    // Count any new tool results
+    adapter.countToolResults(messages, tracker)
+    
+    // Once we've exceeded the threshold, nudge on every fetch
+    if (tracker.toolResultCount > freq) {
+        adapter.appendNudge(messages, nudgeText)
+        return true
     }
     return false
 }
@@ -79,27 +77,29 @@ const openaiAdapter: MessageFormatAdapter = {
         return newCount
     },
     appendNudge(messages, nudgeText) {
-        messages.push({ role: 'user', content: nudgeText, synthetic: true })
+        messages.push({ role: 'user', content: nudgeText })
     }
-}
-
-export function isIgnoredUserMessage(msg: any): boolean {
-    if (!msg || msg.role !== 'user') return false
-    if (msg.ignored || msg.info?.ignored || msg.synthetic) return true
-    if (Array.isArray(msg.content) && msg.content.length > 0) {
-        if (msg.content.every((part: any) => part?.ignored)) return true
-    }
-    return false
 }
 
 export function injectNudge(messages: any[], tracker: ToolTracker, nudgeText: string, freq: number): boolean {
     return injectNudgeCore(messages, tracker, nudgeText, freq, openaiAdapter)
 }
 
-export function injectSynth(messages: any[], instruction: string): boolean {
+/** Check if a message content matches nudge text (OpenAI/Anthropic format) */
+function isNudgeMessage(msg: any, nudgeText: string): boolean {
+    if (typeof msg.content === 'string') {
+        return msg.content === nudgeText
+    }
+    return false
+}
+
+export function injectSynth(messages: any[], instruction: string, nudgeText: string): boolean {
     for (let i = messages.length - 1; i >= 0; i--) {
         const msg = messages[i]
-        if (msg.role === 'user' && !isIgnoredUserMessage(msg)) {
+        if (msg.role === 'user') {
+            // Skip nudge messages - find real user message
+            if (isNudgeMessage(msg, nudgeText)) continue
+            
             if (typeof msg.content === 'string') {
                 if (msg.content.includes(instruction)) return false
                 msg.content = msg.content + '\n\n' + instruction
@@ -151,10 +151,22 @@ export function injectNudgeGemini(contents: any[], tracker: ToolTracker, nudgeTe
     return injectNudgeCore(contents, tracker, nudgeText, freq, geminiAdapter)
 }
 
-export function injectSynthGemini(contents: any[], instruction: string): boolean {
+/** Check if a Gemini content matches nudge text */
+function isNudgeContentGemini(content: any, nudgeText: string): boolean {
+    if (Array.isArray(content.parts) && content.parts.length === 1) {
+        const part = content.parts[0]
+        return part?.text === nudgeText
+    }
+    return false
+}
+
+export function injectSynthGemini(contents: any[], instruction: string, nudgeText: string): boolean {
     for (let i = contents.length - 1; i >= 0; i--) {
         const content = contents[i]
         if (content.role === 'user' && Array.isArray(content.parts)) {
+            // Skip nudge messages - find real user message
+            if (isNudgeContentGemini(content, nudgeText)) continue
+            
             const alreadyInjected = content.parts.some(
                 (part: any) => part?.text && typeof part.text === 'string' && part.text.includes(instruction)
             )
@@ -198,10 +210,21 @@ export function injectNudgeResponses(input: any[], tracker: ToolTracker, nudgeTe
     return injectNudgeCore(input, tracker, nudgeText, freq, responsesAdapter)
 }
 
-export function injectSynthResponses(input: any[], instruction: string): boolean {
+/** Check if a Responses API item matches nudge text */
+function isNudgeItemResponses(item: any, nudgeText: string): boolean {
+    if (typeof item.content === 'string') {
+        return item.content === nudgeText
+    }
+    return false
+}
+
+export function injectSynthResponses(input: any[], instruction: string, nudgeText: string): boolean {
     for (let i = input.length - 1; i >= 0; i--) {
         const item = input[i]
         if (item.type === 'message' && item.role === 'user') {
+            // Skip nudge messages - find real user message
+            if (isNudgeItemResponses(item, nudgeText)) continue
+            
             if (typeof item.content === 'string') {
                 if (item.content.includes(instruction)) return false
                 item.content = item.content + '\n\n' + instruction

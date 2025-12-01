@@ -45,7 +45,7 @@ export function createEventHandler(
                 // Reset nudge counter if idle pruning succeeded and covers tool strategies
                 if (result && result.prunedCount > 0 && toolTracker && config.nudge_freq > 0) {
                     if (toolStrategiesCoveredByIdle(config.strategies.onIdle, config.strategies.onTool)) {
-                        resetToolTrackerCount(toolTracker, config.nudge_freq)
+                        resetToolTrackerCount(toolTracker)
                     }
                 }
             } catch (err: any) {

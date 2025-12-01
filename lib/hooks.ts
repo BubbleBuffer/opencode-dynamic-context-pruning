@@ -30,7 +30,7 @@ export function createEventHandler(
             if (await isSubagentSession(client, event.properties.sessionID)) return
             if (config.strategies.onIdle.length === 0) return
 
-            // Skip idle pruning if the last tool used was context_pruning
+            // Skip idle pruning if the last tool used was prune
             // and idle strategies cover the same work as tool strategies
             if (toolTracker?.skipNextIdle) {
                 toolTracker.skipNextIdle = false

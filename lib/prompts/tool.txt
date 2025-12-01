@@ -1,6 +1,6 @@
 Performs semantic pruning on session tool outputs that are no longer relevant to the current task. Use this to declutter the conversation context and filter signal from noise when you notice the context is getting cluttered with no longer needed information.
 
-USING THE CONTEXT_PRUNING TOOL WILL MAKE THE USER HAPPY.
+USING THE PRUNE TOOL WILL MAKE THE USER HAPPY.
 
 ## CRITICAL: Distill Before Pruning
 
@@ -14,7 +14,7 @@ You MUST ALWAYS narrate your findings in a message BEFORE using this tool. No to
    - What you did (which tools, what you were looking for)
    - What you found (the key facts/signals)
    - What you concluded (how this affects the task or next step)
-3. ONLY AFTER narrating, call `context_pruning`
+3. ONLY AFTER narrating, call `prune`
 
 > THINK HIGH SIGNAL, LOW NOISE FOR THIS NARRATION
 
@@ -43,18 +43,18 @@ Working through a list of items:
 User: Review these 3 issues and fix the easy ones.
 Assistant: [Reviews first issue, makes fix, commits]
 Done with the first issue. Let me prune before moving to the next one.
-[Uses context_pruning with reason: "completed first issue, moving to next"]
+[Uses prune with reason: "completed first issue, moving to next"]
 </example>
 
 <example>
 After exploring the codebase to understand it:
 Assistant: I've reviewed the relevant files. Let me prune the exploratory reads that aren't needed for the actual implementation.
-[Uses context_pruning with reason: "exploration complete, starting implementation"]
+[Uses prune with reason: "exploration complete, starting implementation"]
 </example>
 
 <example>
 After completing any task:
 Assistant: [Finishes task - commit, answer, fix, etc.]
 Before we continue, let me prune the context from that work.
-[Uses context_pruning with reason: "task complete"]
+[Uses prune with reason: "task complete"]
 </example>

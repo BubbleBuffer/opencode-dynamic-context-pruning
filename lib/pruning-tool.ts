@@ -6,11 +6,11 @@ import { resetToolTrackerCount } from "./synth-instruction"
 import { loadPrompt } from "./prompt"
 import { isSubagentSession } from "./hooks"
 
-/** Tool description for the context_pruning tool, loaded from prompts/tool.txt */
+/** Tool description for the prune tool, loaded from prompts/tool.txt */
 export const CONTEXT_PRUNING_DESCRIPTION = loadPrompt("tool")
 
 /**
- * Creates the context_pruning tool definition.
+ * Creates the prune tool definition.
  * Returns a tool definition that can be passed to the plugin's tool registry.
  */
 export function createPruningTool(client: any, janitor: Janitor, config: PluginConfig, toolTracker: ToolTracker): ReturnType<typeof tool> {

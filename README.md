@@ -62,7 +62,7 @@ DCP uses its own config file (`~/.config/opencode/dcp.jsonc` or `.opencode/dcp.j
 | `nudge_freq` | `10` | How often to remind AI to prune (lower = more frequent) |
 | `protectedTools` | `["task", "todowrite", "todoread", "prune"]` | Tools that are never pruned |
 | `strategies.onIdle` | `["deduplication", "ai-analysis"]` | Strategies for automatic pruning |
-| `strategies.onTool` | `["deduplication", "ai-analysis"]` | Strategies when AI calls `context_pruning` |
+| `strategies.onTool` | `["deduplication", "ai-analysis"]` | Strategies when AI calls `prune` |
 
 **Strategies:** `"deduplication"` (fast, zero LLM cost) and `"ai-analysis"` (maximum savings). Empty array disables that trigger.
 

@@ -4,6 +4,7 @@ import type { PluginConfig } from "./config"
 import type { ToolTracker } from "./synth-instruction"
 import { resetToolTrackerCount } from "./synth-instruction"
 import { loadPrompt } from "./prompt"
+import { isSubagentSession } from "./hooks"
 
 /** Tool description for the context_pruning tool, loaded from prompts/tool.txt */
 export const CONTEXT_PRUNING_DESCRIPTION = loadPrompt("tool")
@@ -12,7 +13,7 @@ export const CONTEXT_PRUNING_DESCRIPTION = loadPrompt("tool")
  * Creates the context_pruning tool definition.
  * Returns a tool definition that can be passed to the plugin's tool registry.
  */
-export function createPruningTool(janitor: Janitor, config: PluginConfig, toolTracker: ToolTracker): ReturnType<typeof tool> {
+export function createPruningTool(client: any, janitor: Janitor, config: PluginConfig, toolTracker: ToolTracker): ReturnType<typeof tool> {
     return tool({
         description: CONTEXT_PRUNING_DESCRIPTION,
         args: {
@@ -21,6 +22,12 @@ export function createPruningTool(janitor: Janitor, config: PluginConfig, toolTr
             ),
         },
         async execute(args, ctx) {
+            // Skip pruning in subagent sessions, but guide the model to provide a proper summary
+            // TODO: implement something better here when PR 4913 is merged
+            if (await isSubagentSession(client, ctx.sessionID)) {
+                return "Pruning is disabled in subagent sessions. IMPORTANT: You must now provide your final summary/findings to return to the main agent. Do not call this tool again - simply respond with your results."
+            }
+
             const result = await janitor.runForTool(
                 ctx.sessionID,
                 config.strategies.onTool,

@@ -33,7 +33,7 @@ export async function handleOpenAIChatAndAnthropic(
         // Inject periodic nudge based on tool result count
         if (ctx.config.nudge_freq > 0) {
             if (injectNudge(body.messages, ctx.toolTracker, ctx.prompts.nudgeInstruction, ctx.config.nudge_freq)) {
-                ctx.logger.info("fetch", "Injected nudge instruction")
+                // ctx.logger.info("fetch", "Injected nudge instruction")
                 modified = true
             }
         }
@@ -43,7 +43,7 @@ export async function handleOpenAIChatAndAnthropic(
         }
 
         if (injectSynth(body.messages, ctx.prompts.synthInstruction, ctx.prompts.nudgeInstruction)) {
-            ctx.logger.info("fetch", "Injected synthetic instruction")
+            // ctx.logger.info("fetch", "Injected synthetic instruction")
             modified = true
         }
     }

@@ -53,7 +53,7 @@ const openaiAdapter: MessageFormatAdapter = {
                     tracker.seenToolResultIds.add(id)
                     newCount++
                     const toolName = m.name || tracker.getToolName?.(m.tool_call_id)
-                    if (toolName !== 'context_pruning') {
+                    if (toolName !== 'prune') {
                         tracker.skipNextIdle = false
                     }
                 }
@@ -65,7 +65,7 @@ const openaiAdapter: MessageFormatAdapter = {
                             tracker.seenToolResultIds.add(id)
                             newCount++
                             const toolName = tracker.getToolName?.(part.tool_use_id)
-                            if (toolName !== 'context_pruning') {
+                            if (toolName !== 'prune') {
                                 tracker.skipNextIdle = false
                             }
                         }
@@ -132,7 +132,7 @@ const geminiAdapter: MessageFormatAdapter = {
                     if (!tracker.seenToolResultIds.has(pseudoId)) {
                         tracker.seenToolResultIds.add(pseudoId)
                         newCount++
-                        if (funcName !== 'context_pruning') {
+                        if (funcName !== 'prune') {
                             tracker.skipNextIdle = false
                         }
                     }
@@ -192,7 +192,7 @@ const responsesAdapter: MessageFormatAdapter = {
                     tracker.seenToolResultIds.add(id)
                     newCount++
                     const toolName = item.name || tracker.getToolName?.(item.call_id)
-                    if (toolName !== 'context_pruning') {
+                    if (toolName !== 'prune') {
                         tracker.skipNextIdle = false
                     }
                 }

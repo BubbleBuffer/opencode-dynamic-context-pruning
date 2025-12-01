@@ -116,7 +116,7 @@ function createDefaultConfig(): void {
   "strategies": {
     // Strategies to run when session goes idle
     "onIdle": ["deduplication", "ai-analysis"],
-    // Strategies to run when AI calls context_pruning tool
+    // Strategies to run when AI calls prune tool
     "onTool": ["deduplication", "ai-analysis"]
   },
   // Summary display: "off", "minimal", or "detailed"

@@ -28,7 +28,7 @@ export async function handleGemini(
         // Inject periodic nudge based on tool result count
         if (ctx.config.nudge_freq > 0) {
             if (injectNudgeGemini(body.contents, ctx.toolTracker, ctx.prompts.nudgeInstruction, ctx.config.nudge_freq)) {
-                ctx.logger.info("fetch", "Injected nudge instruction (Gemini)")
+                // ctx.logger.info("fetch", "Injected nudge instruction (Gemini)")
                 modified = true
             }
         }
@@ -38,7 +38,7 @@ export async function handleGemini(
         }
 
         if (injectSynthGemini(body.contents, ctx.prompts.synthInstruction, ctx.prompts.nudgeInstruction)) {
-            ctx.logger.info("fetch", "Injected synthetic instruction (Gemini)")
+            // ctx.logger.info("fetch", "Injected synthetic instruction (Gemini)")
             modified = true
         }
     }

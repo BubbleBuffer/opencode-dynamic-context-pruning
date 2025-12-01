@@ -33,7 +33,7 @@ export async function handleOpenAIResponses(
         // Inject periodic nudge based on tool result count
         if (ctx.config.nudge_freq > 0) {
             if (injectNudgeResponses(body.input, ctx.toolTracker, ctx.prompts.nudgeInstruction, ctx.config.nudge_freq)) {
-                ctx.logger.info("fetch", "Injected nudge instruction (Responses API)")
+                // ctx.logger.info("fetch", "Injected nudge instruction (Responses API)")
                 modified = true
             }
         }
@@ -43,7 +43,7 @@ export async function handleOpenAIResponses(
         }
 
         if (injectSynthResponses(body.input, ctx.prompts.synthInstruction, ctx.prompts.nudgeInstruction)) {
-            ctx.logger.info("fetch", "Injected synthetic instruction (Responses API)")
+            // ctx.logger.info("fetch", "Injected synthetic instruction (Responses API)")
             modified = true
         }
     }

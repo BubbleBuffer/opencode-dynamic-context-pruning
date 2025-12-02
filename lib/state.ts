@@ -22,6 +22,10 @@ export interface PluginState {
     googleToolCallMapping: Map<string, Map<string, string>>
     /** Set of session IDs that have been restored from disk */
     restoredSessions: Set<string>
+    /** Set of session IDs that are subagents (have a parentID) - used to skip fetch wrapper processing */
+    subagentSessions: Set<string>
+    /** The most recent session ID seen in chat.params - used to correlate fetch requests */
+    lastSeenSessionId: string | null
 }
 
 export interface ToolParameterEntry {
@@ -45,6 +49,8 @@ export function createPluginState(): PluginState {
         model: new Map(),
         googleToolCallMapping: new Map(),
         restoredSessions: new Set(),
+        subagentSessions: new Set(),
+        lastSeenSessionId: null,
     }
 }
 

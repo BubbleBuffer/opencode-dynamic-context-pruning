@@ -28,7 +28,7 @@ export function installFetchWrapper(
     prompts: SynthPrompts
 ): () => void {
     const originalGlobalFetch = globalThis.fetch
-    
+
     const ctx: FetchHandlerContext = {
         state,
         logger,
@@ -39,6 +39,14 @@ export function installFetchWrapper(
     }
 
     globalThis.fetch = async (input: any, init?: any) => {
+        // Skip all DCP processing for subagent sessions
+        if (state.lastSeenSessionId && state.subagentSessions.has(state.lastSeenSessionId)) {
+            logger.debug("fetch-wrapper", "Skipping DCP processing for subagent session", {
+                sessionId: state.lastSeenSessionId.substring(0, 8)
+            })
+            return originalGlobalFetch(input, init)
+        }
+
         if (init?.body && typeof init.body === 'string') {
             try {
                 const body = JSON.parse(init.body)
@@ -74,14 +82,12 @@ export function installFetchWrapper(
                     init.body = JSON.stringify(body)
                 }
             } catch (e) {
-                // Silently ignore parsing errors - pass through to original fetch
             }
         }
 
         return originalGlobalFetch(input, init)
     }
 
-    // Return cleanup function to restore original fetch
     return () => {
         globalThis.fetch = originalGlobalFetch
     }

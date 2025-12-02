@@ -13,7 +13,7 @@ Add to your OpenCode config:
 ```jsonc
 // opencode.jsonc
 {
-  "plugin": ["@tarquinen/opencode-dcp@0.3.28"]
+  "plugin": ["@tarquinen/opencode-dcp@0.3.29"]
 }
 ```
 
@@ -82,6 +82,20 @@ DCP uses its own config file (`~/.config/opencode/dcp.jsonc` or `.opencode/dcp.j
 Settings are merged in order: **Defaults** → **Global** (`~/.config/opencode/dcp.jsonc`) → **Project** (`.opencode/dcp.jsonc`). Each level overrides the previous, so project settings take priority over global, which takes priority over defaults.
 
 Restart OpenCode after making config changes.
+
+## Subagents
+
+DCP automatically skips processing for subagent sessions (`general`, `explore`, etc.), but subagents can still invoke the `prune` tool. To prevent this, disable the tool in your OpenCode config. Any custom agents you've defined should also have prune disabled:
+
+```jsonc
+// opencode.jsonc
+{
+  "agent": {
+    "general": { "tools": { "prune": false } },
+    "explore": { "tools": { "prune": false } }
+  }
+}
+```
 
 ## License
 

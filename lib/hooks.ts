@@ -72,6 +72,18 @@ export function createChatParamsHandler(
             providerID = input.message.model.providerID
         }
 
+        // Track the last seen session ID for fetch wrapper correlation
+        state.lastSeenSessionId = sessionId
+
+        // Check if this is a subagent session
+        if (!state.checkedSessions.has(sessionId)) {
+            state.checkedSessions.add(sessionId)
+            const isSubagent = await isSubagentSession(client, sessionId)
+            if (isSubagent) {
+                state.subagentSessions.add(sessionId)
+            }
+        }
+
         // Cache model info for the session
         if (providerID && modelID) {
             state.model.set(sessionId, {

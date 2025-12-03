@@ -62,12 +62,6 @@ export function createPruningTool(
                 .map(numId => getActualId(sessionId, numId))
                 .filter((id): id is string => id !== undefined)
 
-            logger.debug("prune-tool", "ID conversion", {
-                inputIds: args.ids,
-                actualIds: prunedIds,
-                toolParamsKeys: Array.from(state.toolParameters.keys()).slice(0, 10)
-            })
-
             if (prunedIds.length === 0) {
                 return "None of the provided IDs were valid. Check the <prunable-tools> list for available IDs."
             }

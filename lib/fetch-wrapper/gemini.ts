@@ -53,7 +53,8 @@ export async function handleGemini(
                 if (injectPrunableListGemini(body.contents, endInjection)) {
                     ctx.logger.debug("fetch", "Injected prunable tools list (Gemini)", {
                         ids: numericIds,
-                        nudge: includeNudge
+                        nudge: includeNudge,
+                        toolsSincePrune: ctx.toolTracker.toolResultCount
                     })
                     modified = true
                 }

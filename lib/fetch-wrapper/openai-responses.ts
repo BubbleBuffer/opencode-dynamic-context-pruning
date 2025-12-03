@@ -58,7 +58,8 @@ export async function handleOpenAIResponses(
                 if (injectPrunableListResponses(body.input, endInjection)) {
                     ctx.logger.debug("fetch", "Injected prunable tools list (Responses API)", {
                         ids: numericIds,
-                        nudge: includeNudge
+                        nudge: includeNudge,
+                        toolsSincePrune: ctx.toolTracker.toolResultCount
                     })
                     modified = true
                 }

@@ -58,7 +58,8 @@ export async function handleOpenAIChatAndAnthropic(
                 if (injectPrunableList(body.messages, endInjection)) {
                     ctx.logger.debug("fetch", "Injected prunable tools list", {
                         ids: numericIds,
-                        nudge: includeNudge
+                        nudge: includeNudge,
+                        toolsSincePrune: ctx.toolTracker.toolResultCount
                     })
                     modified = true
                 }

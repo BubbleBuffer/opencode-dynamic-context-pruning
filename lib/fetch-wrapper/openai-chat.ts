@@ -6,7 +6,7 @@ import {
     getMostRecentActiveSession
 } from "./types"
 import { cacheToolParametersFromMessages } from "../state/tool-cache"
-import { injectSynth, countToolResults } from "../api-formats/synth-instruction"
+import { injectSynth, trackNewToolResults } from "../api-formats/synth-instruction"
 import { buildPrunableToolsList, buildEndInjection, injectPrunableList } from "../api-formats/prunable-list"
 
 /**
@@ -50,9 +50,9 @@ export async function handleOpenAIChatAndAnthropic(
             )
 
             if (prunableList) {
-                // Check if nudge should be included
-                const toolResultCount = countToolResults(body.messages)
-                const includeNudge = ctx.config.nudge_freq > 0 && toolResultCount > ctx.config.nudge_freq
+                // Track new tool results and check if nudge threshold is met
+                trackNewToolResults(body.messages, ctx.toolTracker)
+                const includeNudge = ctx.config.nudge_freq > 0 && ctx.toolTracker.toolResultCount > ctx.config.nudge_freq
 
                 const endInjection = buildEndInjection(prunableList, includeNudge)
                 if (injectPrunableList(body.messages, endInjection)) {

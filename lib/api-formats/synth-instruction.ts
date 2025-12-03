@@ -15,52 +15,76 @@ export function resetToolTrackerCount(tracker: ToolTracker): void {
 }
 
 /**
- * Counts total tool results in OpenAI/Anthropic messages (without tracker).
- * Used for determining if nudge threshold is met.
+ * Track new tool results in OpenAI/Anthropic messages.
+ * Increments toolResultCount only for tools not already seen.
+ * Returns the number of NEW tools found (since last call).
  */
-export function countToolResults(messages: any[]): number {
-    let count = 0
+export function trackNewToolResults(messages: any[], tracker: ToolTracker): number {
+    let newCount = 0
     for (const m of messages) {
-        if (m.role === 'tool') {
-            count++
+        if (m.role === 'tool' && m.tool_call_id) {
+            if (!tracker.seenToolResultIds.has(m.tool_call_id)) {
+                tracker.seenToolResultIds.add(m.tool_call_id)
+                tracker.toolResultCount++
+                newCount++
+            }
         } else if (m.role === 'user' && Array.isArray(m.content)) {
             for (const part of m.content) {
-                if (part.type === 'tool_result') {
-                    count++
+                if (part.type === 'tool_result' && part.tool_use_id) {
+                    if (!tracker.seenToolResultIds.has(part.tool_use_id)) {
+                        tracker.seenToolResultIds.add(part.tool_use_id)
+                        tracker.toolResultCount++
+                        newCount++
+                    }
                 }
             }
         }
     }
-    return count
+    return newCount
 }
 
 /**
- * Counts total tool results in Gemini contents (without tracker).
+ * Track new tool results in Gemini contents.
+ * Uses position-based tracking since Gemini doesn't have tool call IDs.
+ * Returns the number of NEW tools found (since last call).
  */
-export function countToolResultsGemini(contents: any[]): number {
-    let count = 0
+export function trackNewToolResultsGemini(contents: any[], tracker: ToolTracker): number {
+    let newCount = 0
+    let positionCounter = 0
     for (const content of contents) {
         if (!Array.isArray(content.parts)) continue
         for (const part of content.parts) {
             if (part.functionResponse) {
-                count++
+                // Use position-based ID since Gemini doesn't have tool_call_id
+                const positionId = `gemini_pos_${positionCounter}`
+                positionCounter++
+                if (!tracker.seenToolResultIds.has(positionId)) {
+                    tracker.seenToolResultIds.add(positionId)
+                    tracker.toolResultCount++
+                    newCount++
+                }
             }
         }
     }
-    return count
+    return newCount
 }
 
 /**
- * Counts total tool results in OpenAI Responses API input (without tracker).
+ * Track new tool results in OpenAI Responses API input.
+ * Returns the number of NEW tools found (since last call).
  */
-export function countToolResultsResponses(input: any[]): number {
-    let count = 0
+export function trackNewToolResultsResponses(input: any[], tracker: ToolTracker): number {
+    let newCount = 0
     for (const item of input) {
-        if (item.type === 'function_call_output') {
-            count++
+        if (item.type === 'function_call_output' && item.call_id) {
+            if (!tracker.seenToolResultIds.has(item.call_id)) {
+                tracker.seenToolResultIds.add(item.call_id)
+                tracker.toolResultCount++
+                newCount++
+            }
         }
     }
-    return count
+    return newCount
 }
 
 // ============================================================================

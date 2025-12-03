@@ -4,7 +4,7 @@ import {
     getAllPrunedIds,
     fetchSessionMessages
 } from "./types"
-import { injectSynthGemini, countToolResultsGemini } from "../api-formats/synth-instruction"
+import { injectSynthGemini, trackNewToolResultsGemini } from "../api-formats/synth-instruction"
 import { buildPrunableToolsList, buildEndInjection, injectPrunableListGemini } from "../api-formats/prunable-list"
 
 /**
@@ -45,9 +45,9 @@ export async function handleGemini(
             )
 
             if (prunableList) {
-                // Check if nudge should be included
-                const toolResultCount = countToolResultsGemini(body.contents)
-                const includeNudge = ctx.config.nudge_freq > 0 && toolResultCount > ctx.config.nudge_freq
+                // Track new tool results and check if nudge threshold is met
+                trackNewToolResultsGemini(body.contents, ctx.toolTracker)
+                const includeNudge = ctx.config.nudge_freq > 0 && ctx.toolTracker.toolResultCount > ctx.config.nudge_freq
 
                 const endInjection = buildEndInjection(prunableList, includeNudge)
                 if (injectPrunableListGemini(body.contents, endInjection)) {

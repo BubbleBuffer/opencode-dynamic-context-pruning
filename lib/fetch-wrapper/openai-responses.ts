@@ -6,7 +6,7 @@ import {
     getMostRecentActiveSession
 } from "./types"
 import { cacheToolParametersFromInput } from "../state/tool-cache"
-import { injectSynthResponses, countToolResultsResponses } from "../api-formats/synth-instruction"
+import { injectSynthResponses, trackNewToolResultsResponses } from "../api-formats/synth-instruction"
 import { buildPrunableToolsList, buildEndInjection, injectPrunableListResponses } from "../api-formats/prunable-list"
 
 /**
@@ -50,9 +50,9 @@ export async function handleOpenAIResponses(
             )
 
             if (prunableList) {
-                // Check if nudge should be included
-                const toolResultCount = countToolResultsResponses(body.input)
-                const includeNudge = ctx.config.nudge_freq > 0 && toolResultCount > ctx.config.nudge_freq
+                // Track new tool results and check if nudge threshold is met
+                trackNewToolResultsResponses(body.input, ctx.toolTracker)
+                const includeNudge = ctx.config.nudge_freq > 0 && ctx.toolTracker.toolResultCount > ctx.config.nudge_freq
 
                 const endInjection = buildEndInjection(prunableList, includeNudge)
                 if (injectPrunableListResponses(body.input, endInjection)) {

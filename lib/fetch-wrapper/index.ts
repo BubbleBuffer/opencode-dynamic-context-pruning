@@ -42,7 +42,6 @@ export function installFetchWrapper(
     }
 
     globalThis.fetch = async (input: any, init?: any) => {
-        // Skip all DCP processing for subagent sessions
         if (state.lastSeenSessionId && state.subagentSessions.has(state.lastSeenSessionId)) {
             logger.debug("fetch-wrapper", "Skipping DCP processing for subagent session", {
                 sessionId: state.lastSeenSessionId.substring(0, 8)
@@ -84,13 +83,10 @@ export function installFetchWrapper(
                     }
                 }
 
-                // Run strategies when new tools are cached
-                // We use all tool IDs for deduplication detection (to find duplicates across requests)
-                // but pruning is session-scoped via state.prunedIds
                 const sessionId = state.lastSeenSessionId
                 const toolIdsAfter = Array.from(state.toolParameters.keys())
                 const newToolsCached = toolIdsAfter.filter(id => !toolIdsBefore.has(id)).length > 0
-                
+
                 if (sessionId && newToolsCached && state.toolParameters.size > 0) {
                     const toolIds = Array.from(state.toolParameters.keys())
                     const alreadyPruned = state.prunedIds.get(sessionId) ?? []
@@ -103,16 +99,12 @@ export function installFetchWrapper(
                             config.protectedTools
                         )
                         if (result.prunedIds.length > 0) {
-                            // Normalize to lowercase to match janitor's ID normalization
                             const normalizedIds = result.prunedIds.map(id => id.toLowerCase())
                             state.prunedIds.set(sessionId, [...new Set([...alreadyPruned, ...normalizedIds])])
-
-                            // Track GC activity for the next notification
                             accumulateGCStats(state, sessionId, result.prunedIds, body, logger)
                         }
                     }
 
-                    // Trim cache to prevent unbounded memory growth
                     trimToolParametersCache(state)
                 }
 

@@ -9,83 +9,94 @@ export function createToolTracker(): ToolTracker {
     return { seenToolResultIds: new Set(), toolResultCount: 0, skipNextIdle: false }
 }
 
-/** Reset tool count to 0 (called after a prune event) */
 export function resetToolTrackerCount(tracker: ToolTracker): void {
     tracker.toolResultCount = 0
 }
 
-/** Adapter interface for format-specific message operations */
-interface MessageFormatAdapter {
-    countToolResults(messages: any[], tracker: ToolTracker): number
-    appendNudge(messages: any[], nudgeText: string): void
-}
-
-/** Generic nudge injection - nudges every fetch once tools since last prune exceeds freq */
-function injectNudgeCore(
-    messages: any[],
-    tracker: ToolTracker,
-    nudgeText: string,
-    freq: number,
-    adapter: MessageFormatAdapter
-): boolean {
-    // Count any new tool results
-    adapter.countToolResults(messages, tracker)
-    
-    // Once we've exceeded the threshold, nudge on every fetch
-    if (tracker.toolResultCount > freq) {
-        adapter.appendNudge(messages, nudgeText)
-        return true
-    }
-    return false
-}
-
-// ============================================================================
-// OpenAI Chat / Anthropic Format
-// ============================================================================
-
-const openaiAdapter: MessageFormatAdapter = {
-    countToolResults(messages, tracker) {
-        let newCount = 0
-        for (const m of messages) {
-            if (m.role === 'tool' && m.tool_call_id) {
-                const id = String(m.tool_call_id).toLowerCase()
-                if (!tracker.seenToolResultIds.has(id)) {
-                    tracker.seenToolResultIds.add(id)
+/**
+ * Track new tool results in OpenAI/Anthropic messages.
+ * Increments toolResultCount only for tools not already seen and not protected.
+ * Returns the number of NEW tools found (since last call).
+ */
+export function trackNewToolResults(messages: any[], tracker: ToolTracker, protectedTools: Set<string>): number {
+    let newCount = 0
+    for (const m of messages) {
+        if (m.role === 'tool' && m.tool_call_id) {
+            if (!tracker.seenToolResultIds.has(m.tool_call_id)) {
+                tracker.seenToolResultIds.add(m.tool_call_id)
+                const toolName = tracker.getToolName?.(m.tool_call_id)
+                if (!toolName || !protectedTools.has(toolName)) {
+                    tracker.toolResultCount++
                     newCount++
-                    const toolName = m.name || tracker.getToolName?.(m.tool_call_id)
-                    if (toolName !== 'prune') {
-                        tracker.skipNextIdle = false
-                    }
                 }
-            } else if (m.role === 'user' && Array.isArray(m.content)) {
-                for (const part of m.content) {
-                    if (part.type === 'tool_result' && part.tool_use_id) {
-                        const id = String(part.tool_use_id).toLowerCase()
-                        if (!tracker.seenToolResultIds.has(id)) {
-                            tracker.seenToolResultIds.add(id)
+            }
+        } else if (m.role === 'user' && Array.isArray(m.content)) {
+            for (const part of m.content) {
+                if (part.type === 'tool_result' && part.tool_use_id) {
+                    if (!tracker.seenToolResultIds.has(part.tool_use_id)) {
+                        tracker.seenToolResultIds.add(part.tool_use_id)
+                        const toolName = tracker.getToolName?.(part.tool_use_id)
+                        if (!toolName || !protectedTools.has(toolName)) {
+                            tracker.toolResultCount++
                             newCount++
-                            const toolName = tracker.getToolName?.(part.tool_use_id)
-                            if (toolName !== 'prune') {
-                                tracker.skipNextIdle = false
-                            }
                         }
                     }
                 }
             }
         }
-        tracker.toolResultCount += newCount
-        return newCount
-    },
-    appendNudge(messages, nudgeText) {
-        messages.push({ role: 'user', content: nudgeText })
     }
+    return newCount
 }
 
-export function injectNudge(messages: any[], tracker: ToolTracker, nudgeText: string, freq: number): boolean {
-    return injectNudgeCore(messages, tracker, nudgeText, freq, openaiAdapter)
+/**
+ * Track new tool results in Gemini contents.
+ * Uses position-based tracking since Gemini doesn't have tool call IDs.
+ * Returns the number of NEW tools found (since last call).
+ */
+export function trackNewToolResultsGemini(contents: any[], tracker: ToolTracker, protectedTools: Set<string>): number {
+    let newCount = 0
+    let positionCounter = 0
+    for (const content of contents) {
+        if (!Array.isArray(content.parts)) continue
+        for (const part of content.parts) {
+            if (part.functionResponse) {
+                const positionId = `gemini_pos_${positionCounter}`
+                positionCounter++
+                if (!tracker.seenToolResultIds.has(positionId)) {
+                    tracker.seenToolResultIds.add(positionId)
+                    const toolName = part.functionResponse.name
+                    if (!toolName || !protectedTools.has(toolName)) {
+                        tracker.toolResultCount++
+                        newCount++
+                    }
+                }
+            }
+        }
+    }
+    return newCount
 }
 
-/** Check if a message content matches nudge text (OpenAI/Anthropic format) */
+/**
+ * Track new tool results in OpenAI Responses API input.
+ * Returns the number of NEW tools found (since last call).
+ */
+export function trackNewToolResultsResponses(input: any[], tracker: ToolTracker, protectedTools: Set<string>): number {
+    let newCount = 0
+    for (const item of input) {
+        if (item.type === 'function_call_output' && item.call_id) {
+            if (!tracker.seenToolResultIds.has(item.call_id)) {
+                tracker.seenToolResultIds.add(item.call_id)
+                const toolName = tracker.getToolName?.(item.call_id)
+                if (!toolName || !protectedTools.has(toolName)) {
+                    tracker.toolResultCount++
+                    newCount++
+                }
+            }
+        }
+    }
+    return newCount
+}
+
 function isNudgeMessage(msg: any, nudgeText: string): boolean {
     if (typeof msg.content === 'string') {
         return msg.content === nudgeText
@@ -116,42 +127,6 @@ export function injectSynth(messages: any[], instruction: string, nudgeText: str
     return false
 }
 
-// ============================================================================
-// Google/Gemini Format (body.contents with parts)
-// ============================================================================
-
-const geminiAdapter: MessageFormatAdapter = {
-    countToolResults(contents, tracker) {
-        let newCount = 0
-        for (const content of contents) {
-            if (!Array.isArray(content.parts)) continue
-            for (const part of content.parts) {
-                if (part.functionResponse) {
-                    const funcName = part.functionResponse.name?.toLowerCase() || 'unknown'
-                    const pseudoId = `gemini:${funcName}:${tracker.seenToolResultIds.size}`
-                    if (!tracker.seenToolResultIds.has(pseudoId)) {
-                        tracker.seenToolResultIds.add(pseudoId)
-                        newCount++
-                        if (funcName !== 'prune') {
-                            tracker.skipNextIdle = false
-                        }
-                    }
-                }
-            }
-        }
-        tracker.toolResultCount += newCount
-        return newCount
-    },
-    appendNudge(contents, nudgeText) {
-        contents.push({ role: 'user', parts: [{ text: nudgeText }] })
-    }
-}
-
-export function injectNudgeGemini(contents: any[], tracker: ToolTracker, nudgeText: string, freq: number): boolean {
-    return injectNudgeCore(contents, tracker, nudgeText, freq, geminiAdapter)
-}
-
-/** Check if a Gemini content matches nudge text */
 function isNudgeContentGemini(content: any, nudgeText: string): boolean {
     if (Array.isArray(content.parts) && content.parts.length === 1) {
         const part = content.parts[0]
@@ -178,39 +153,6 @@ export function injectSynthGemini(contents: any[], instruction: string, nudgeTex
     return false
 }
 
-// ============================================================================
-// OpenAI Responses API Format (body.input with type-based items)
-// ============================================================================
-
-const responsesAdapter: MessageFormatAdapter = {
-    countToolResults(input, tracker) {
-        let newCount = 0
-        for (const item of input) {
-            if (item.type === 'function_call_output' && item.call_id) {
-                const id = String(item.call_id).toLowerCase()
-                if (!tracker.seenToolResultIds.has(id)) {
-                    tracker.seenToolResultIds.add(id)
-                    newCount++
-                    const toolName = item.name || tracker.getToolName?.(item.call_id)
-                    if (toolName !== 'prune') {
-                        tracker.skipNextIdle = false
-                    }
-                }
-            }
-        }
-        tracker.toolResultCount += newCount
-        return newCount
-    },
-    appendNudge(input, nudgeText) {
-        input.push({ type: 'message', role: 'user', content: nudgeText })
-    }
-}
-
-export function injectNudgeResponses(input: any[], tracker: ToolTracker, nudgeText: string, freq: number): boolean {
-    return injectNudgeCore(input, tracker, nudgeText, freq, responsesAdapter)
-}
-
-/** Check if a Responses API item matches nudge text */
 function isNudgeItemResponses(item: any, nudgeText: string): boolean {
     if (typeof item.content === 'string') {
         return item.content === nudgeText

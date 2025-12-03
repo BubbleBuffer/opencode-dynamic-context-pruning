@@ -3,9 +3,8 @@ import type { Logger } from "../logger"
 import type { FetchHandlerContext, SynthPrompts } from "./types"
 import type { ToolTracker } from "../api-formats/synth-instruction"
 import type { PluginConfig } from "../config"
-import { handleOpenAIChatAndAnthropic } from "./openai-chat"
-import { handleGemini } from "./gemini"
-import { handleOpenAIResponses } from "./openai-responses"
+import { openaiChatFormat, openaiResponsesFormat, geminiFormat } from "./formats"
+import { handleFormat } from "./handler"
 import { runStrategies } from "../core/strategies"
 import { accumulateGCStats } from "./gc-tracker"
 import { trimToolParametersCache } from "../state/tool-cache"
@@ -55,29 +54,23 @@ export function installFetchWrapper(
                 const inputUrl = typeof input === 'string' ? input : 'URL object'
                 let modified = false
 
-                // Capture tool IDs before handlers run to track what gets cached this request
                 const toolIdsBefore = new Set(state.toolParameters.keys())
 
-                // Try each format handler in order
-                // OpenAI Chat Completions & Anthropic style (body.messages)
-                if (body.messages && Array.isArray(body.messages)) {
-                    const result = await handleOpenAIChatAndAnthropic(body, ctx, inputUrl)
+                // Mutually exclusive format handlers
+                if (openaiResponsesFormat.detect(body)) {
+                    const result = await handleFormat(body, ctx, inputUrl, openaiResponsesFormat)
                     if (result.modified) {
                         modified = true
                     }
                 }
-
-                // Google/Gemini style (body.contents)
-                if (body.contents && Array.isArray(body.contents)) {
-                    const result = await handleGemini(body, ctx, inputUrl)
+                else if (openaiChatFormat.detect(body)) {
+                    const result = await handleFormat(body, ctx, inputUrl, openaiChatFormat)
                     if (result.modified) {
                         modified = true
                     }
                 }
-
-                // OpenAI Responses API style (body.input)
-                if (body.input && Array.isArray(body.input)) {
-                    const result = await handleOpenAIResponses(body, ctx, inputUrl)
+                else if (geminiFormat.detect(body)) {
+                    const result = await handleFormat(body, ctx, inputUrl, geminiFormat)
                     if (result.modified) {
                         modified = true
                     }

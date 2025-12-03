@@ -5,6 +5,7 @@ import { runOnIdle } from "./core/janitor"
 import type { PluginConfig, PruningStrategy } from "./config"
 import type { ToolTracker } from "./api-formats/synth-instruction"
 import { resetToolTrackerCount } from "./api-formats/synth-instruction"
+import { clearAllMappings } from "./state/id-mapping"
 
 export async function isSubagentSession(client: any, sessionID: string): Promise<boolean> {
     try {
@@ -31,8 +32,6 @@ export function createEventHandler(
             if (await isSubagentSession(client, event.properties.sessionID)) return
             if (config.strategies.onIdle.length === 0) return
 
-            // Skip idle pruning if the last tool used was prune
-            // and idle strategies cover the same work as tool strategies
             if (toolTracker?.skipNextIdle) {
                 toolTracker.skipNextIdle = false
                 if (toolStrategiesCoveredByIdle(config.strategies.onIdle, config.strategies.onTool)) {
@@ -43,7 +42,6 @@ export function createEventHandler(
             try {
                 const result = await runOnIdle(janitorCtx, event.properties.sessionID, config.strategies.onIdle)
 
-                // Reset nudge counter if idle pruning succeeded and covers tool strategies
                 if (result && result.prunedCount > 0 && toolTracker && config.nudge_freq > 0) {
                     if (toolStrategiesCoveredByIdle(config.strategies.onIdle, config.strategies.onTool)) {
                         resetToolTrackerCount(toolTracker)
@@ -73,10 +71,17 @@ export function createChatParamsHandler(
             providerID = input.message.model.providerID
         }
 
-        // Track the last seen session ID for fetch wrapper correlation
+        if (state.lastSeenSessionId && state.lastSeenSessionId !== sessionId) {
+            logger.info("chat.params", "Session changed, resetting state", {
+                from: state.lastSeenSessionId.substring(0, 8),
+                to: sessionId.substring(0, 8)
+            })
+            clearAllMappings()
+            state.toolParameters.clear()
+        }
+
         state.lastSeenSessionId = sessionId
 
-        // Check if this is a subagent session
         if (!state.checkedSessions.has(sessionId)) {
             state.checkedSessions.add(sessionId)
             const isSubagent = await isSubagentSession(client, sessionId)
@@ -85,7 +90,7 @@ export function createChatParamsHandler(
             }
         }
 
-        // Cache model info for the session
+        // Cache model info for the session (used by janitor for model selection)
         if (providerID && modelID) {
             state.model.set(sessionId, {
                 providerID: providerID,
@@ -93,8 +98,7 @@ export function createChatParamsHandler(
             })
         }
 
-        // Build Google/Gemini tool call mapping for position-based correlation
-        // This is needed because Google's native format loses tool call IDs
+        // Build position-based mapping for Gemini (which loses tool call IDs in native format)
         if (providerID === 'google' || providerID === 'google-vertex') {
             try {
                 const messagesResponse = await client.session.messages({
@@ -104,7 +108,6 @@ export function createChatParamsHandler(
                 const messages = messagesResponse.data || messagesResponse
 
                 if (Array.isArray(messages)) {
-                    // Build position mapping: track tool calls by name and occurrence index
                     const toolCallsByName = new Map<string, string[]>()
 
                     for (const msg of messages) {
@@ -112,16 +115,24 @@ export function createChatParamsHandler(
                             for (const part of msg.parts) {
                                 if (part.type === 'tool' && part.callID && part.tool) {
                                     const toolName = part.tool.toLowerCase()
+                                    const callId = part.callID.toLowerCase()
+                                    
                                     if (!toolCallsByName.has(toolName)) {
                                         toolCallsByName.set(toolName, [])
                                     }
-                                    toolCallsByName.get(toolName)!.push(part.callID.toLowerCase())
+                                    toolCallsByName.get(toolName)!.push(callId)
+                                    
+                                    if (!state.toolParameters.has(callId)) {
+                                        state.toolParameters.set(callId, {
+                                            tool: part.tool,
+                                            parameters: part.input ?? {}
+                                        })
+                                    }
                                 }
                             }
                         }
                     }
 
-                    // Create position mapping: "toolName:index" -> toolCallId
                     const positionMapping = new Map<string, string>()
                     for (const [toolName, callIds] of toolCallsByName) {
                         callIds.forEach((callId, index) => {
@@ -132,7 +143,8 @@ export function createChatParamsHandler(
                     state.googleToolCallMapping.set(sessionId, positionMapping)
                     logger.info("chat.params", "Built Google tool call mapping", {
                         sessionId: sessionId.substring(0, 8),
-                        toolCount: positionMapping.size
+                        toolCount: positionMapping.size,
+                        toolParamsCount: state.toolParameters.size
                     })
                 }
             } catch (error: any) {

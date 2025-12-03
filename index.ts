@@ -45,7 +45,7 @@ const plugin: Plugin = (async (ctx) => {
 
     // Wire up tool name lookup from the cached tool parameters
     toolTracker.getToolName = (callId: string) => {
-        const entry = state.toolParameters.get(callId)
+        const entry = state.toolParameters.get(callId.toLowerCase())
         return entry?.tool
     }
 
@@ -90,7 +90,14 @@ const plugin: Plugin = (async (ctx) => {
         event: createEventHandler(ctx.client, janitorCtx, logger, config, toolTracker),
         "chat.params": createChatParamsHandler(ctx.client, state, logger),
         tool: config.strategies.onTool.length > 0 ? {
-            prune: createPruningTool(ctx.client, janitorCtx, config, toolTracker),
+            prune: createPruningTool({
+                client: ctx.client,
+                state,
+                logger,
+                config,
+                notificationCtx: janitorCtx.notificationCtx,
+                workingDirectory: ctx.directory
+            }, toolTracker),
         } : undefined,
     }
 }) satisfies Plugin

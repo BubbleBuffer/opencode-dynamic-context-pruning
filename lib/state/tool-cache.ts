@@ -59,3 +59,23 @@ export function cacheToolParametersFromInput(
         }
     }
 }
+
+/** Maximum number of entries to keep in the tool parameters cache */
+const MAX_TOOL_CACHE_SIZE = 500
+
+/**
+ * Trim the tool parameters cache to prevent unbounded memory growth.
+ * Uses FIFO eviction - removes oldest entries first.
+ */
+export function trimToolParametersCache(state: PluginState): void {
+    if (state.toolParameters.size <= MAX_TOOL_CACHE_SIZE) {
+        return
+    }
+
+    const keysToRemove = Array.from(state.toolParameters.keys())
+        .slice(0, state.toolParameters.size - MAX_TOOL_CACHE_SIZE)
+
+    for (const key of keysToRemove) {
+        state.toolParameters.delete(key)
+    }
+}

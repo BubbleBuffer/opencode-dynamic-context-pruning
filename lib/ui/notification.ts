@@ -75,103 +75,76 @@ export async function sendUnifiedNotification(
 }
 
 function buildMinimalMessage(data: NotificationData): string {
-    const hasAiPruning = data.aiPrunedCount > 0
-    const hasGcActivity = data.gcPending && data.gcPending.toolsDeduped > 0
+    const { justNowTokens, totalTokens } = calculateStats(data)
 
-    if (hasAiPruning) {
-        const gcTokens = hasGcActivity ? data.gcPending!.tokensCollected : 0
-        const totalSaved = formatTokenCount(data.aiTokensSaved + gcTokens)
-        const toolText = data.aiPrunedCount === 1 ? 'tool' : 'tools'
+    return formatStatsHeader(totalTokens, justNowTokens)
+}
 
-        let cycleStats = `${data.aiPrunedCount} ${toolText}`
-        if (hasGcActivity) {
-            cycleStats += `, ~${formatTokenCount(data.gcPending!.tokensCollected)} 🗑️`
-        }
+function calculateStats(data: NotificationData): {
+    justNowTokens: number
+    totalTokens: number
+} {
+    const justNowTokens = data.aiTokensSaved + (data.gcPending?.tokensCollected ?? 0)
 
-        let message = `🧹 DCP: ~${totalSaved} saved (${cycleStats})`
-        message += buildSessionSuffix(data.sessionStats, data.aiPrunedCount)
+    const totalTokens = data.sessionStats
+        ? data.sessionStats.totalTokensSaved + data.sessionStats.totalGCTokens
+        : justNowTokens
 
-        return message
-    } else {
-        const tokensCollected = formatTokenCount(data.gcPending!.tokensCollected)
+    return { justNowTokens, totalTokens }
+}
 
-        let message = `🗑️ DCP: ~${tokensCollected} collected`
-        message += buildSessionSuffix(data.sessionStats, 0)
+function formatStatsHeader(
+    totalTokens: number,
+    justNowTokens: number
+): string {
+    const totalTokensStr = `~${formatTokenCount(totalTokens)}`
+    const justNowTokensStr = `~${formatTokenCount(justNowTokens)}`
 
-        return message
-    }
+    const maxTokenLen = Math.max(totalTokensStr.length, justNowTokensStr.length)
+    const totalTokensPadded = totalTokensStr.padStart(maxTokenLen)
+    const justNowTokensPadded = justNowTokensStr.padStart(maxTokenLen)
+
+    return [
+        `▣ DCP Stats`,
+        `  Total saved │ ${totalTokensPadded}`,
+        `  Just now    │ ${justNowTokensPadded}`,
+    ].join('\n')
 }
 
 function buildDetailedMessage(data: NotificationData, workingDirectory?: string): string {
-    const hasAiPruning = data.aiPrunedCount > 0
-    const hasGcActivity = data.gcPending && data.gcPending.toolsDeduped > 0
+    const { justNowTokens, totalTokens } = calculateStats(data)
 
-    let message: string
+    let message = formatStatsHeader(totalTokens, justNowTokens)
 
-    if (hasAiPruning) {
-        const gcTokens = hasGcActivity ? data.gcPending!.tokensCollected : 0
-        const totalSaved = formatTokenCount(data.aiTokensSaved + gcTokens)
-        const toolText = data.aiPrunedCount === 1 ? 'tool' : 'tools'
+    if (data.aiPrunedCount > 0) {
+        message += '\n\n▣ Pruned tools:'
 
-        let cycleStats = `${data.aiPrunedCount} ${toolText}`
-        if (hasGcActivity) {
-            cycleStats += `, ~${formatTokenCount(data.gcPending!.tokensCollected)} 🗑️`
-        }
+        for (const prunedId of data.aiPrunedIds) {
+            const normalizedId = prunedId.toLowerCase()
+            const metadata = data.toolMetadata.get(normalizedId)
 
-        message = `🧹 DCP: ~${totalSaved} saved (${cycleStats})`
-        message += buildSessionSuffix(data.sessionStats, data.aiPrunedCount)
-        message += '\n'
-
-        message += `\n🤖 LLM analysis (${data.aiPrunedIds.length}):\n`
-        const toolsSummary = buildToolsSummary(data.aiPrunedIds, data.toolMetadata, workingDirectory)
-
-        for (const [toolName, params] of toolsSummary.entries()) {
-            if (params.length > 0) {
-                message += `  ${toolName} (${params.length}):\n`
-                for (const param of params) {
-                    message += `    ${param}\n`
+            if (metadata) {
+                const paramKey = extractParameterKey(metadata)
+                if (paramKey) {
+                    const displayKey = truncate(shortenPath(paramKey, workingDirectory), 60)
+                    message += `\n→ ${metadata.tool}: ${displayKey}`
+                } else {
+                    message += `\n→ ${metadata.tool}`
                 }
             }
         }
 
-        const foundToolNames = new Set(toolsSummary.keys())
-        const missingTools = data.aiPrunedIds.filter(id => {
-            const normalizedId = id.toLowerCase()
-            const metadata = data.toolMetadata.get(normalizedId)
-            return !metadata || !foundToolNames.has(metadata.tool)
-        })
+        const knownCount = data.aiPrunedIds.filter(id =>
+            data.toolMetadata.has(id.toLowerCase())
+        ).length
+        const unknownCount = data.aiPrunedIds.length - knownCount
 
-        if (missingTools.length > 0) {
-            message += `  (${missingTools.length} tool${missingTools.length > 1 ? 's' : ''} with unknown metadata)\n`
+        if (unknownCount > 0) {
+            message += `\n→ (${unknownCount} tool${unknownCount > 1 ? 's' : ''} with unknown metadata)`
         }
-    } else {
-        const tokensCollected = formatTokenCount(data.gcPending!.tokensCollected)
-
-        message = `🗑️ DCP: ~${tokensCollected} collected`
-        message += buildSessionSuffix(data.sessionStats, 0)
     }
 
     return message.trim()
-}
-
-function buildSessionSuffix(sessionStats: SessionStats | null, currentAiPruned: number): string {
-    if (!sessionStats) {
-        return ''
-    }
-
-    if (sessionStats.totalToolsPruned <= currentAiPruned) {
-        return ''
-    }
-
-    const totalSaved = sessionStats.totalTokensSaved + sessionStats.totalGCTokens
-    let suffix = ` │ Session: ~${formatTokenCount(totalSaved)} (${sessionStats.totalToolsPruned} tools`
-
-    if (sessionStats.totalGCTokens > 0) {
-        suffix += `, ~${formatTokenCount(sessionStats.totalGCTokens)} 🗑️`
-    }
-
-    suffix += ')'
-    return suffix
 }
 
 export function formatPruningResultForTool(

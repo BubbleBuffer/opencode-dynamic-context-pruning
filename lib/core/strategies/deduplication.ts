@@ -17,7 +17,8 @@ export const deduplicationStrategy: PruningStrategy = {
 
         const deduplicatableIds = unprunedIds.filter(id => {
             const metadata = toolMetadata.get(id)
-            return !metadata || !protectedTools.includes(metadata.tool)
+            const protectedToolsLower = protectedTools.map(t => t.toLowerCase())
+            return !metadata || !protectedToolsLower.includes(metadata.tool.toLowerCase())
         })
 
         for (const id of deduplicatableIds) {

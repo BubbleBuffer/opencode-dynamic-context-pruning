@@ -123,7 +123,7 @@ function createDefaultConfig(): void {
   "pruning_summary": "detailed",
   // How often to nudge the AI to prune (every N tool results, 0 = disabled)
   "nudge_freq": 10
-  // Additional tools to protect from pruning (merged with built-in: task, todowrite, todoread, prune)
+  // Additional tools to protect from pruning (merged with built-in: task, todowrite, todoread, prune, batch)
   // "protectedTools": ["bash"]
 }
 `

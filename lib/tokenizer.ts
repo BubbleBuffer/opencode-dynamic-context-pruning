@@ -9,7 +9,7 @@ export async function estimateTokensBatch(texts: string[]): Promise<number[]> {
 
 export function formatTokenCount(tokens: number): string {
     if (tokens >= 1000) {
-        return `${(tokens / 1000).toFixed(1)}K`.replace('.0K', 'K')
+        return `${(tokens / 1000).toFixed(1)}K`.replace('.0K', 'K') + ' tokens'
     }
-    return tokens.toString()
+    return tokens.toString() + ' tokens'
 }

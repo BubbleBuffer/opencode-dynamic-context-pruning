@@ -8,6 +8,7 @@ import { handleGemini } from "./gemini"
 import { handleOpenAIResponses } from "./openai-responses"
 import { runStrategies } from "../core/strategies"
 import { accumulateGCStats } from "./gc-tracker"
+import { trimToolParametersCache } from "../state/tool-cache"
 
 export type { FetchHandlerContext, FetchHandlerResult, SynthPrompts } from "./types"
 
@@ -41,7 +42,6 @@ export function installFetchWrapper(
     }
 
     globalThis.fetch = async (input: any, init?: any) => {
-        // Skip all DCP processing for subagent sessions
         if (state.lastSeenSessionId && state.subagentSessions.has(state.lastSeenSessionId)) {
             logger.debug("fetch-wrapper", "Skipping DCP processing for subagent session", {
                 sessionId: state.lastSeenSessionId.substring(0, 8)
@@ -54,6 +54,9 @@ export function installFetchWrapper(
                 const body = JSON.parse(init.body)
                 const inputUrl = typeof input === 'string' ? input : 'URL object'
                 let modified = false
+
+                // Capture tool IDs before handlers run to track what gets cached this request
+                const toolIdsBefore = new Set(state.toolParameters.keys())
 
                 // Try each format handler in order
                 // OpenAI Chat Completions & Anthropic style (body.messages)
@@ -80,9 +83,11 @@ export function installFetchWrapper(
                     }
                 }
 
-                // Run strategies after handlers have populated toolParameters cache
                 const sessionId = state.lastSeenSessionId
-                if (sessionId && state.toolParameters.size > 0) {
+                const toolIdsAfter = Array.from(state.toolParameters.keys())
+                const newToolsCached = toolIdsAfter.filter(id => !toolIdsBefore.has(id)).length > 0
+
+                if (sessionId && newToolsCached && state.toolParameters.size > 0) {
                     const toolIds = Array.from(state.toolParameters.keys())
                     const alreadyPruned = state.prunedIds.get(sessionId) ?? []
                     const alreadyPrunedLower = new Set(alreadyPruned.map(id => id.toLowerCase()))
@@ -94,14 +99,13 @@ export function installFetchWrapper(
                             config.protectedTools
                         )
                         if (result.prunedIds.length > 0) {
-                            // Normalize to lowercase to match janitor's ID normalization
                             const normalizedIds = result.prunedIds.map(id => id.toLowerCase())
                             state.prunedIds.set(sessionId, [...new Set([...alreadyPruned, ...normalizedIds])])
-
-                            // Track GC activity for the next notification
                             accumulateGCStats(state, sessionId, result.prunedIds, body, logger)
                         }
                     }
+
+                    trimToolParametersCache(state)
                 }
 
                 if (modified) {

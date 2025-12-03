@@ -64,7 +64,8 @@ export async function ensureSessionRestored(
             const stats: SessionStats = {
                 totalToolsPruned: persisted.stats.totalToolsPruned,
                 totalTokensSaved: persisted.stats.totalTokensSaved,
-                totalGCTokens: persisted.stats.totalGCTokens ?? 0
+                totalGCTokens: persisted.stats.totalGCTokens ?? 0,
+                totalGCTools: persisted.stats.totalGCTools ?? 0
             }
             state.stats.set(sessionId, stats)
         }

@@ -8,6 +8,7 @@ import { handleGemini } from "./gemini"
 import { handleOpenAIResponses } from "./openai-responses"
 import { runStrategies } from "../core/strategies"
 import { accumulateGCStats } from "./gc-tracker"
+import { trimToolParametersCache } from "../state/tool-cache"
 
 export type { FetchHandlerContext, FetchHandlerResult, SynthPrompts } from "./types"
 
@@ -55,6 +56,9 @@ export function installFetchWrapper(
                 const inputUrl = typeof input === 'string' ? input : 'URL object'
                 let modified = false
 
+                // Capture tool IDs before handlers run to track what gets cached this request
+                const toolIdsBefore = new Set(state.toolParameters.keys())
+
                 // Try each format handler in order
                 // OpenAI Chat Completions & Anthropic style (body.messages)
                 if (body.messages && Array.isArray(body.messages)) {
@@ -80,9 +84,14 @@ export function installFetchWrapper(
                     }
                 }
 
-                // Run strategies after handlers have populated toolParameters cache
+                // Run strategies when new tools are cached
+                // We use all tool IDs for deduplication detection (to find duplicates across requests)
+                // but pruning is session-scoped via state.prunedIds
                 const sessionId = state.lastSeenSessionId
-                if (sessionId && state.toolParameters.size > 0) {
+                const toolIdsAfter = Array.from(state.toolParameters.keys())
+                const newToolsCached = toolIdsAfter.filter(id => !toolIdsBefore.has(id)).length > 0
+                
+                if (sessionId && newToolsCached && state.toolParameters.size > 0) {
                     const toolIds = Array.from(state.toolParameters.keys())
                     const alreadyPruned = state.prunedIds.get(sessionId) ?? []
                     const alreadyPrunedLower = new Set(alreadyPruned.map(id => id.toLowerCase()))
@@ -102,6 +111,9 @@ export function installFetchWrapper(
                             accumulateGCStats(state, sessionId, result.prunedIds, body, logger)
                         }
                     }
+
+                    // Trim cache to prevent unbounded memory growth
+                    trimToolParametersCache(state)
                 }
 
                 if (modified) {

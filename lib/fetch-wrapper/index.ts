@@ -55,25 +55,21 @@ export function installFetchWrapper(
                 const inputUrl = typeof input === 'string' ? input : 'URL object'
                 let modified = false
 
-                // Capture tool IDs before handlers run to track what gets cached this request
                 const toolIdsBefore = new Set(state.toolParameters.keys())
 
-                // Try each format handler - mutually exclusive to avoid double-processing
-                // OpenAI Responses API style (body.input) - check first as it may also have messages
+                // Mutually exclusive format handlers to avoid double-processing
                 if (body.input && Array.isArray(body.input)) {
                     const result = await handleOpenAIResponses(body, ctx, inputUrl)
                     if (result.modified) {
                         modified = true
                     }
                 }
-                // OpenAI Chat Completions & Anthropic style (body.messages)
                 else if (body.messages && Array.isArray(body.messages)) {
                     const result = await handleOpenAIChatAndAnthropic(body, ctx, inputUrl)
                     if (result.modified) {
                         modified = true
                     }
                 }
-                // Google/Gemini style (body.contents)
                 else if (body.contents && Array.isArray(body.contents)) {
                     const result = await handleGemini(body, ctx, inputUrl)
                     if (result.modified) {

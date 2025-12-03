@@ -22,14 +22,11 @@ export async function handleGemini(
 
     let modified = false
 
-    // Inject synthetic instructions if onTool strategies are enabled
     if (ctx.config.strategies.onTool.length > 0) {
-        // Inject base synthetic instructions (appended to last user content)
         if (injectSynthGemini(body.contents, ctx.prompts.synthInstruction, ctx.prompts.nudgeInstruction)) {
             modified = true
         }
 
-        // Build and inject prunable tools list at the end
         const sessionId = ctx.state.lastSeenSessionId
         if (sessionId) {
             const toolIds = Array.from(ctx.state.toolParameters.keys())
@@ -45,7 +42,6 @@ export async function handleGemini(
             )
 
             if (prunableList) {
-                // Track new tool results and check if nudge threshold is met
                 const protectedSet = new Set(ctx.config.protectedTools)
                 trackNewToolResultsGemini(body.contents, ctx.toolTracker, protectedSet)
                 const includeNudge = ctx.config.nudge_freq > 0 && ctx.toolTracker.toolResultCount > ctx.config.nudge_freq
@@ -63,7 +59,6 @@ export async function handleGemini(
         }
     }
 
-    // Check for functionResponse parts in any content item
     const hasFunctionResponses = body.contents.some((content: any) =>
         Array.isArray(content.parts) &&
         content.parts.some((part: any) => part.functionResponse)
@@ -79,7 +74,6 @@ export async function handleGemini(
         return { modified, body }
     }
 
-    // Find the active session to get the position mapping
     const activeSessions = allSessions.data?.filter((s: any) => !s.parentID) || []
     let positionMapping: Map<string, string> | undefined
 
@@ -112,17 +106,14 @@ export async function handleGemini(
                 totalFunctionResponses++
                 const funcName = part.functionResponse.name?.toLowerCase()
 
-                // Count as prunable if not a protected tool
                 if (!funcName || !protectedToolsLower.has(funcName)) {
                     prunableFunctionResponses++
                 }
 
                 if (funcName) {
-                    // Get current position for this tool name and increment counter
                     const currentIndex = toolPositionCounters.get(funcName) || 0
                     toolPositionCounters.set(funcName, currentIndex + 1)
 
-                    // Look up the tool call ID using position
                     const positionKey = `${funcName}:${currentIndex}`
                     const toolCallId = positionMapping!.get(positionKey)
 
@@ -130,7 +121,6 @@ export async function handleGemini(
                         contentModified = true
                         replacedCount++
                         // Preserve thoughtSignature if present (required for Gemini 3 Pro)
-                        // response must be a Struct (object), not a plain string
                         return {
                             ...part,
                             functionResponse: {

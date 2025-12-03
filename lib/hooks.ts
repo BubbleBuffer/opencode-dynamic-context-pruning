@@ -32,8 +32,7 @@ export function createEventHandler(
             if (await isSubagentSession(client, event.properties.sessionID)) return
             if (config.strategies.onIdle.length === 0) return
 
-            // Skip idle pruning if the last tool used was prune
-            // and idle strategies cover the same work as tool strategies
+            // Skip idle pruning if the last tool used was prune and idle strategies cover tool strategies
             if (toolTracker?.skipNextIdle) {
                 toolTracker.skipNextIdle = false
                 if (toolStrategiesCoveredByIdle(config.strategies.onIdle, config.strategies.onTool)) {
@@ -73,22 +72,17 @@ export function createChatParamsHandler(
             providerID = input.message.model.providerID
         }
 
-        // Detect session change and reset per-session state
         if (state.lastSeenSessionId && state.lastSeenSessionId !== sessionId) {
             logger.info("chat.params", "Session changed, resetting state", {
                 from: state.lastSeenSessionId.substring(0, 8),
                 to: sessionId.substring(0, 8)
             })
-            // Clear ID mappings from previous session
             clearAllMappings()
-            // Clear tool parameters cache (not session-scoped, so must be cleared)
             state.toolParameters.clear()
         }
 
-        // Track the last seen session ID for fetch wrapper correlation
         state.lastSeenSessionId = sessionId
 
-        // Check if this is a subagent session
         if (!state.checkedSessions.has(sessionId)) {
             state.checkedSessions.add(sessionId)
             const isSubagent = await isSubagentSession(client, sessionId)
@@ -108,7 +102,6 @@ export function createChatParamsHandler(
                 const messages = messagesResponse.data || messagesResponse
 
                 if (Array.isArray(messages)) {
-                    // Build position mapping: track tool calls by name and occurrence index
                     const toolCallsByName = new Map<string, string[]>()
 
                     for (const msg of messages) {
@@ -125,7 +118,6 @@ export function createChatParamsHandler(
                         }
                     }
 
-                    // Create position mapping: "toolName:index" -> toolCallId
                     const positionMapping = new Map<string, string>()
                     for (const [toolName, callIds] of toolCallsByName) {
                         callIds.forEach((callId, index) => {

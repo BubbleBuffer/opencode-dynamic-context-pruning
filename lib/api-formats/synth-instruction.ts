@@ -9,7 +9,6 @@ export function createToolTracker(): ToolTracker {
     return { seenToolResultIds: new Set(), toolResultCount: 0, skipNextIdle: false }
 }
 
-/** Reset tool count to 0 (called after a prune event) */
 export function resetToolTrackerCount(tracker: ToolTracker): void {
     tracker.toolResultCount = 0
 }
@@ -25,7 +24,6 @@ export function trackNewToolResults(messages: any[], tracker: ToolTracker, prote
         if (m.role === 'tool' && m.tool_call_id) {
             if (!tracker.seenToolResultIds.has(m.tool_call_id)) {
                 tracker.seenToolResultIds.add(m.tool_call_id)
-                // Skip protected tools for nudge frequency counting
                 const toolName = tracker.getToolName?.(m.tool_call_id)
                 if (!toolName || !protectedTools.has(toolName)) {
                     tracker.toolResultCount++
@@ -37,7 +35,6 @@ export function trackNewToolResults(messages: any[], tracker: ToolTracker, prote
                 if (part.type === 'tool_result' && part.tool_use_id) {
                     if (!tracker.seenToolResultIds.has(part.tool_use_id)) {
                         tracker.seenToolResultIds.add(part.tool_use_id)
-                        // Skip protected tools for nudge frequency counting
                         const toolName = tracker.getToolName?.(part.tool_use_id)
                         if (!toolName || !protectedTools.has(toolName)) {
                             tracker.toolResultCount++
@@ -63,12 +60,10 @@ export function trackNewToolResultsGemini(contents: any[], tracker: ToolTracker,
         if (!Array.isArray(content.parts)) continue
         for (const part of content.parts) {
             if (part.functionResponse) {
-                // Use position-based ID since Gemini doesn't have tool_call_id
                 const positionId = `gemini_pos_${positionCounter}`
                 positionCounter++
                 if (!tracker.seenToolResultIds.has(positionId)) {
                     tracker.seenToolResultIds.add(positionId)
-                    // Skip protected tools for nudge frequency counting
                     const toolName = part.functionResponse.name
                     if (!toolName || !protectedTools.has(toolName)) {
                         tracker.toolResultCount++
@@ -91,7 +86,6 @@ export function trackNewToolResultsResponses(input: any[], tracker: ToolTracker,
         if (item.type === 'function_call_output' && item.call_id) {
             if (!tracker.seenToolResultIds.has(item.call_id)) {
                 tracker.seenToolResultIds.add(item.call_id)
-                // Skip protected tools for nudge frequency counting
                 const toolName = tracker.getToolName?.(item.call_id)
                 if (!toolName || !protectedTools.has(toolName)) {
                     tracker.toolResultCount++
@@ -103,11 +97,6 @@ export function trackNewToolResultsResponses(input: any[], tracker: ToolTracker,
     return newCount
 }
 
-// ============================================================================
-// OpenAI Chat / Anthropic Format
-// ============================================================================
-
-/** Check if a message content matches nudge text (OpenAI/Anthropic format) */
 function isNudgeMessage(msg: any, nudgeText: string): boolean {
     if (typeof msg.content === 'string') {
         return msg.content === nudgeText
@@ -138,11 +127,6 @@ export function injectSynth(messages: any[], instruction: string, nudgeText: str
     return false
 }
 
-// ============================================================================
-// Google/Gemini Format (body.contents with parts)
-// ============================================================================
-
-/** Check if a Gemini content matches nudge text */
 function isNudgeContentGemini(content: any, nudgeText: string): boolean {
     if (Array.isArray(content.parts) && content.parts.length === 1) {
         const part = content.parts[0]
@@ -169,11 +153,6 @@ export function injectSynthGemini(contents: any[], instruction: string, nudgeTex
     return false
 }
 
-// ============================================================================
-// OpenAI Responses API Format (body.input with type-based items)
-// ============================================================================
-
-/** Check if a Responses API item matches nudge text */
 function isNudgeItemResponses(item: any, nudgeText: string): boolean {
     if (typeof item.content === 'string') {
         return item.content === nudgeText

@@ -20,9 +20,6 @@ export interface IdMapping {
 /** Per-session ID mappings */
 const sessionMappings = new Map<string, IdMapping>()
 
-/**
- * Gets or creates the ID mapping for a session.
- */
 function getSessionMapping(sessionId: string): IdMapping {
     let mapping = sessionMappings.get(sessionId)
     if (!mapping) {
@@ -57,60 +54,33 @@ export function getOrCreateNumericId(sessionId: string, actualId: string): numbe
     return numericId
 }
 
-/**
- * Looks up the actual tool call ID for a numeric ID.
- * Returns undefined if the numeric ID doesn't exist.
- */
 export function getActualId(sessionId: string, numericId: number): string | undefined {
     const mapping = sessionMappings.get(sessionId)
     return mapping?.numericToActual.get(numericId)
 }
 
-/**
- * Looks up the numeric ID for an actual tool call ID.
- * Returns undefined if not mapped.
- */
 export function getNumericId(sessionId: string, actualId: string): number | undefined {
     const mapping = sessionMappings.get(sessionId)
     return mapping?.actualToNumeric.get(actualId)
 }
 
-/**
- * Gets all current mappings for a session.
- * Useful for debugging and building the prunable tools list.
- */
 export function getAllMappings(sessionId: string): Map<number, string> {
     const mapping = sessionMappings.get(sessionId)
     return mapping?.numericToActual ?? new Map()
 }
 
-/**
- * Checks if a session has any ID mappings.
- */
 export function hasMapping(sessionId: string): boolean {
     return sessionMappings.has(sessionId)
 }
 
-/**
- * Clears all ID mappings for a specific session.
- * Call this when a session ends or when switching to a new session.
- */
 export function clearSessionMapping(sessionId: string): void {
     sessionMappings.delete(sessionId)
 }
 
-/**
- * Clears all session mappings.
- * Call this when switching sessions to ensure clean state.
- */
 export function clearAllMappings(): void {
     sessionMappings.clear()
 }
 
-/**
- * Gets the next numeric ID that will be assigned (without assigning it).
- * Useful for knowing the current state.
- */
 export function getNextId(sessionId: string): number {
     const mapping = sessionMappings.get(sessionId)
     return mapping?.nextId ?? 1

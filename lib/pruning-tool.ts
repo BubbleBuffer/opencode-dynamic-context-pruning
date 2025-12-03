@@ -44,20 +44,16 @@ export function createPruningTool(
             const { client, state, logger, config, notificationCtx, workingDirectory } = ctx
             const sessionId = toolCtx.sessionID
 
-            // Skip pruning in subagent sessions
             if (await isSubagentSession(client, sessionId)) {
                 return "Pruning is unavailable in subagent sessions. Do not call this tool again. Continue with your current task."
             }
 
-            // Validate input
             if (!args.ids || args.ids.length === 0) {
                 return "No IDs provided. Check the <prunable-tools> list for available IDs to prune."
             }
 
-            // Restore persisted state if needed
             await ensureSessionRestored(state, sessionId, logger)
 
-            // Convert numeric IDs to actual tool call IDs
             const prunedIds = args.ids
                 .map(numId => getActualId(sessionId, numId))
                 .filter((id): id is string => id !== undefined)
@@ -66,10 +62,8 @@ export function createPruningTool(
                 return "None of the provided IDs were valid. Check the <prunable-tools> list for available IDs."
             }
 
-            // Calculate tokens saved
-            const tokensSaved = await calculateTokensSaved(client, sessionId, prunedIds, state)
+            const tokensSaved = await calculateTokensSaved(client, sessionId, prunedIds)
 
-            // Update stats
             const currentStats = state.stats.get(sessionId) ?? {
                 totalToolsPruned: 0,
                 totalTokensSaved: 0,
@@ -83,17 +77,13 @@ export function createPruningTool(
             }
             state.stats.set(sessionId, sessionStats)
 
-            // Update pruned IDs state
             const alreadyPrunedIds = state.prunedIds.get(sessionId) ?? []
             const allPrunedIds = [...alreadyPrunedIds, ...prunedIds]
             state.prunedIds.set(sessionId, allPrunedIds)
 
-            // Persist state
             saveSessionState(sessionId, new Set(allPrunedIds), sessionStats, logger)
                 .catch(err => logger.error("prune-tool", "Failed to persist state", { error: err.message }))
 
-            // Build tool metadata for notification
-            // Keys are normalized to lowercase to match lookup in notification.ts
             const toolMetadata = new Map<string, { tool: string, parameters?: any }>()
             for (const id of prunedIds) {
                 // Try both original and lowercase since caching may vary
@@ -110,7 +100,6 @@ export function createPruningTool(
                 }
             }
 
-            // Send notification to user
             await sendUnifiedNotification(notificationCtx, sessionId, {
                 aiPrunedCount: prunedIds.length,
                 aiTokensSaved: tokensSaved,
@@ -120,15 +109,12 @@ export function createPruningTool(
                 sessionStats
             })
 
-            // Skip next idle pruning since we just pruned
             toolTracker.skipNextIdle = true
 
-            // Reset nudge counter
             if (config.nudge_freq > 0) {
                 resetToolTrackerCount(toolTracker)
             }
 
-            // Format result for the AI
             const result = {
                 prunedCount: prunedIds.length,
                 tokensSaved,
@@ -150,11 +136,9 @@ export function createPruningTool(
 async function calculateTokensSaved(
     client: any,
     sessionId: string,
-    prunedIds: string[],
-    state: PluginState
+    prunedIds: string[]
 ): Promise<number> {
     try {
-        // Fetch session messages to get tool output content
         const messagesResponse = await client.session.messages({
             path: { id: sessionId },
             query: { limit: 200 }

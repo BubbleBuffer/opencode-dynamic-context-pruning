@@ -22,19 +22,15 @@ export async function handleOpenAIResponses(
         return { modified: false, body }
     }
 
-    // Cache tool parameters from input (OpenAI Responses API format)
     cacheToolParametersFromInput(body.input, ctx.state, ctx.logger)
 
     let modified = false
 
-    // Inject synthetic instructions if onTool strategies are enabled
     if (ctx.config.strategies.onTool.length > 0) {
-        // Inject base synthetic instructions (appended to last user message)
         if (injectSynthResponses(body.input, ctx.prompts.synthInstruction, ctx.prompts.nudgeInstruction)) {
             modified = true
         }
 
-        // Build and inject prunable tools list at the end
         const sessionId = ctx.state.lastSeenSessionId
         if (sessionId) {
             const toolIds = Array.from(ctx.state.toolParameters.keys())
@@ -50,7 +46,6 @@ export async function handleOpenAIResponses(
             )
 
             if (prunableList) {
-                // Track new tool results and check if nudge threshold is met
                 const protectedSet = new Set(ctx.config.protectedTools)
                 trackNewToolResultsResponses(body.input, ctx.toolTracker, protectedSet)
                 const includeNudge = ctx.config.nudge_freq > 0 && ctx.toolTracker.toolResultCount > ctx.config.nudge_freq
@@ -68,7 +63,6 @@ export async function handleOpenAIResponses(
         }
     }
 
-    // Check for function_call_output items
     const functionOutputs = body.input.filter((item: any) => item.type === 'function_call_output')
 
     if (functionOutputs.length === 0) {
@@ -81,7 +75,6 @@ export async function handleOpenAIResponses(
         return { modified, body }
     }
 
-    // Count only prunable (non-protected) function outputs for the total
     const protectedToolsLower = new Set(ctx.config.protectedTools.map(t => t.toLowerCase()))
     let prunableFunctionOutputCount = 0
     for (const item of functionOutputs) {

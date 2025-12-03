@@ -22,19 +22,15 @@ export async function handleOpenAIChatAndAnthropic(
         return { modified: false, body }
     }
 
-    // Cache tool parameters from messages (OpenAI and Anthropic formats)
     cacheToolParametersFromMessages(body.messages, ctx.state, ctx.logger)
 
     let modified = false
 
-    // Inject synthetic instructions if onTool strategies are enabled
     if (ctx.config.strategies.onTool.length > 0) {
-        // Inject base synthetic instructions (appended to last user message)
         if (injectSynth(body.messages, ctx.prompts.synthInstruction, ctx.prompts.nudgeInstruction)) {
             modified = true
         }
 
-        // Build and inject prunable tools list at the end
         const sessionId = ctx.state.lastSeenSessionId
         if (sessionId) {
             const toolIds = Array.from(ctx.state.toolParameters.keys())
@@ -50,7 +46,6 @@ export async function handleOpenAIChatAndAnthropic(
             )
 
             if (prunableList) {
-                // Track new tool results and check if nudge threshold is met
                 const protectedSet = new Set(ctx.config.protectedTools)
                 trackNewToolResults(body.messages, ctx.toolTracker, protectedSet)
                 const includeNudge = ctx.config.nudge_freq > 0 && ctx.toolTracker.toolResultCount > ctx.config.nudge_freq
@@ -68,12 +63,8 @@ export async function handleOpenAIChatAndAnthropic(
         }
     }
 
-    // Check for tool messages in both formats:
-    // 1. OpenAI style: role === 'tool'
-    // 2. Anthropic style: role === 'user' with content containing tool_result
     const protectedToolsLower = new Set(ctx.config.protectedTools.map(t => t.toLowerCase()))
     
-    // Count all tool messages
     const toolMessages = body.messages.filter((m: any) => {
         if (m.role === 'tool') return true
         if (m.role === 'user' && Array.isArray(m.content)) {
@@ -84,11 +75,9 @@ export async function handleOpenAIChatAndAnthropic(
         return false
     })
     
-    // Count only prunable (non-protected) tool messages for the total
     let prunableToolCount = 0
     for (const m of body.messages) {
         if (m.role === 'tool') {
-            // Get tool name from cached metadata
             const toolId = m.tool_call_id?.toLowerCase()
             const metadata = toolId ? ctx.state.toolParameters.get(toolId) : undefined
             if (!metadata || !protectedToolsLower.has(metadata.tool.toLowerCase())) {
@@ -116,7 +105,6 @@ export async function handleOpenAIChatAndAnthropic(
     let replacedCount = 0
 
     body.messages = body.messages.map((m: any) => {
-        // OpenAI style: role === 'tool' with tool_call_id
         if (m.role === 'tool' && allPrunedIds.has(m.tool_call_id?.toLowerCase())) {
             replacedCount++
             return {
@@ -125,7 +113,6 @@ export async function handleOpenAIChatAndAnthropic(
             }
         }
 
-        // Anthropic style: role === 'user' with content array containing tool_result
         if (m.role === 'user' && Array.isArray(m.content)) {
             let messageModified = false
             const newContent = m.content.map((part: any) => {

@@ -22,7 +22,6 @@ export function cacheToolParametersFromMessages(
             continue
         }
 
-        // OpenAI format: tool_calls array
         if (Array.isArray(message.tool_calls)) {
             for (const toolCall of message.tool_calls) {
                 if (!toolCall.id || !toolCall.function) {
@@ -44,7 +43,6 @@ export function cacheToolParametersFromMessages(
             }
         }
 
-        // Anthropic format: content array with tool_use blocks
         if (Array.isArray(message.content)) {
             for (const part of message.content) {
                 if (part.type !== 'tool_use' || !part.id || !part.name) {
@@ -60,7 +58,6 @@ export function cacheToolParametersFromMessages(
         }
     }
 
-    // Log cache results if anything was cached
     if (logger && (openaiCached > 0 || anthropicCached > 0)) {
         logger.debug("tool-cache", "Cached tool parameters from messages", {
             openaiFormat: openaiCached,

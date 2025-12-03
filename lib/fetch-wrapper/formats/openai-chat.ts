@@ -49,7 +49,6 @@ export const openaiChatFormat: FormatDescriptor = {
         const outputs: ToolOutput[] = []
 
         for (const m of data) {
-            // OpenAI Chat format: role='tool' with tool_call_id
             if (m.role === 'tool' && m.tool_call_id) {
                 const metadata = state.toolParameters.get(m.tool_call_id.toLowerCase())
                 outputs.push({
@@ -58,7 +57,6 @@ export const openaiChatFormat: FormatDescriptor = {
                 })
             }
 
-            // Anthropic format: role='user' with content[].type='tool_result'
             if (m.role === 'user' && Array.isArray(m.content)) {
                 for (const part of m.content) {
                     if (part.type === 'tool_result' && part.tool_use_id) {
@@ -82,13 +80,11 @@ export const openaiChatFormat: FormatDescriptor = {
         for (let i = 0; i < data.length; i++) {
             const m = data[i]
 
-            // OpenAI Chat format
             if (m.role === 'tool' && m.tool_call_id?.toLowerCase() === toolIdLower) {
                 data[i] = { ...m, content: prunedMessage }
                 replaced = true
             }
 
-            // Anthropic format
             if (m.role === 'user' && Array.isArray(m.content)) {
                 let messageModified = false
                 const newContent = m.content.map((part: any) => {

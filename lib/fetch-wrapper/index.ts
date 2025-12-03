@@ -56,7 +56,7 @@ export function installFetchWrapper(
 
                 const toolIdsBefore = new Set(state.toolParameters.keys())
 
-                // Mutually exclusive format handlers to avoid double-processing
+                // Mutually exclusive format handlers
                 if (openaiResponsesFormat.detect(body)) {
                     const result = await handleFormat(body, ctx, inputUrl, openaiResponsesFormat)
                     if (result.modified) {

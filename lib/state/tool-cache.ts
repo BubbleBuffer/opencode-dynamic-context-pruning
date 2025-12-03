@@ -38,7 +38,6 @@ export function cacheToolParametersFromMessages(
                 })
                     openaiCached++
                 } catch (error) {
-                    // Silently ignore parse errors
                 }
             }
         }
@@ -93,7 +92,6 @@ export function cacheToolParametersFromInput(
             })
             cached++
         } catch (error) {
-            // Silently ignore parse errors
         }
     }
 

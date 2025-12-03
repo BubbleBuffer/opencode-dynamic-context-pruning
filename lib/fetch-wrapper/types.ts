@@ -99,7 +99,6 @@ export async function getAllPrunedIds(
     if (currentSession) {
         await ensureSessionRestored(state, currentSession.id, logger)
         const prunedIds = state.prunedIds.get(currentSession.id) ?? []
-        // Normalize to lowercase for case-insensitive matching
         prunedIds.forEach((id: string) => allPrunedIds.add(id.toLowerCase()))
         
         if (logger && prunedIds.length > 0) {

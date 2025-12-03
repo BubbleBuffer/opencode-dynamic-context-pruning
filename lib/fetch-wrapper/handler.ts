@@ -29,10 +29,8 @@ export async function handleFormat(
 
     let modified = false
 
-    // Cache tool parameters for this format
     format.cacheToolParameters(data, ctx.state, ctx.logger)
 
-    // Inject synthetic instructions if strategies are enabled
     if (ctx.config.strategies.onTool.length > 0) {
         if (format.injectSynth(data, ctx.prompts.synthInstruction, ctx.prompts.nudgeInstruction)) {
             modified = true
@@ -70,25 +68,21 @@ export async function handleFormat(
         }
     }
 
-    // Check if there are any tool outputs to potentially prune
     if (!format.hasToolOutputs(data)) {
         return { modified, body }
     }
 
-    // Get all pruned IDs across sessions
     const { allSessions, allPrunedIds } = await getAllPrunedIds(ctx.client, ctx.state, ctx.logger)
 
     if (allPrunedIds.size === 0) {
         return { modified, body }
     }
 
-    // Extract tool outputs and replace pruned ones
     const toolOutputs = format.extractToolOutputs(data, ctx.state)
     const protectedToolsLower = new Set(ctx.config.protectedTools.map(t => t.toLowerCase()))
     let replacedCount = 0
 
     for (const output of toolOutputs) {
-        // Skip protected tools
         if (output.toolName && protectedToolsLower.has(output.toolName.toLowerCase())) {
             continue
         }
@@ -106,7 +100,6 @@ export async function handleFormat(
             total: toolOutputs.length
         })
 
-        // Save context for debugging if logging is enabled
         if (ctx.logger.enabled) {
             const activeSessions = allSessions.data?.filter((s: any) => !s.parentID) || []
             let sessionMessages: any[] | undefined

@@ -50,8 +50,6 @@ export const geminiFormat: FormatDescriptor = {
     extractToolOutputs(data: any[], state: PluginState): ToolOutput[] {
         const outputs: ToolOutput[] = []
 
-        // We need the position mapping to correlate functionResponses to tool call IDs
-        // Find the mapping from any active session
         let positionMapping: Map<string, string> | undefined
         for (const [_sessionId, mapping] of state.googleToolCallMapping) {
             if (mapping && mapping.size > 0) {
@@ -64,7 +62,6 @@ export const geminiFormat: FormatDescriptor = {
             return outputs
         }
 
-        // Track position counters per tool name
         const toolPositionCounters = new Map<string, number>()
 
         for (const content of data) {
@@ -95,7 +92,6 @@ export const geminiFormat: FormatDescriptor = {
     },
 
     replaceToolOutput(data: any[], toolId: string, prunedMessage: string, state: PluginState): boolean {
-        // Find the position mapping
         let positionMapping: Map<string, string> | undefined
         for (const [_sessionId, mapping] of state.googleToolCallMapping) {
             if (mapping && mapping.size > 0) {

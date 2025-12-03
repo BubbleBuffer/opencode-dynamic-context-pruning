@@ -86,7 +86,6 @@ export function createPruningTool(
 
             const toolMetadata = new Map<string, { tool: string, parameters?: any }>()
             for (const id of prunedIds) {
-                // Look up with lowercase since all IDs are stored lowercase
                 const meta = state.toolParameters.get(id.toLowerCase())
                 if (meta) {
                     toolMetadata.set(id.toLowerCase(), meta)
@@ -144,7 +143,6 @@ async function calculateTokensSaved(
         })
         const messages = messagesResponse.data || messagesResponse
 
-        // Build map of tool call ID -> output content
         const toolOutputs = new Map<string, string>()
         for (const msg of messages) {
             if (msg.role === 'tool' && msg.tool_call_id) {
@@ -153,7 +151,6 @@ async function calculateTokensSaved(
                     : JSON.stringify(msg.content)
                 toolOutputs.set(msg.tool_call_id.toLowerCase(), content)
             }
-            // Handle Anthropic format
             if (msg.role === 'user' && Array.isArray(msg.content)) {
                 for (const part of msg.content) {
                     if (part.type === 'tool_result' && part.tool_use_id) {
@@ -166,7 +163,6 @@ async function calculateTokensSaved(
             }
         }
 
-        // Collect content for pruned outputs
         const contents: string[] = []
         for (const id of prunedIds) {
             const content = toolOutputs.get(id.toLowerCase())
@@ -176,14 +172,12 @@ async function calculateTokensSaved(
         }
 
         if (contents.length === 0) {
-            return prunedIds.length * 500 // fallback estimate
+            return prunedIds.length * 500
         }
 
-        // Estimate tokens
         const tokenCounts = await estimateTokensBatch(contents)
         return tokenCounts.reduce((sum, count) => sum + count, 0)
     } catch (error: any) {
-        // If we can't calculate, estimate based on average
         return prunedIds.length * 500
     }
 }

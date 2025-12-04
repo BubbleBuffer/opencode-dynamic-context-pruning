@@ -102,12 +102,9 @@ function formatStatsHeader(
 
     const maxTokenLen = Math.max(totalTokensStr.length, justNowTokensStr.length)
     const totalTokensPadded = totalTokensStr.padStart(maxTokenLen)
-    const justNowTokensPadded = justNowTokensStr.padStart(maxTokenLen)
 
     return [
-        `▣ DCP Stats`,
-        `  Total saved │ ${totalTokensPadded}`,
-        `  Just now    │ ${justNowTokensPadded}`,
+        `▣ DCP | ${totalTokensPadded} saved total`,
     ].join('\n')
 }
 
@@ -117,7 +114,8 @@ function buildDetailedMessage(data: NotificationData, workingDirectory?: string)
     let message = formatStatsHeader(totalTokens, justNowTokens)
 
     if (data.aiPrunedCount > 0) {
-        message += '\n\n▣ Pruned tools:'
+        const justNowTokensStr = `~${formatTokenCount(justNowTokens)}`
+        message += `\n\n▣ Pruned tools (${justNowTokensStr})`
 
         for (const prunedId of data.aiPrunedIds) {
             const normalizedId = prunedId.toLowerCase()

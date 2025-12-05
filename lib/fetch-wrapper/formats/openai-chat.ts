@@ -1,23 +1,73 @@
-import type { FormatDescriptor, ToolOutput } from "../types"
-import { PRUNED_CONTENT_MESSAGE } from "../types"
+import type { FormatDescriptor, ToolOutput, ToolTracker } from "../types"
 import type { PluginState } from "../../state"
 import type { Logger } from "../../logger"
-import type { ToolTracker } from "../../api-formats/synth-instruction"
 import { cacheToolParametersFromMessages } from "../../state/tool-cache"
-import { injectSynth, trackNewToolResults } from "../../api-formats/synth-instruction"
-import { injectPrunableList } from "../../api-formats/prunable-list"
 
-/**
- * Format descriptor for OpenAI Chat Completions and Anthropic APIs.
- * 
- * OpenAI Chat format:
- * - Messages with role='tool' and tool_call_id
- * - Assistant messages with tool_calls[] array
- * 
- * Anthropic format:
- * - Messages with role='user' containing content[].type='tool_result' and tool_use_id
- * - Assistant messages with content[].type='tool_use'
- */
+function isNudgeMessage(msg: any, nudgeText: string): boolean {
+    if (typeof msg.content === 'string') {
+        return msg.content === nudgeText
+    }
+    return false
+}
+
+function injectSynth(messages: any[], instruction: string, nudgeText: string): boolean {
+    for (let i = messages.length - 1; i >= 0; i--) {
+        const msg = messages[i]
+        if (msg.role === 'user') {
+            if (isNudgeMessage(msg, nudgeText)) continue
+
+            if (typeof msg.content === 'string') {
+                if (msg.content.includes(instruction)) return false
+                msg.content = msg.content + '\n\n' + instruction
+            } else if (Array.isArray(msg.content)) {
+                const alreadyInjected = msg.content.some(
+                    (part: any) => part?.type === 'text' && typeof part.text === 'string' && part.text.includes(instruction)
+                )
+                if (alreadyInjected) return false
+                msg.content.push({ type: 'text', text: instruction })
+            }
+            return true
+        }
+    }
+    return false
+}
+
+function trackNewToolResults(messages: any[], tracker: ToolTracker, protectedTools: Set<string>): number {
+    let newCount = 0
+    for (const m of messages) {
+        if (m.role === 'tool' && m.tool_call_id) {
+            if (!tracker.seenToolResultIds.has(m.tool_call_id)) {
+                tracker.seenToolResultIds.add(m.tool_call_id)
+                const toolName = tracker.getToolName?.(m.tool_call_id)
+                if (!toolName || !protectedTools.has(toolName)) {
+                    tracker.toolResultCount++
+                    newCount++
+                }
+            }
+        } else if (m.role === 'user' && Array.isArray(m.content)) {
+            for (const part of m.content) {
+                if (part.type === 'tool_result' && part.tool_use_id) {
+                    if (!tracker.seenToolResultIds.has(part.tool_use_id)) {
+                        tracker.seenToolResultIds.add(part.tool_use_id)
+                        const toolName = tracker.getToolName?.(part.tool_use_id)
+                        if (!toolName || !protectedTools.has(toolName)) {
+                            tracker.toolResultCount++
+                            newCount++
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return newCount
+}
+
+function injectPrunableList(messages: any[], injection: string): boolean {
+    if (!injection) return false
+    messages.push({ role: 'user', content: injection })
+    return true
+}
+
 export const openaiChatFormat: FormatDescriptor = {
     name: 'openai-chat',
 

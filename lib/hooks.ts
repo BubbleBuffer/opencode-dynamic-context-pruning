@@ -3,8 +3,8 @@ import type { Logger } from "./logger"
 import type { JanitorContext } from "./core/janitor"
 import { runOnIdle } from "./core/janitor"
 import type { PluginConfig, PruningStrategy } from "./config"
-import type { ToolTracker } from "./api-formats/synth-instruction"
-import { resetToolTrackerCount } from "./api-formats/synth-instruction"
+import type { ToolTracker } from "./fetch-wrapper/tool-tracker"
+import { resetToolTrackerCount } from "./fetch-wrapper/tool-tracker"
 import { clearAllMappings } from "./state/id-mapping"
 
 export async function isSubagentSession(client: any, sessionID: string): Promise<boolean> {
@@ -116,12 +116,12 @@ export function createChatParamsHandler(
                                 if (part.type === 'tool' && part.callID && part.tool) {
                                     const toolName = part.tool.toLowerCase()
                                     const callId = part.callID.toLowerCase()
-                                    
+
                                     if (!toolCallsByName.has(toolName)) {
                                         toolCallsByName.set(toolName, [])
                                     }
                                     toolCallsByName.get(toolName)!.push(callId)
-                                    
+
                                     if (!state.toolParameters.has(callId)) {
                                         state.toolParameters.set(callId, {
                                             tool: part.tool,

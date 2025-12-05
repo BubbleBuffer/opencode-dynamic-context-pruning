@@ -1,19 +1,63 @@
-import type { FormatDescriptor, ToolOutput } from "../types"
-import { PRUNED_CONTENT_MESSAGE } from "../types"
+import type { FormatDescriptor, ToolOutput, ToolTracker } from "../types"
 import type { PluginState } from "../../state"
 import type { Logger } from "../../logger"
-import type { ToolTracker } from "../../api-formats/synth-instruction"
-import { injectSynthGemini, trackNewToolResultsGemini } from "../../api-formats/synth-instruction"
-import { injectPrunableListGemini } from "../../api-formats/prunable-list"
+
+function isNudgeContent(content: any, nudgeText: string): boolean {
+    if (Array.isArray(content.parts) && content.parts.length === 1) {
+        const part = content.parts[0]
+        return part?.text === nudgeText
+    }
+    return false
+}
+
+function injectSynth(contents: any[], instruction: string, nudgeText: string): boolean {
+    for (let i = contents.length - 1; i >= 0; i--) {
+        const content = contents[i]
+        if (content.role === 'user' && Array.isArray(content.parts)) {
+            if (isNudgeContent(content, nudgeText)) continue
+
+            const alreadyInjected = content.parts.some(
+                (part: any) => part?.text && typeof part.text === 'string' && part.text.includes(instruction)
+            )
+            if (alreadyInjected) return false
+            content.parts.push({ text: instruction })
+            return true
+        }
+    }
+    return false
+}
+
+function trackNewToolResults(contents: any[], tracker: ToolTracker, protectedTools: Set<string>): number {
+    let newCount = 0
+    let positionCounter = 0
+    for (const content of contents) {
+        if (!Array.isArray(content.parts)) continue
+        for (const part of content.parts) {
+            if (part.functionResponse) {
+                const positionId = `gemini_pos_${positionCounter}`
+                positionCounter++
+                if (!tracker.seenToolResultIds.has(positionId)) {
+                    tracker.seenToolResultIds.add(positionId)
+                    const toolName = part.functionResponse.name
+                    if (!toolName || !protectedTools.has(toolName)) {
+                        tracker.toolResultCount++
+                        newCount++
+                    }
+                }
+            }
+        }
+    }
+    return newCount
+}
+
+function injectPrunableList(contents: any[], injection: string): boolean {
+    if (!injection) return false
+    contents.push({ role: 'user', parts: [{ text: injection }] })
+    return true
+}
 
 /**
- * Format descriptor for Google/Gemini API.
- * 
- * Uses body.contents array with:
- * - parts[].functionCall for tool invocations
- * - parts[].functionResponse for tool results
- * 
- * IMPORTANT: Gemini doesn't include tool call IDs in its native format.
+ * Gemini doesn't include tool call IDs in its native format.
  * We use position-based correlation via state.googleToolCallMapping which maps
  * "toolName:index" -> "toolCallId" (populated by hooks.ts from message events).
  */
@@ -29,22 +73,19 @@ export const geminiFormat: FormatDescriptor = {
     },
 
     cacheToolParameters(_data: any[], _state: PluginState, _logger?: Logger): void {
-        // Gemini format doesn't include tool parameters in the request body.
-        // Tool parameters are captured via message events in hooks.ts and stored
-        // in state.googleToolCallMapping for position-based correlation.
-        // No-op here.
+        // No-op: Gemini tool parameters are captured via message events in hooks.ts
     },
 
     injectSynth(data: any[], instruction: string, nudgeText: string): boolean {
-        return injectSynthGemini(data, instruction, nudgeText)
+        return injectSynth(data, instruction, nudgeText)
     },
 
     trackNewToolResults(data: any[], tracker: ToolTracker, protectedTools: Set<string>): number {
-        return trackNewToolResultsGemini(data, tracker, protectedTools)
+        return trackNewToolResults(data, tracker, protectedTools)
     },
 
     injectPrunableList(data: any[], injection: string): boolean {
-        return injectPrunableListGemini(data, injection)
+        return injectPrunableList(data, injection)
     },
 
     extractToolOutputs(data: any[], state: PluginState): ToolOutput[] {

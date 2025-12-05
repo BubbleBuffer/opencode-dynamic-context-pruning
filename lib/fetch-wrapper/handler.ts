@@ -1,21 +1,57 @@
-import type { FetchHandlerContext, FetchHandlerResult, FormatDescriptor } from "./types"
-import {
-    PRUNED_CONTENT_MESSAGE,
-    getAllPrunedIds,
-    fetchSessionMessages
-} from "./types"
-import { buildPrunableToolsList, buildEndInjection } from "../api-formats/prunable-list"
+import type { FetchHandlerContext, FetchHandlerResult, FormatDescriptor, PrunedIdData } from "./types"
+import { type PluginState, ensureSessionRestored } from "../state"
+import type { Logger } from "../logger"
+import { buildPrunableToolsList, buildEndInjection } from "./prunable-list"
 
-/**
- * Generic format handler that processes any API format using a FormatDescriptor.
- * 
- * This consolidates the common logic from all format-specific handlers:
- * 1. Cache tool parameters
- * 2. Inject synthetic instructions (if strategies enabled)
- * 3. Build and inject prunable tools list
- * 4. Replace pruned tool outputs
- * 5. Log and save context
- */
+const PRUNED_CONTENT_MESSAGE = '[Output removed to save context - information superseded or no longer needed]'
+
+function getMostRecentActiveSession(allSessions: any): any | undefined {
+    const activeSessions = allSessions.data?.filter((s: any) => !s.parentID) || []
+    return activeSessions.length > 0 ? activeSessions[0] : undefined
+}
+
+async function fetchSessionMessages(
+    client: any,
+    sessionId: string
+): Promise<any[] | undefined> {
+    try {
+        const messagesResponse = await client.session.messages({
+            path: { id: sessionId },
+            query: { limit: 100 }
+        })
+        return Array.isArray(messagesResponse.data)
+            ? messagesResponse.data
+            : Array.isArray(messagesResponse) ? messagesResponse : undefined
+    } catch (e) {
+        return undefined
+    }
+}
+
+async function getAllPrunedIds(
+    client: any,
+    state: PluginState,
+    logger?: Logger
+): Promise<PrunedIdData> {
+    const allSessions = await client.session.list()
+    const allPrunedIds = new Set<string>()
+
+    const currentSession = getMostRecentActiveSession(allSessions)
+    if (currentSession) {
+        await ensureSessionRestored(state, currentSession.id, logger)
+        const prunedIds = state.prunedIds.get(currentSession.id) ?? []
+        prunedIds.forEach((id: string) => allPrunedIds.add(id.toLowerCase()))
+
+        if (logger && prunedIds.length > 0) {
+            logger.debug("fetch", "Loaded pruned IDs for replacement", {
+                sessionId: currentSession.id,
+                prunedCount: prunedIds.length
+            })
+        }
+    }
+
+    return { allSessions, allPrunedIds }
+}
+
 export async function handleFormat(
     body: any,
     ctx: FetchHandlerContext,
@@ -81,11 +117,13 @@ export async function handleFormat(
     const toolOutputs = format.extractToolOutputs(data, ctx.state)
     const protectedToolsLower = new Set(ctx.config.protectedTools.map(t => t.toLowerCase()))
     let replacedCount = 0
+    let prunableCount = 0
 
     for (const output of toolOutputs) {
         if (output.toolName && protectedToolsLower.has(output.toolName.toLowerCase())) {
             continue
         }
+        prunableCount++
 
         if (allPrunedIds.has(output.id)) {
             if (format.replaceToolOutput(data, output.id, PRUNED_CONTENT_MESSAGE, ctx.state)) {
@@ -97,7 +135,7 @@ export async function handleFormat(
     if (replacedCount > 0) {
         ctx.logger.info("fetch", `Replaced pruned tool outputs (${format.name})`, {
             replaced: replacedCount,
-            total: toolOutputs.length
+            total: prunableCount
         })
 
         if (ctx.logger.enabled) {

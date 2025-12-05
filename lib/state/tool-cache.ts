@@ -1,5 +1,6 @@
 import type { PluginState, ToolStatus } from "./index"
 import type { Logger } from "../logger"
+import type { ToolTracker } from "../fetch-wrapper/tool-tracker"
 
 /** Maximum number of entries to keep in the tool parameters cache */
 const MAX_TOOL_CACHE_SIZE = 500
@@ -8,11 +9,16 @@ const MAX_TOOL_CACHE_SIZE = 500
  * Sync tool parameters from OpenCode's session.messages() API.
  * This is the single source of truth for tool parameters, replacing
  * format-specific parsing from LLM API requests.
+ * 
+ * Also tracks new tool results for nudge injection, consolidating
+ * what was previously done via format-specific trackNewToolResults().
  */
 export async function syncToolParametersFromOpenCode(
     client: any,
     sessionId: string,
     state: PluginState,
+    tracker?: ToolTracker,
+    protectedTools?: Set<string>,
     logger?: Logger
 ): Promise<void> {
     try {
@@ -36,8 +42,20 @@ export async function syncToolParametersFromOpenCode(
 
                 const id = part.callID.toLowerCase()
 
-                // Skip if already cached (optimization)
+                // Track tool results for nudge injection (replaces format-specific trackNewToolResults)
+                if (tracker && !tracker.seenToolResultIds.has(id)) {
+                    tracker.seenToolResultIds.add(id)
+                    // Only count non-protected tools toward nudge threshold
+                    if (!part.tool || !protectedTools?.has(part.tool)) {
+                        tracker.toolResultCount++
+                    }
+                }
+
+                // Skip if already cached (optimization for parameter caching only)
                 if (state.toolParameters.has(id)) continue
+
+                // Skip protected tools - they shouldn't be in the cache at all
+                if (part.tool && protectedTools?.has(part.tool)) continue
 
                 const status = part.state?.status as ToolStatus | undefined
                 state.toolParameters.set(id, {
@@ -55,8 +73,7 @@ export async function syncToolParametersFromOpenCode(
         if (logger && synced > 0) {
             logger.debug("tool-cache", "Synced tool parameters from OpenCode", {
                 sessionId: sessionId.slice(0, 8),
-                synced,
-                totalCached: state.toolParameters.size
+                synced
             })
         }
     } catch (error) {

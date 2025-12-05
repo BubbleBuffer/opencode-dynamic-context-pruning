@@ -116,12 +116,12 @@ export function createChatParamsHandler(
                                 if (part.type === 'tool' && part.callID && part.tool) {
                                     const toolName = part.tool.toLowerCase()
                                     const callId = part.callID.toLowerCase()
-                                    
+
                                     if (!toolCallsByName.has(toolName)) {
                                         toolCallsByName.set(toolName, [])
                                     }
                                     toolCallsByName.get(toolName)!.push(callId)
-                                    
+
                                     if (!state.toolParameters.has(callId)) {
                                         state.toolParameters.set(callId, {
                                             tool: part.tool,

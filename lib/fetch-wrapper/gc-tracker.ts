@@ -14,7 +14,7 @@ export function accumulateGCStats(
     const tokensCollected = estimateTokensFromOutputs(toolOutputs)
 
     const existing = state.gcPending.get(sessionId) ?? { tokensCollected: 0, toolsDeduped: 0 }
-    
+
     state.gcPending.set(sessionId, {
         tokensCollected: existing.tokensCollected + tokensCollected,
         toolsDeduped: existing.toolsDeduped + prunedIds.length

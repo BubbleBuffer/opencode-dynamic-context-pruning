@@ -15,7 +15,7 @@ function injectSynth(contents: any[], instruction: string, nudgeText: string): b
         const content = contents[i]
         if (content.role === 'user' && Array.isArray(content.parts)) {
             if (isNudgeContent(content, nudgeText)) continue
-            
+
             const alreadyInjected = content.parts.some(
                 (part: any) => part?.text && typeof part.text === 'string' && part.text.includes(instruction)
             )

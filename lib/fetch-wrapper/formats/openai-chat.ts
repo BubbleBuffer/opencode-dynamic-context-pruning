@@ -15,7 +15,7 @@ function injectSynth(messages: any[], instruction: string, nudgeText: string): b
         const msg = messages[i]
         if (msg.role === 'user') {
             if (isNudgeMessage(msg, nudgeText)) continue
-            
+
             if (typeof msg.content === 'string') {
                 if (msg.content.includes(instruction)) return false
                 msg.content = msg.content + '\n\n' + instruction

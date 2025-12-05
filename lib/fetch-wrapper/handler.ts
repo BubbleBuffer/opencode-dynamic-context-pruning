@@ -117,11 +117,13 @@ export async function handleFormat(
     const toolOutputs = format.extractToolOutputs(data, ctx.state)
     const protectedToolsLower = new Set(ctx.config.protectedTools.map(t => t.toLowerCase()))
     let replacedCount = 0
+    let prunableCount = 0
 
     for (const output of toolOutputs) {
         if (output.toolName && protectedToolsLower.has(output.toolName.toLowerCase())) {
             continue
         }
+        prunableCount++
 
         if (allPrunedIds.has(output.id)) {
             if (format.replaceToolOutput(data, output.id, PRUNED_CONTENT_MESSAGE, ctx.state)) {
@@ -133,7 +135,7 @@ export async function handleFormat(
     if (replacedCount > 0) {
         ctx.logger.info("fetch", `Replaced pruned tool outputs (${format.name})`, {
             replaced: replacedCount,
-            total: toolOutputs.length
+            total: prunableCount
         })
 
         if (ctx.logger.enabled) {

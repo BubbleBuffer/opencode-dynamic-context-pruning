@@ -1,0 +1,2 @@
+The notes/ directory is in the root of this project and is gitignored. It is intended for users to store their personal notes, ideas, or any other information they wish to keep private and not include in version control. You can create and manage your notes in this directory without worrying about them being tracked by Git.
+There is an opencode reference use repo cloned locally at /home/dan/.config/opencode/opencode/ , use it if you need to find any code information about opencode.

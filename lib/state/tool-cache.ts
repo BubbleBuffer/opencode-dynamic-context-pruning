@@ -9,9 +9,6 @@ const MAX_TOOL_CACHE_SIZE = 500
  * Sync tool parameters from OpenCode's session.messages() API.
  * This is the single source of truth for tool parameters, replacing
  * format-specific parsing from LLM API requests.
- * 
- * Also tracks new tool results for nudge injection, consolidating
- * what was previously done via format-specific trackNewToolResults().
  */
 export async function syncToolParametersFromOpenCode(
     client: any,
@@ -42,7 +39,7 @@ export async function syncToolParametersFromOpenCode(
 
                 const id = part.callID.toLowerCase()
 
-                // Track tool results for nudge injection (replaces format-specific trackNewToolResults)
+                // Track tool results for nudge injection
                 if (tracker && !tracker.seenToolResultIds.has(id)) {
                     tracker.seenToolResultIds.add(id)
                     // Only count non-protected tools toward nudge threshold
@@ -51,10 +48,7 @@ export async function syncToolParametersFromOpenCode(
                     }
                 }
 
-                // Skip if already cached (optimization for parameter caching only)
                 if (state.toolParameters.has(id)) continue
-
-                // Skip protected tools - they shouldn't be in the cache at all
                 if (part.tool && protectedTools?.has(part.tool)) continue
 
                 const status = part.state?.status as ToolStatus | undefined

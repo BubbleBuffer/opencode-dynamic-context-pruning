@@ -8,7 +8,8 @@ function isNudgeItem(item: any, nudgeText: string): boolean {
     return false
 }
 
-function injectSynth(input: any[], instruction: string, nudgeText: string): boolean {
+function injectSynth(input: any[], instruction: string, nudgeText: string, systemReminder: string): boolean {
+    const fullInstruction = systemReminder + '\n\n' + instruction
     for (let i = input.length - 1; i >= 0; i--) {
         const item = input[i]
         if (item.type === 'message' && item.role === 'user') {
@@ -16,13 +17,13 @@ function injectSynth(input: any[], instruction: string, nudgeText: string): bool
 
             if (typeof item.content === 'string') {
                 if (item.content.includes(instruction)) return false
-                item.content = item.content + '\n\n' + instruction
+                item.content = item.content + '\n\n' + fullInstruction
             } else if (Array.isArray(item.content)) {
                 const alreadyInjected = item.content.some(
                     (part: any) => part?.type === 'input_text' && typeof part.text === 'string' && part.text.includes(instruction)
                 )
                 if (alreadyInjected) return false
-                item.content.push({ type: 'input_text', text: instruction })
+                item.content.push({ type: 'input_text', text: fullInstruction })
             }
             return true
         }
@@ -47,8 +48,8 @@ export const openaiResponsesFormat: FormatDescriptor = {
         return body.input
     },
 
-    injectSynth(data: any[], instruction: string, nudgeText: string): boolean {
-        return injectSynth(data, instruction, nudgeText)
+    injectSynth(data: any[], instruction: string, nudgeText: string, systemReminder: string): boolean {
+        return injectSynth(data, instruction, nudgeText, systemReminder)
     },
 
     injectPrunableList(data: any[], injection: string): boolean {

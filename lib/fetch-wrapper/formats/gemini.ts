@@ -9,7 +9,8 @@ function isNudgeContent(content: any, nudgeText: string): boolean {
     return false
 }
 
-function injectSynth(contents: any[], instruction: string, nudgeText: string): boolean {
+function injectSynth(contents: any[], instruction: string, nudgeText: string, systemReminder: string): boolean {
+    const fullInstruction = systemReminder + '\n\n' + instruction
     for (let i = contents.length - 1; i >= 0; i--) {
         const content = contents[i]
         if (content.role === 'user' && Array.isArray(content.parts)) {
@@ -19,7 +20,7 @@ function injectSynth(contents: any[], instruction: string, nudgeText: string): b
                 (part: any) => part?.text && typeof part.text === 'string' && part.text.includes(instruction)
             )
             if (alreadyInjected) return false
-            content.parts.push({ text: instruction })
+            content.parts.push({ text: fullInstruction })
             return true
         }
     }
@@ -48,8 +49,8 @@ export const geminiFormat: FormatDescriptor = {
         return body.contents
     },
 
-    injectSynth(data: any[], instruction: string, nudgeText: string): boolean {
-        return injectSynth(data, instruction, nudgeText)
+    injectSynth(data: any[], instruction: string, nudgeText: string, systemReminder: string): boolean {
+        return injectSynth(data, instruction, nudgeText, systemReminder)
     },
 
     injectPrunableList(data: any[], injection: string): boolean {

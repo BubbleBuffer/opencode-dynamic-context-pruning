@@ -8,7 +8,8 @@ function isNudgeMessage(msg: any, nudgeText: string): boolean {
     return false
 }
 
-function injectSynth(messages: any[], instruction: string, nudgeText: string): boolean {
+function injectSynth(messages: any[], instruction: string, nudgeText: string, systemReminder: string): boolean {
+    const fullInstruction = systemReminder + '\n\n' + instruction
     for (let i = messages.length - 1; i >= 0; i--) {
         const msg = messages[i]
         if (msg.role === 'user') {
@@ -16,13 +17,13 @@ function injectSynth(messages: any[], instruction: string, nudgeText: string): b
 
             if (typeof msg.content === 'string') {
                 if (msg.content.includes(instruction)) return false
-                msg.content = msg.content + '\n\n' + instruction
+                msg.content = msg.content + '\n\n' + fullInstruction
             } else if (Array.isArray(msg.content)) {
                 const alreadyInjected = msg.content.some(
                     (part: any) => part?.type === 'text' && typeof part.text === 'string' && part.text.includes(instruction)
                 )
                 if (alreadyInjected) return false
-                msg.content.push({ type: 'text', text: instruction })
+                msg.content.push({ type: 'text', text: fullInstruction })
             }
             return true
         }
@@ -56,8 +57,8 @@ export const bedrockFormat: FormatDescriptor = {
         return body.messages
     },
 
-    injectSynth(data: any[], instruction: string, nudgeText: string): boolean {
-        return injectSynth(data, instruction, nudgeText)
+    injectSynth(data: any[], instruction: string, nudgeText: string, systemReminder: string): boolean {
+        return injectSynth(data, instruction, nudgeText, systemReminder)
     },
 
     injectPrunableList(data: any[], injection: string): boolean {

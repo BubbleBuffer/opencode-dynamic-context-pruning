@@ -1,5 +1,5 @@
 import { extractParameterKey } from "../../ui/display-utils"
-import type { PruningStrategy, StrategyResult, ToolMetadata } from "./types"
+import type { PruningStrategy, StrategyResult, ToolMetadata } from "./index"
 
 /**
  * Deduplication strategy - prunes older tool calls that have identical

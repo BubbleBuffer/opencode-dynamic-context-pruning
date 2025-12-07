@@ -5,7 +5,7 @@ import type { ToolTracker } from "./fetch-wrapper/tool-tracker"
 import { resetToolTrackerCount } from "./fetch-wrapper/tool-tracker"
 import { isSubagentSession } from "./hooks"
 import { getActualId } from "./state/id-mapping"
-import { formatPruningResultForTool, sendUnifiedNotification, type NotificationContext } from "./ui/notification"
+import { sendUnifiedNotification, type NotificationContext } from "./ui/notification"
 import { ensureSessionRestored } from "./state"
 import { saveSessionState } from "./state/persistence"
 import type { Logger } from "./logger"
@@ -41,7 +41,7 @@ export function createPruningTool(
             ),
         },
         async execute(args, toolCtx) {
-            const { client, state, logger, config, notificationCtx, workingDirectory } = ctx
+            const { client, state, logger, config, notificationCtx } = ctx
             const sessionId = toolCtx.sessionID
 
             if (await isSubagentSession(client, sessionId)) {

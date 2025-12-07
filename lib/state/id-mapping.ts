@@ -59,10 +59,6 @@ export function getActualId(sessionId: string, numericId: number): string | unde
     return mapping?.numericToActual.get(numericId)
 }
 
-export function clearSessionMapping(sessionId: string): void {
-    sessionMappings.delete(sessionId)
-}
-
 export function clearAllMappings(): void {
     sessionMappings.clear()
 }

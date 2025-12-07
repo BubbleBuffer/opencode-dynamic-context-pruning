@@ -1,5 +1,5 @@
 import type { Logger } from "../logger"
-import type { SessionStats, GCStats, PruningResult } from "../core/janitor"
+import type { SessionStats, GCStats } from "../core/janitor"
 import type { ToolMetadata } from "../fetch-wrapper/types"
 import { formatTokenCount } from "../tokenizer"
 import { extractParameterKey } from "./display-utils"
@@ -144,72 +144,6 @@ function buildDetailedMessage(data: NotificationData, workingDirectory?: string)
     }
 
     return message.trim()
-}
-
-export function formatPruningResultForTool(
-    result: PruningResult,
-    workingDirectory?: string
-): string {
-    const lines: string[] = []
-    lines.push(`Context pruning complete. Pruned ${result.prunedCount} tool outputs.`)
-    lines.push('')
-
-    if (result.llmPrunedIds.length > 0) {
-        lines.push(`Semantically pruned (${result.llmPrunedIds.length}):`)
-        const toolsSummary = buildToolsSummary(result.llmPrunedIds, result.toolMetadata, workingDirectory)
-        lines.push(...formatToolSummaryLines(toolsSummary))
-    }
-
-    return lines.join('\n').trim()
-}
-
-export function buildToolsSummary(
-    prunedIds: string[],
-    toolMetadata: Map<string, ToolMetadata>,
-    workingDirectory?: string
-): Map<string, string[]> {
-    const toolsSummary = new Map<string, string[]>()
-
-    for (const prunedId of prunedIds) {
-        const normalizedId = prunedId.toLowerCase()
-        const metadata = toolMetadata.get(normalizedId)
-        if (metadata) {
-            const toolName = metadata.tool
-            if (!toolsSummary.has(toolName)) {
-                toolsSummary.set(toolName, [])
-            }
-
-            const paramKey = extractParameterKey(metadata)
-            if (paramKey) {
-                const displayKey = truncate(shortenPath(paramKey, workingDirectory), 80)
-                toolsSummary.get(toolName)!.push(displayKey)
-            } else {
-                toolsSummary.get(toolName)!.push('(default)')
-            }
-        }
-    }
-
-    return toolsSummary
-}
-
-export function formatToolSummaryLines(
-    toolsSummary: Map<string, string[]>,
-    indent: string = '  '
-): string[] {
-    const lines: string[] = []
-
-    for (const [toolName, params] of toolsSummary.entries()) {
-        if (params.length === 1) {
-            lines.push(`${indent}${toolName}: ${params[0]}`)
-        } else if (params.length > 1) {
-            lines.push(`${indent}${toolName} (${params.length}):`)
-            for (const param of params) {
-                lines.push(`${indent}  ${param}`)
-            }
-        }
-    }
-
-    return lines
 }
 
 function truncate(str: string, maxLen: number = 60): string {

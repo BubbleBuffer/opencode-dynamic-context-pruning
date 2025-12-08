@@ -1,9 +1,11 @@
 import type { FetchHandlerContext, FetchHandlerResult, FormatDescriptor, PrunedIdData } from "./types"
 import { type PluginState, ensureSessionRestored } from "../state"
 import type { Logger } from "../logger"
-import { buildPrunableToolsList, buildSystemInjection } from "./prunable-list"
+import { buildPrunableToolsList, buildUserInjection } from "./prunable-list"
 import { syncToolCache } from "../state/tool-cache"
+import { loadPrompt } from "../core/prompt"
 
+const SYNTHETIC_INSTRUCTION = loadPrompt("synthetic")
 const PRUNED_CONTENT_MESSAGE = '[Output removed to save context - information superseded or no longer needed]'
 
 function getMostRecentActiveSession(allSessions: any): any | undefined {
@@ -90,10 +92,15 @@ export async function handleFormat(
 
         if (prunableList) {
             const includeNudge = ctx.config.nudge_freq > 0 && ctx.toolTracker.toolResultCount > ctx.config.nudge_freq
-            const systemInjection = buildSystemInjection(prunableList, includeNudge)
-            
-            if (format.injectSystemMessage(body, systemInjection)) {
-                ctx.logger.debug("fetch", `Injected prunable tools list into system message (${format.name})`, {
+            if (format.injectSystemMessage(body, SYNTHETIC_INSTRUCTION)) {
+                modified = true
+            }
+
+            const userInjection = buildUserInjection(prunableList, includeNudge)
+
+            if (format.injectUserMessage && format.injectUserMessage(body, userInjection)) {
+                const nudgeMsg = includeNudge ? " with nudge" : ""
+                ctx.logger.debug("fetch", `Injected prunable tools list${nudgeMsg} into user message (${format.name})`, {
                     ids: numericIds,
                     nudge: includeNudge,
                     toolsSincePrune: ctx.toolTracker.toolResultCount

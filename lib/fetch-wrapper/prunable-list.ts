@@ -4,7 +4,6 @@ import { loadPrompt } from '../core/prompt'
 import type { ToolMetadata } from './types'
 
 const NUDGE_INSTRUCTION = loadPrompt("nudge")
-const SYNTHETIC_INSTRUCTION = loadPrompt("synthetic")
 
 export interface PrunableListResult {
     list: string
@@ -43,7 +42,7 @@ export function buildPrunableToolsList(
     }
 }
 
-export function buildSystemInjection(
+export function buildUserInjection(
     prunableList: string,
     includeNudge: boolean
 ): string {
@@ -51,9 +50,8 @@ export function buildSystemInjection(
         return ''
     }
 
-    // Always include synthetic instruction, optionally add nudge
-    const parts = [SYNTHETIC_INSTRUCTION, prunableList]
-    
+    const parts = [prunableList]
+
     if (includeNudge) {
         parts.push(NUDGE_INSTRUCTION)
     }

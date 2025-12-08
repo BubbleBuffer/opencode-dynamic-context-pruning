@@ -31,6 +31,15 @@ export const geminiFormat: FormatDescriptor = {
         return true
     },
 
+    injectUserMessage(body: any, injection: string): boolean {
+        if (!injection || !body.contents) return false
+        body.contents.push({
+            role: 'user',
+            parts: [{ text: injection }]
+        })
+        return true
+    },
+
     extractToolOutputs(data: any[], state: PluginState): ToolOutput[] {
         const outputs: ToolOutput[] = []
 

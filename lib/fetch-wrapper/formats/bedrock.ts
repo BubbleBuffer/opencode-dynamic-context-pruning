@@ -32,6 +32,15 @@ export const bedrockFormat: FormatDescriptor = {
         return true
     },
 
+    injectUserMessage(body: any, injection: string): boolean {
+        if (!injection || !body.messages) return false
+        body.messages.push({
+            role: 'user',
+            content: [{ text: injection }]
+        })
+        return true
+    },
+
     extractToolOutputs(data: any[], state: PluginState): ToolOutput[] {
         const outputs: ToolOutput[] = []
 

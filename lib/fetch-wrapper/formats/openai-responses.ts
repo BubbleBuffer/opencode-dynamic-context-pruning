@@ -23,6 +23,16 @@ export const openaiResponsesFormat: FormatDescriptor = {
         return true
     },
 
+    injectUserMessage(body: any, injection: string): boolean {
+        if (!injection || !body.input) return false
+        body.input.push({
+            type: 'message',
+            role: 'user',
+            content: injection
+        })
+        return true
+    },
+
     extractToolOutputs(data: any[], state: PluginState): ToolOutput[] {
         const outputs: ToolOutput[] = []
 

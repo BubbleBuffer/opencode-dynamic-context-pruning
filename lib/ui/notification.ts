@@ -1,6 +1,7 @@
 import type { Logger } from "../logger"
 import type { SessionStats, GCStats } from "../core/janitor"
-import type { ToolMetadata } from "../fetch-wrapper/types"
+import type { ToolMetadata, PruneReason } from "../fetch-wrapper/types"
+import { PRUNE_REASON_LABELS } from "../fetch-wrapper/types"
 import { formatTokenCount } from "../tokenizer"
 import { formatPrunedItemsList } from "./display-utils"
 
@@ -24,6 +25,7 @@ export interface NotificationData {
     toolMetadata: Map<string, ToolMetadata>
     gcPending: GCStats | null
     sessionStats: SessionStats | null
+    reason?: PruneReason
 }
 
 export async function sendUnifiedNotification(
@@ -77,7 +79,8 @@ export async function sendIgnoredMessage(
 
 function buildMinimalMessage(data: NotificationData): string {
     const { justNowTokens, totalTokens } = calculateStats(data)
-    return formatStatsHeader(totalTokens, justNowTokens)
+    const reasonSuffix = data.reason ? ` [${PRUNE_REASON_LABELS[data.reason]}]` : ''
+    return formatStatsHeader(totalTokens, justNowTokens) + reasonSuffix
 }
 
 function buildDetailedMessage(data: NotificationData, workingDirectory?: string): string {
@@ -87,7 +90,8 @@ function buildDetailedMessage(data: NotificationData, workingDirectory?: string)
 
     if (data.aiPrunedCount > 0) {
         const justNowTokensStr = `~${formatTokenCount(justNowTokens)}`
-        message += `\n\n▣ Pruned tools (${justNowTokensStr})`
+        const reasonLabel = data.reason ? ` — ${PRUNE_REASON_LABELS[data.reason]}` : ''
+        message += `\n\n▣ Pruned tools (${justNowTokensStr})${reasonLabel}`
 
         const itemLines = formatPrunedItemsList(data.aiPrunedIds, data.toolMetadata, workingDirectory)
         message += '\n' + itemLines.join('\n')

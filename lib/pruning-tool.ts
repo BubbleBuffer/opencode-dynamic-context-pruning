@@ -2,7 +2,7 @@ import { tool } from "@opencode-ai/plugin"
 import type { PluginState } from "./state"
 import type { PluginConfig } from "./config"
 import type { ToolTracker } from "./fetch-wrapper/tool-tracker"
-import type { ToolMetadata } from "./fetch-wrapper/types"
+import type { ToolMetadata, PruneReason } from "./fetch-wrapper/types"
 import { resetToolTrackerCount } from "./fetch-wrapper/tool-tracker"
 import { isSubagentSession, findCurrentAgent } from "./hooks"
 import { getActualId } from "./state/id-mapping"
@@ -38,8 +38,13 @@ export function createPruningTool(
     return tool({
         description: TOOL_DESCRIPTION,
         args: {
-            ids: tool.schema.array(tool.schema.number()).describe(
-                "Array of numeric IDs to prune from the <prunable-tools> list"
+            ids: tool.schema.array(
+                tool.schema.union([
+                    tool.schema.enum(["completion", "noise", "consolidation"]),
+                    tool.schema.number()
+                ])
+            ).describe(
+                "First element is the reason ('completion', 'noise', 'consolidation'), followed by numeric IDs to prune"
             ),
         },
         async execute(args, toolCtx) {
@@ -54,9 +59,26 @@ export function createPruningTool(
                 return "No IDs provided. Check the <prunable-tools> list for available IDs to prune."
             }
 
+            // Parse reason from first element, numeric IDs from the rest
+            const firstElement = args.ids[0]
+            const validReasons = ["completion", "noise", "consolidation"] as const
+            let reason: PruneReason | undefined
+            let numericIds: number[]
+
+            if (typeof firstElement === "string" && validReasons.includes(firstElement as any)) {
+                reason = firstElement as PruneReason
+                numericIds = args.ids.slice(1).filter((id): id is number => typeof id === "number")
+            } else {
+                numericIds = args.ids.filter((id): id is number => typeof id === "number")
+            }
+
+            if (numericIds.length === 0) {
+                return "No numeric IDs provided. Format: [reason, id1, id2, ...] where reason is 'completion', 'noise', or 'consolidation'."
+            }
+
             await ensureSessionRestored(state, sessionId, logger)
 
-            const prunedIds = args.ids
+            const prunedIds = numericIds
                 .map(numId => getActualId(sessionId, numId))
                 .filter((id): id is string => id !== undefined)
 
@@ -114,7 +136,8 @@ export function createPruningTool(
                 aiPrunedIds: prunedIds,
                 toolMetadata,
                 gcPending: null,
-                sessionStats
+                sessionStats,
+                reason
             }, currentAgent)
 
             toolTracker.skipNextIdle = true
@@ -128,7 +151,8 @@ export function createPruningTool(
                 tokensSaved,
                 llmPrunedIds: prunedIds,
                 toolMetadata,
-                sessionStats
+                sessionStats,
+                reason
             }
 
             return formatPruningResultForTool(result, ctx.workingDirectory)

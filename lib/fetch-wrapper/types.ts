@@ -43,3 +43,34 @@ export interface PrunedIdData {
     allSessions: any
     allPrunedIds: Set<string>
 }
+
+/** The 3 scenarios that trigger explicit LLM pruning */
+export type PruneReason = "completion" | "noise" | "consolidation"
+
+/** Human-readable labels for prune reasons */
+export const PRUNE_REASON_LABELS: Record<PruneReason, string> = {
+    completion: "Task Complete",
+    noise: "Noise Removal",
+    consolidation: "Consolidation"
+}
+
+export interface SessionStats {
+    totalToolsPruned: number
+    totalTokensSaved: number
+    totalGCTokens: number
+    totalGCTools: number
+}
+
+export interface GCStats {
+    tokensCollected: number
+    toolsDeduped: number
+}
+
+export interface PruningResult {
+    prunedCount: number
+    tokensSaved: number
+    llmPrunedIds: string[]
+    toolMetadata: Map<string, ToolMetadata>
+    sessionStats: SessionStats
+    reason?: PruneReason
+}

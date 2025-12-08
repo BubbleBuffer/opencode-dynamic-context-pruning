@@ -2,7 +2,7 @@ import { z } from "zod"
 import type { Logger } from "../logger"
 import type { PruningStrategy } from "../config"
 import type { PluginState } from "../state"
-import type { ToolMetadata } from "../fetch-wrapper/types"
+import type { ToolMetadata, PruneReason, SessionStats, GCStats, PruningResult } from "../fetch-wrapper/types"
 import { findCurrentAgent } from "../hooks"
 import { buildAnalysisPrompt } from "./prompt"
 import { selectModel, extractModelFromSession } from "../model-selector"
@@ -14,25 +14,7 @@ import {
     type NotificationContext
 } from "../ui/notification"
 
-export interface SessionStats {
-    totalToolsPruned: number
-    totalTokensSaved: number
-    totalGCTokens: number
-    totalGCTools: number
-}
-
-export interface GCStats {
-    tokensCollected: number
-    toolsDeduped: number
-}
-
-export interface PruningResult {
-    prunedCount: number
-    tokensSaved: number
-    llmPrunedIds: string[]
-    toolMetadata: Map<string, ToolMetadata>
-    sessionStats: SessionStats
-}
+export type { SessionStats, GCStats, PruningResult }
 
 export interface PruningOptions {
     reason?: string

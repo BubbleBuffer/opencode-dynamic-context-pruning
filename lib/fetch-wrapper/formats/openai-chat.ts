@@ -102,7 +102,8 @@ export const openaiChatFormat: FormatDescriptor = {
         return {
             url: inputUrl,
             replacedCount,
-            totalMessages: data.length
+            totalMessages: data.length,
+            format: 'openai-chat'
         }
     }
 }

@@ -120,7 +120,7 @@ async function runWithStrategies(
 
         const [sessionInfoResponse, messagesResponse] = await Promise.all([
             client.session.get({ path: { id: sessionID } }),
-            client.session.messages({ path: { id: sessionID }, query: { limit: 100 } })
+            client.session.messages({ path: { id: sessionID }, query: { limit: 500 } })
         ])
 
         const sessionInfo = sessionInfoResponse.data

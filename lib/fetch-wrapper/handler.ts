@@ -18,7 +18,7 @@ async function fetchSessionMessages(
     try {
         const messagesResponse = await client.session.messages({
             path: { id: sessionId },
-            query: { limit: 100 }
+            query: { limit: 500 }
         })
         return Array.isArray(messagesResponse.data)
             ? messagesResponse.data

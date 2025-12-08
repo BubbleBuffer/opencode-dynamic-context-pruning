@@ -21,7 +21,7 @@ export async function syncToolCache(
     try {
         const messagesResponse = await client.session.messages({
             path: { id: sessionId },
-            query: { limit: 100 }
+            query: { limit: 500 }
         })
         const messages = messagesResponse.data || messagesResponse
 

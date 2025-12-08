@@ -1,10 +1,10 @@
 import { extractParameterKey } from '../ui/display-utils'
 import { getOrCreateNumericId } from '../state/id-mapping'
+import { loadPrompt } from '../core/prompt'
 import type { ToolMetadata } from './types'
 
-const NUDGE_INSTRUCTION = `<instruction name=agent_nudge>
-You have accumulated several tool outputs. If you have completed a discrete unit of work and distilled relevant understanding in writing for the user to keep, use the prune tool to remove obsolete tool outputs from this conversation and optimize token usage.
-</instruction>`
+const NUDGE_INSTRUCTION = loadPrompt("nudge")
+const SYNTHETIC_INSTRUCTION = loadPrompt("synthetic")
 
 export interface PrunableListResult {
     list: string
@@ -51,9 +51,12 @@ export function buildSystemInjection(
         return ''
     }
 
+    // Always include synthetic instruction, optionally add nudge
+    const parts = [SYNTHETIC_INSTRUCTION, prunableList]
+    
     if (includeNudge) {
-        return `${NUDGE_INSTRUCTION}\n\n${prunableList}`
+        parts.push(NUDGE_INSTRUCTION)
     }
 
-    return prunableList
+    return parts.join('\n\n')
 }

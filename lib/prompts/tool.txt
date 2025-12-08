@@ -1,47 +1,56 @@
-Prunes tool outputs from context to manage conversation size.
+Prunes tool outputs from context to manage conversation size and reduce noise.
 
 ## IMPORTANT: The Prunable List
-A list of available tool outputs (with numeric IDs) is maintained for you in the SYSTEM PROMPT at the beginning of the context. This list is always up-to-date. You can rely on it to pick tools to prune.
+A list of available tool outputs (with numeric IDs) is maintained for you in the SYSTEM PROMPT at the beginning of the context. This list is always up-to-date. Use these IDs to select tools to prune.
 
-## CRITICAL: Distill Before Pruning (NON-NEGOTIABLE)
+## CRITICAL: When and How to Prune
 
-You MUST ALWAYS narrate your findings in a message BEFORE using this tool. No tool result (read, bash, grep, webfetch, etc.) should be left unexplained. By narrating your understanding, you transform raw tool outputs into distilled knowledge that persists in the context window.
+You must use this tool in three specific scenarios. The rules for distillation (summarizing findings) differ for each.
 
-**Signal Management:**
-After calling a series of tools, you ALWAYS have to distill signals from their results. This ensures traceability of your reasoning and is PARAMOUNT to best context window management practices.
+### 1. Task Completion (Clean Up)
+**When:** You have successfully completed a specific unit of work (e.g., fixed a bug, wrote a file, answered a question).
+**Action:** Prune the tools used for that task.
+**Distillation:** NOT REQUIRED. Since the task is done, the raw data is no longer needed. Simply state that the task is complete.
 
-**Distillation Workflow:**
-1. Call tools to investigate/explore.
-2. In your next message, EXPLICITLY narrate:
-   - What you did (which tools, what you were looking for).
-   - What you found (the key facts/signals).
-   - What you concluded (how this affects the task or next step).
-   > THINK HIGH SIGNAL, LOW NOISE FOR THIS NARRATION.
-3. ONLY AFTER narrating, call `prune` with the numeric IDs of outputs no longer needed.
+### 2. Removing Noise (Garbage Collection)
+**When:** You have read files or run commands that turned out to be irrelevant, unhelpful, or outdated (meaning later tools have provided fresher, more valid information).
+**Action:** Prune these specific tool outputs immediately.
+**Distillation:** FORBIDDEN. Do not pollute the context by summarizing useless information. Just cut it out.
 
-**Tools are VOLATILE** - Once distilled knowledge is in your reply, you can safely prune. Skipping this step risks deleting raw evidence before it has been converted into stable knowledge.
+### 3. Context Conservation (Research & Consolidation)
+**When:** You have gathered useful information. Prune frequently as you work (e.g., after reading a few files), rather than waiting for a "long" phase to end.
+**Action:** Convert raw data into distilled knowledge. This allows you to discard large outputs (like full file reads) while keeping only the specific parts you need (like a single function signature or constant).
+**Distillation:** MANDATORY. Before pruning, you *must* explicitly summarize the key findings from *every* tool you plan to prune.
+   - **Extract specific value:** If you read a large file but only care about one function, record that function's details and prune the whole read.
+   - Narrative format: "I found X in file Y..."
+   - Capture all relevant details (function names, logic, constraints).
+   - Once distilled into your response history, the raw tool output can be safely pruned.
 
-**After Pruning:**
-Do NOT re-summarize or re-narrate. You already distilled your findings before calling prune. Continue with your next task.
-
-## When to Use This Tool
-
-**Key Heuristic:** Distill, then prune when you finish something and are about to start something else.
-
-1. **After a discrete unit of work**: Confirming a hypothesis, closing a branch of investigation, or finishing a feature.
-2. **After exploratory bursts**: When tool calls led to a clear conclusion (or to noise).
-3. **Before a new phase**: When old tool outputs are no longer needed for the next actions.
+## Best Practices
+- **Don't wait too long:** Prune frequently to keep the context agile.
+- **Be surgical:** You can mix strategies. Prune noise without comment, while distilling useful context in the same turn.
+- **Verify:** Ensure you have captured what you need before deleting useful raw data.
 
 ## Examples
 
-<example>
-User: Review these 3 issues and fix the easy ones.
-Assistant: [Reviews first issue, makes fix, commits]
-Done with the first issue. Let me prune before moving to the next one.
-[Uses prune with ids: [1, 2, 3, 4]]
-</example>
+<example_noise>
+Assistant: [Reads 'wrong_file.ts']
+This file isn't relevant to the auth system. I'll remove it to clear the context.
+[Uses prune with ids: [5]]
+</example_noise>
 
-<example>
-Assistant: I've reviewed the relevant files. Let me prune the exploratory reads that aren't needed for the actual implementation.
-[Uses prune with ids: [1, 2, 5, 7]]
-</example>
+<example_consolidation>
+Assistant: [Reads 5 different config files]
+I have analyzed the configuration. Here is the distillation:
+- 'config.ts' uses port 3000.
+- 'db.ts' connects to mongo:27017.
+- The other 3 files were defaults.
+I have preserved the signals above, so I am now pruning the raw reads.
+[Uses prune with ids: [10, 11, 12, 13, 14]]
+</example_consolidation>
+
+<example_completion>
+Assistant: [Runs tests, they pass]
+The tests passed. The feature is verified.
+[Uses prune with ids: [20, 21]]
+</example_completion>

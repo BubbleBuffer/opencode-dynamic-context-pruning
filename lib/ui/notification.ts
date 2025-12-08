@@ -2,7 +2,7 @@ import type { Logger } from "../logger"
 import type { SessionStats, GCStats } from "../core/janitor"
 import type { ToolMetadata } from "../fetch-wrapper/types"
 import { formatTokenCount } from "../tokenizer"
-import { extractParameterKey } from "./display-utils"
+import { formatPrunedItemsList } from "./display-utils"
 
 export type PruningSummaryLevel = "off" | "minimal" | "detailed"
 
@@ -24,30 +24,6 @@ export interface NotificationData {
     toolMetadata: Map<string, ToolMetadata>
     gcPending: GCStats | null
     sessionStats: SessionStats | null
-}
-
-export async function sendIgnoredMessage(
-    ctx: NotificationContext,
-    sessionID: string,
-    text: string,
-    agent?: string
-): Promise<void> {
-    try {
-        await ctx.client.session.prompt({
-            path: { id: sessionID },
-            body: {
-                noReply: true,
-                agent: agent,
-                parts: [{
-                    type: 'text',
-                    text: text,
-                    ignored: true
-                }]
-            }
-        })
-    } catch (error: any) {
-        ctx.logger.error("notification", "Failed to send notification", { error: error.message })
-    }
 }
 
 export async function sendUnifiedNotification(
@@ -75,10 +51,49 @@ export async function sendUnifiedNotification(
     return true
 }
 
+export async function sendIgnoredMessage(
+    ctx: NotificationContext,
+    sessionID: string,
+    text: string,
+    agent?: string
+): Promise<void> {
+    try {
+        await ctx.client.session.prompt({
+            path: { id: sessionID },
+            body: {
+                noReply: true,
+                agent: agent,
+                parts: [{
+                    type: 'text',
+                    text: text,
+                    ignored: true
+                }]
+            }
+        })
+    } catch (error: any) {
+        ctx.logger.error("notification", "Failed to send notification", { error: error.message })
+    }
+}
+
 function buildMinimalMessage(data: NotificationData): string {
     const { justNowTokens, totalTokens } = calculateStats(data)
-
     return formatStatsHeader(totalTokens, justNowTokens)
+}
+
+function buildDetailedMessage(data: NotificationData, workingDirectory?: string): string {
+    const { justNowTokens, totalTokens } = calculateStats(data)
+
+    let message = formatStatsHeader(totalTokens, justNowTokens)
+
+    if (data.aiPrunedCount > 0) {
+        const justNowTokensStr = `~${formatTokenCount(justNowTokens)}`
+        message += `\n\n▣ Pruned tools (${justNowTokensStr})`
+
+        const itemLines = formatPrunedItemsList(data.aiPrunedIds, data.toolMetadata, workingDirectory)
+        message += '\n' + itemLines.join('\n')
+    }
+
+    return message.trim()
 }
 
 function calculateStats(data: NotificationData): {
@@ -107,95 +122,4 @@ function formatStatsHeader(
     return [
         `▣ DCP | ${totalTokensPadded} saved total`,
     ].join('\n')
-}
-
-function buildDetailedMessage(data: NotificationData, workingDirectory?: string): string {
-    const { justNowTokens, totalTokens } = calculateStats(data)
-
-    let message = formatStatsHeader(totalTokens, justNowTokens)
-
-    if (data.aiPrunedCount > 0) {
-        const justNowTokensStr = `~${formatTokenCount(justNowTokens)}`
-        message += `\n\n▣ Pruned tools (${justNowTokensStr})`
-
-        for (const prunedId of data.aiPrunedIds) {
-            const normalizedId = prunedId.toLowerCase()
-            const metadata = data.toolMetadata.get(normalizedId)
-
-            if (metadata) {
-                const paramKey = extractParameterKey(metadata)
-                if (paramKey) {
-                    const displayKey = truncate(shortenPath(paramKey, workingDirectory), 60)
-                    message += `\n→ ${metadata.tool}: ${displayKey}`
-                } else {
-                    message += `\n→ ${metadata.tool}`
-                }
-            }
-        }
-
-        const knownCount = data.aiPrunedIds.filter(id =>
-            data.toolMetadata.has(id.toLowerCase())
-        ).length
-        const unknownCount = data.aiPrunedIds.length - knownCount
-
-        if (unknownCount > 0) {
-            message += `\n→ (${unknownCount} tool${unknownCount > 1 ? 's' : ''} with unknown metadata)`
-        }
-    }
-
-    return message.trim()
-}
-
-function truncate(str: string, maxLen: number = 60): string {
-    if (str.length <= maxLen) return str
-    return str.slice(0, maxLen - 3) + '...'
-}
-
-function shortenPath(input: string, workingDirectory?: string): string {
-    const inPathMatch = input.match(/^(.+) in (.+)$/)
-    if (inPathMatch) {
-        const prefix = inPathMatch[1]
-        const pathPart = inPathMatch[2]
-        const shortenedPath = shortenSinglePath(pathPart, workingDirectory)
-        return `${prefix} in ${shortenedPath}`
-    }
-
-    return shortenSinglePath(input, workingDirectory)
-}
-
-function shortenSinglePath(path: string, workingDirectory?: string): string {
-    const homeDir = require('os').homedir()
-
-    if (workingDirectory) {
-        if (path.startsWith(workingDirectory + '/')) {
-            return path.slice(workingDirectory.length + 1)
-        }
-        if (path === workingDirectory) {
-            return '.'
-        }
-    }
-
-    if (path.startsWith(homeDir)) {
-        path = '~' + path.slice(homeDir.length)
-    }
-
-    const nodeModulesMatch = path.match(/node_modules\/(@[^\/]+\/[^\/]+|[^\/]+)\/(.*)/)
-    if (nodeModulesMatch) {
-        return `${nodeModulesMatch[1]}/${nodeModulesMatch[2]}`
-    }
-
-    if (workingDirectory) {
-        const workingDirWithTilde = workingDirectory.startsWith(homeDir)
-            ? '~' + workingDirectory.slice(homeDir.length)
-            : null
-
-        if (workingDirWithTilde && path.startsWith(workingDirWithTilde + '/')) {
-            return path.slice(workingDirWithTilde.length + 1)
-        }
-        if (workingDirWithTilde && path === workingDirWithTilde) {
-            return '.'
-        }
-    }
-
-    return path
 }

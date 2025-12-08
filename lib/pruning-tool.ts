@@ -7,11 +7,12 @@ import { resetToolTrackerCount } from "./fetch-wrapper/tool-tracker"
 import { isSubagentSession, findCurrentAgent } from "./hooks"
 import { getActualId } from "./state/id-mapping"
 import { sendUnifiedNotification, type NotificationContext } from "./ui/notification"
+import { formatPruningResultForTool } from "./ui/display-utils"
 import { ensureSessionRestored } from "./state"
 import { saveSessionState } from "./state/persistence"
 import type { Logger } from "./logger"
 import { estimateTokensBatch } from "./tokenizer"
-import type { SessionStats } from "./core/janitor"
+import type { SessionStats, PruningResult } from "./core/janitor"
 import { loadPrompt } from "./core/prompt"
 
 /** Tool description loaded from prompts/tool.txt */
@@ -122,8 +123,15 @@ export function createPruningTool(
                 resetToolTrackerCount(toolTracker)
             }
 
-            // Return empty string on success (like edit tool) - guidance is in tool description
-            return ""
+            const result: PruningResult = {
+                prunedCount: prunedIds.length,
+                tokensSaved,
+                llmPrunedIds: prunedIds,
+                toolMetadata,
+                sessionStats
+            }
+
+            return formatPruningResultForTool(result, ctx.workingDirectory)
         },
     })
 }

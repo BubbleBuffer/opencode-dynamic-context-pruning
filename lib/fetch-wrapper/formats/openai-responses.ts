@@ -1,42 +1,6 @@
 import type { FormatDescriptor, ToolOutput } from "../types"
 import type { PluginState } from "../../state"
 
-function isNudgeItem(item: any, nudgeText: string): boolean {
-    if (typeof item.content === 'string') {
-        return item.content === nudgeText
-    }
-    return false
-}
-
-function injectSynth(input: any[], instruction: string, nudgeText: string, systemReminder: string): boolean {
-    const fullInstruction = systemReminder + '\n\n' + instruction
-    for (let i = input.length - 1; i >= 0; i--) {
-        const item = input[i]
-        if (item.type === 'message' && item.role === 'user') {
-            if (isNudgeItem(item, nudgeText)) continue
-
-            if (typeof item.content === 'string') {
-                if (item.content.includes(instruction)) return false
-                item.content = item.content + '\n\n' + fullInstruction
-            } else if (Array.isArray(item.content)) {
-                const alreadyInjected = item.content.some(
-                    (part: any) => part?.type === 'input_text' && typeof part.text === 'string' && part.text.includes(instruction)
-                )
-                if (alreadyInjected) return false
-                item.content.push({ type: 'input_text', text: fullInstruction })
-            }
-            return true
-        }
-    }
-    return false
-}
-
-function injectPrunableList(input: any[], injection: string): boolean {
-    if (!injection) return false
-    input.push({ type: 'message', role: 'user', content: injection })
-    return true
-}
-
 export const openaiResponsesFormat: FormatDescriptor = {
     name: 'openai-responses',
 
@@ -48,12 +12,17 @@ export const openaiResponsesFormat: FormatDescriptor = {
         return body.input
     },
 
-    injectSynth(data: any[], instruction: string, nudgeText: string, systemReminder: string): boolean {
-        return injectSynth(data, instruction, nudgeText, systemReminder)
-    },
-
-    injectPrunableList(data: any[], injection: string): boolean {
-        return injectPrunableList(data, injection)
+    injectSystemMessage(body: any, injection: string): boolean {
+        if (!injection) return false
+        
+        // OpenAI Responses API uses top-level `instructions` for system content
+        // Append to existing instructions if present
+        if (body.instructions && typeof body.instructions === 'string') {
+            body.instructions = body.instructions + '\n\n' + injection
+        } else {
+            body.instructions = injection
+        }
+        return true
     },
 
     extractToolOutputs(data: any[], state: PluginState): ToolOutput[] {

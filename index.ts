@@ -8,7 +8,6 @@ import { installFetchWrapper } from "./lib/fetch-wrapper"
 import { createPruningTool } from "./lib/pruning-tool"
 import { createEventHandler, createChatParamsHandler } from "./lib/hooks"
 import { createToolTracker } from "./lib/fetch-wrapper/tool-tracker"
-import { loadPrompt } from "./lib/core/prompt"
 
 const plugin: Plugin = (async (ctx) => {
     const { config, migrations } = getConfig(ctx)
@@ -40,17 +39,11 @@ const plugin: Plugin = (async (ctx) => {
         }
     )
 
-    // Create tool tracker and load prompts for synthetic instruction injection
+    // Create tool tracker for nudge injection
     const toolTracker = createToolTracker()
 
-    const prompts = {
-        synthInstruction: loadPrompt("synthetic"),
-        nudgeInstruction: loadPrompt("nudge"),
-        systemReminder: loadPrompt("system-reminder")
-    }
-
-    // Install global fetch wrapper for context pruning and synthetic instruction injection
-    installFetchWrapper(state, logger, ctx.client, config, toolTracker, prompts)
+    // Install global fetch wrapper for context pruning and system message injection
+    installFetchWrapper(state, logger, ctx.client, config, toolTracker)
 
     // Log initialization
     logger.info("plugin", "DCP initialized", {

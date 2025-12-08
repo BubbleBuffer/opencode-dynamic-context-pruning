@@ -18,18 +18,11 @@ export interface FormatDescriptor {
     name: string
     detect(body: any): boolean
     getDataArray(body: any): any[] | undefined
-    injectSynth(data: any[], instruction: string, nudgeText: string, systemReminder: string): boolean
-    injectPrunableList(data: any[], injection: string): boolean
+    injectSystemMessage(body: any, injection: string): boolean
     extractToolOutputs(data: any[], state: PluginState): ToolOutput[]
     replaceToolOutput(data: any[], toolId: string, prunedMessage: string, state: PluginState): boolean
     hasToolOutputs(data: any[]): boolean
     getLogMetadata(data: any[], replacedCount: number, inputUrl: string): Record<string, any>
-}
-
-export interface SynthPrompts {
-    synthInstruction: string
-    nudgeInstruction: string
-    systemReminder: string
 }
 
 export interface FetchHandlerContext {
@@ -38,7 +31,6 @@ export interface FetchHandlerContext {
     client: any
     config: PluginConfig
     toolTracker: ToolTracker
-    prompts: SynthPrompts
 }
 
 export interface FetchHandlerResult {

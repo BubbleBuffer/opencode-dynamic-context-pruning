@@ -1,6 +1,6 @@
 import type { PluginState } from "../state"
 import type { Logger } from "../logger"
-import type { FetchHandlerContext, SynthPrompts } from "./types"
+import type { FetchHandlerContext } from "./types"
 import type { ToolTracker } from "./types"
 import type { PluginConfig } from "../config"
 import { openaiChatFormat, openaiResponsesFormat, geminiFormat, bedrockFormat } from "./formats"
@@ -9,7 +9,7 @@ import { runStrategies } from "../core/strategies"
 import { accumulateGCStats } from "./gc-tracker"
 import { trimToolParametersCache } from "../state/tool-cache"
 
-export type { FetchHandlerContext, FetchHandlerResult, SynthPrompts } from "./types"
+export type { FetchHandlerContext, FetchHandlerResult } from "./types"
 
 /**
  * Creates a wrapped global fetch that intercepts API calls and performs
@@ -27,8 +27,7 @@ export function installFetchWrapper(
     logger: Logger,
     client: any,
     config: PluginConfig,
-    toolTracker: ToolTracker,
-    prompts: SynthPrompts
+    toolTracker: ToolTracker
 ): () => void {
     const originalGlobalFetch = globalThis.fetch
 
@@ -37,8 +36,7 @@ export function installFetchWrapper(
         logger,
         client,
         config,
-        toolTracker,
-        prompts
+        toolTracker
     }
 
     globalThis.fetch = async (input: any, init?: any) => {

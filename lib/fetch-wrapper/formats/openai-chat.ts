@@ -1,42 +1,6 @@
 import type { FormatDescriptor, ToolOutput } from "../types"
 import type { PluginState } from "../../state"
 
-function isNudgeMessage(msg: any, nudgeText: string): boolean {
-    if (typeof msg.content === 'string') {
-        return msg.content === nudgeText
-    }
-    return false
-}
-
-function injectSynth(messages: any[], instruction: string, nudgeText: string, systemReminder: string): boolean {
-    const fullInstruction = systemReminder + '\n\n' + instruction
-    for (let i = messages.length - 1; i >= 0; i--) {
-        const msg = messages[i]
-        if (msg.role === 'user') {
-            if (isNudgeMessage(msg, nudgeText)) continue
-
-            if (typeof msg.content === 'string') {
-                if (msg.content.includes(instruction)) return false
-                msg.content = msg.content + '\n\n' + fullInstruction
-            } else if (Array.isArray(msg.content)) {
-                const alreadyInjected = msg.content.some(
-                    (part: any) => part?.type === 'text' && typeof part.text === 'string' && part.text.includes(instruction)
-                )
-                if (alreadyInjected) return false
-                msg.content.push({ type: 'text', text: fullInstruction })
-            }
-            return true
-        }
-    }
-    return false
-}
-
-function injectPrunableList(messages: any[], injection: string): boolean {
-    if (!injection) return false
-    messages.push({ role: 'user', content: injection })
-    return true
-}
-
 export const openaiChatFormat: FormatDescriptor = {
     name: 'openai-chat',
 
@@ -48,12 +12,21 @@ export const openaiChatFormat: FormatDescriptor = {
         return body.messages
     },
 
-    injectSynth(data: any[], instruction: string, nudgeText: string, systemReminder: string): boolean {
-        return injectSynth(data, instruction, nudgeText, systemReminder)
-    },
-
-    injectPrunableList(data: any[], injection: string): boolean {
-        return injectPrunableList(data, injection)
+    injectSystemMessage(body: any, injection: string): boolean {
+        if (!injection || !body.messages) return false
+        
+        // Find the last system message index to insert after it
+        let lastSystemIndex = -1
+        for (let i = 0; i < body.messages.length; i++) {
+            if (body.messages[i].role === 'system') {
+                lastSystemIndex = i
+            }
+        }
+        
+        // Insert after the last system message, or at the beginning if none exist
+        const insertIndex = lastSystemIndex + 1
+        body.messages.splice(insertIndex, 0, { role: 'system', content: injection })
+        return true
     },
 
     extractToolOutputs(data: any[], state: PluginState): ToolOutput[] {

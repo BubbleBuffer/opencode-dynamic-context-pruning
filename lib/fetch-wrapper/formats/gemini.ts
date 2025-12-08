@@ -1,38 +1,6 @@
 import type { FormatDescriptor, ToolOutput } from "../types"
 import type { PluginState } from "../../state"
 
-function isNudgeContent(content: any, nudgeText: string): boolean {
-    if (Array.isArray(content.parts) && content.parts.length === 1) {
-        const part = content.parts[0]
-        return part?.text === nudgeText
-    }
-    return false
-}
-
-function injectSynth(contents: any[], instruction: string, nudgeText: string, systemReminder: string): boolean {
-    const fullInstruction = systemReminder + '\n\n' + instruction
-    for (let i = contents.length - 1; i >= 0; i--) {
-        const content = contents[i]
-        if (content.role === 'user' && Array.isArray(content.parts)) {
-            if (isNudgeContent(content, nudgeText)) continue
-
-            const alreadyInjected = content.parts.some(
-                (part: any) => part?.text && typeof part.text === 'string' && part.text.includes(instruction)
-            )
-            if (alreadyInjected) return false
-            content.parts.push({ text: fullInstruction })
-            return true
-        }
-    }
-    return false
-}
-
-function injectPrunableList(contents: any[], injection: string): boolean {
-    if (!injection) return false
-    contents.push({ role: 'user', parts: [{ text: injection }] })
-    return true
-}
-
 /**
  * Gemini doesn't include tool call IDs in its native format.
  * We use position-based correlation via state.googleToolCallMapping which maps
@@ -49,12 +17,19 @@ export const geminiFormat: FormatDescriptor = {
         return body.contents
     },
 
-    injectSynth(data: any[], instruction: string, nudgeText: string, systemReminder: string): boolean {
-        return injectSynth(data, instruction, nudgeText, systemReminder)
-    },
-
-    injectPrunableList(data: any[], injection: string): boolean {
-        return injectPrunableList(data, injection)
+    injectSystemMessage(body: any, injection: string): boolean {
+        if (!injection) return false
+        
+        // Gemini uses systemInstruction.parts array for system content
+        if (!body.systemInstruction) {
+            body.systemInstruction = { parts: [] }
+        }
+        if (!Array.isArray(body.systemInstruction.parts)) {
+            body.systemInstruction.parts = []
+        }
+        
+        body.systemInstruction.parts.push({ text: injection })
+        return true
     },
 
     extractToolOutputs(data: any[], state: PluginState): ToolOutput[] {

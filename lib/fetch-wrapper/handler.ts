@@ -1,7 +1,7 @@
 import type { FetchHandlerContext, FetchHandlerResult, FormatDescriptor, PrunedIdData } from "./types"
 import { type PluginState, ensureSessionRestored } from "../state"
 import type { Logger } from "../logger"
-import { buildPrunableToolsList, buildEndInjection } from "./prunable-list"
+import { buildPrunableToolsList, buildSystemInjection } from "./prunable-list"
 import { syncToolCache } from "../state/tool-cache"
 
 const PRUNED_CONTENT_MESSAGE = '[Output removed to save context - information superseded or no longer needed]'
@@ -75,36 +75,30 @@ export async function handleFormat(
         await syncToolCache(ctx.client, sessionId, ctx.state, ctx.toolTracker, protectedSet, ctx.logger)
     }
 
-    if (ctx.config.strategies.onTool.length > 0) {
-        if (format.injectSynth(data, ctx.prompts.synthInstruction, ctx.prompts.nudgeInstruction, ctx.prompts.systemReminder)) {
-            modified = true
-        }
+    if (ctx.config.strategies.onTool.length > 0 && sessionId) {
+        const toolIds = Array.from(ctx.state.toolParameters.keys())
+        const alreadyPruned = ctx.state.prunedIds.get(sessionId) ?? []
+        const alreadyPrunedLower = new Set(alreadyPruned.map(id => id.toLowerCase()))
+        const unprunedIds = toolIds.filter(id => !alreadyPrunedLower.has(id.toLowerCase()))
 
-        if (sessionId) {
-            const toolIds = Array.from(ctx.state.toolParameters.keys())
-            const alreadyPruned = ctx.state.prunedIds.get(sessionId) ?? []
-            const alreadyPrunedLower = new Set(alreadyPruned.map(id => id.toLowerCase()))
-            const unprunedIds = toolIds.filter(id => !alreadyPrunedLower.has(id.toLowerCase()))
+        const { list: prunableList, numericIds } = buildPrunableToolsList(
+            sessionId,
+            unprunedIds,
+            ctx.state.toolParameters,
+            ctx.config.protectedTools
+        )
 
-            const { list: prunableList, numericIds } = buildPrunableToolsList(
-                sessionId,
-                unprunedIds,
-                ctx.state.toolParameters,
-                ctx.config.protectedTools
-            )
-
-            if (prunableList) {
-                const includeNudge = ctx.config.nudge_freq > 0 && ctx.toolTracker.toolResultCount > ctx.config.nudge_freq
-
-                const endInjection = buildEndInjection(prunableList, includeNudge)
-                if (format.injectPrunableList(data, endInjection)) {
-                    ctx.logger.debug("fetch", `Injected prunable tools list (${format.name})`, {
-                        ids: numericIds,
-                        nudge: includeNudge,
-                        toolsSincePrune: ctx.toolTracker.toolResultCount
-                    })
-                    modified = true
-                }
+        if (prunableList) {
+            const includeNudge = ctx.config.nudge_freq > 0 && ctx.toolTracker.toolResultCount > ctx.config.nudge_freq
+            const systemInjection = buildSystemInjection(prunableList, includeNudge)
+            
+            if (format.injectSystemMessage(body, systemInjection)) {
+                ctx.logger.debug("fetch", `Injected prunable tools list into system message (${format.name})`, {
+                    ids: numericIds,
+                    nudge: includeNudge,
+                    toolsSincePrune: ctx.toolTracker.toolResultCount
+                })
+                modified = true
             }
         }
     }

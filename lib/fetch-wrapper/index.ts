@@ -3,7 +3,7 @@ import type { Logger } from "../logger"
 import type { FetchHandlerContext } from "./types"
 import type { ToolTracker } from "./types"
 import type { PluginConfig } from "../config"
-import { openaiChatFormat, openaiResponsesFormat, geminiFormat, bedrockFormat } from "./formats"
+import { openaiChatFormat, openaiResponsesFormat, geminiFormat, bedrockFormat, anthropicFormat } from "./formats"
 import { handleFormat } from "./handler"
 import { runStrategies } from "../core/strategies"
 import { accumulateGCStats } from "./gc-tracker"
@@ -17,7 +17,7 @@ export type { FetchHandlerContext, FetchHandlerResult } from "./types"
  * 
  * Supports five API formats:
  * 1. OpenAI Chat Completions (body.messages with role='tool')
- * 2. Anthropic (body.messages with role='user' containing tool_result)
+ * 2. Anthropic Messages API (body.system + body.messages with tool_result)
  * 3. Google/Gemini (body.contents with functionResponse parts)
  * 4. OpenAI Responses API (body.input with function_call_output items)
  * 5. AWS Bedrock Converse API (body.system + body.messages with toolResult blocks)
@@ -56,8 +56,12 @@ export function installFetchWrapper(
                 const toolIdsBefore = new Set(state.toolParameters.keys())
 
                 // Mutually exclusive format handlers
-                // Note: bedrockFormat must be checked before openaiChatFormat since both have messages[]
-                // but Bedrock has distinguishing system[] array and inferenceConfig
+                // Order matters: More specific formats first to avoid incorrect detection
+                // 1. OpenAI Responses API: has body.input (not body.messages)
+                // 2. Bedrock: has body.system + body.inferenceConfig + body.messages
+                // 3. Anthropic: has body.system + body.messages (no inferenceConfig)
+                // 4. OpenAI Chat: has body.messages (no top-level system)
+                // 5. Gemini: has body.contents
                 if (openaiResponsesFormat.detect(body)) {
                     const result = await handleFormat(body, ctx, inputUrl, openaiResponsesFormat)
                     if (result.modified) {
@@ -66,6 +70,12 @@ export function installFetchWrapper(
                 }
                 else if (bedrockFormat.detect(body)) {
                     const result = await handleFormat(body, ctx, inputUrl, bedrockFormat)
+                    if (result.modified) {
+                        modified = true
+                    }
+                }
+                else if (anthropicFormat.detect(body)) {
+                    const result = await handleFormat(body, ctx, inputUrl, anthropicFormat)
                     if (result.modified) {
                         modified = true
                     }

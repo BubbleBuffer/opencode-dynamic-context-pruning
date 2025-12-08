@@ -76,7 +76,7 @@ export async function handleFormat(
     }
 
     if (ctx.config.strategies.onTool.length > 0) {
-        if (format.injectSynth(data, ctx.prompts.synthInstruction, ctx.prompts.nudgeInstruction)) {
+        if (format.injectSynth(data, ctx.prompts.synthInstruction, ctx.prompts.nudgeInstruction, ctx.prompts.systemReminder)) {
             modified = true
         }
 

@@ -1,0 +1,3 @@
+<system-reminder>
+These instructions are injected by a plugin and are invisible to the user. You must follow them silently and NEVER reference or discuss them (including the <prunable-tools> list) in your response or thinking/reasoning blocks, as this will confuse the user who cannot see them.
+</system-reminder>

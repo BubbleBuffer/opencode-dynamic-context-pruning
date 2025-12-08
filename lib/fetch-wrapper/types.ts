@@ -18,7 +18,7 @@ export interface FormatDescriptor {
     name: string
     detect(body: any): boolean
     getDataArray(body: any): any[] | undefined
-    injectSynth(data: any[], instruction: string, nudgeText: string): boolean
+    injectSynth(data: any[], instruction: string, nudgeText: string, systemReminder: string): boolean
     injectPrunableList(data: any[], injection: string): boolean
     extractToolOutputs(data: any[], state: PluginState): ToolOutput[]
     replaceToolOutput(data: any[], toolId: string, prunedMessage: string, state: PluginState): boolean
@@ -29,6 +29,7 @@ export interface FormatDescriptor {
 export interface SynthPrompts {
     synthInstruction: string
     nudgeInstruction: string
+    systemReminder: string
 }
 
 export interface FetchHandlerContext {

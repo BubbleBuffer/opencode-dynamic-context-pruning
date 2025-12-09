@@ -68,7 +68,7 @@ DCP uses its own config file (`~/.config/opencode/dcp.jsonc` or `.opencode/dcp.j
 | `strictModelSelection` | `false` | Only run AI analysis with session or configured model (disables fallback models) |
 | `pruning_summary` | `"detailed"` | `"off"`, `"minimal"`, or `"detailed"` |
 | `nudge_freq` | `10` | How often to remind AI to prune (lower = more frequent) |
-| `protectedTools` | `["task", "todowrite", "todoread", "prune"]` | Tools that are never pruned |
+| `protectedTools` | `["task", "todowrite", "todoread", "prune", "batch", "write", "edit"]` | Tools that are never pruned |
 | `strategies.onIdle` | `["ai-analysis"]` | Strategies for automatic pruning |
 | `strategies.onTool` | `["ai-analysis"]` | Strategies when AI calls `prune` |
 
@@ -81,7 +81,7 @@ DCP uses its own config file (`~/.config/opencode/dcp.jsonc` or `.opencode/dcp.j
     "onIdle": ["ai-analysis"],
     "onTool": ["ai-analysis"]
   },
-  "protectedTools": ["task", "todowrite", "todoread", "prune"]
+  "protectedTools": ["task", "todowrite", "todoread", "prune", "batch", "write", "edit"]
 }
 ```
 

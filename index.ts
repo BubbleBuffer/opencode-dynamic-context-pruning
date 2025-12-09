@@ -53,7 +53,10 @@ const plugin: Plugin = (async (ctx) => {
 
     // Check for updates after a delay
     setTimeout(() => {
-        checkForUpdates(ctx.client, logger).catch(() => { })
+        checkForUpdates(ctx.client, logger, {
+            showToast: config.showUpdateToasts ?? true,
+            autoUpdate: config.autoUpdate ?? false
+        }).catch(() => { })
     }, 5000)
 
     // Show migration toast if there were config migrations

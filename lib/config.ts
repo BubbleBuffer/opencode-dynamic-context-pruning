@@ -13,6 +13,8 @@ export interface PluginConfig {
     protectedTools: string[]
     model?: string
     showModelErrorToasts?: boolean
+    showUpdateToasts?: boolean
+    autoUpdate?: boolean
     strictModelSelection?: boolean
     pruning_summary: "off" | "minimal" | "detailed"
     nudge_freq: number
@@ -32,6 +34,8 @@ const defaultConfig: PluginConfig = {
     debug: false,
     protectedTools: ['task', 'todowrite', 'todoread', 'prune', 'batch', 'edit', 'write'],
     showModelErrorToasts: true,
+    showUpdateToasts: true,
+    autoUpdate: false,
     strictModelSelection: false,
     pruning_summary: 'detailed',
     nudge_freq: 10,
@@ -47,6 +51,8 @@ const VALID_CONFIG_KEYS = new Set([
     'protectedTools',
     'model',
     'showModelErrorToasts',
+    'showUpdateToasts',
+    'autoUpdate',
     'strictModelSelection',
     'pruning_summary',
     'nudge_freq',
@@ -110,6 +116,10 @@ function createDefaultConfig(): void {
   // "model": "anthropic/claude-haiku-4-5",
   // Show toast notifications when model selection fails
   "showModelErrorToasts": true,
+  // Show toast notifications when a new version is available
+  "showUpdateToasts": true,
+  // Automatically update to new versions (restart required to apply)
+  "autoUpdate": false,
   // Only run AI analysis with session model or configured model (disables fallback models)
   "strictModelSelection": false,
   // AI analysis strategies (deduplication runs automatically on every request)
@@ -199,6 +209,8 @@ export function getConfig(ctx?: PluginInput): ConfigResult {
                     protectedTools: [...new Set([...config.protectedTools, ...(globalConfig.protectedTools ?? [])])],
                     model: globalConfig.model ?? config.model,
                     showModelErrorToasts: globalConfig.showModelErrorToasts ?? config.showModelErrorToasts,
+                    showUpdateToasts: globalConfig.showUpdateToasts ?? config.showUpdateToasts,
+                    autoUpdate: globalConfig.autoUpdate ?? config.autoUpdate,
                     strictModelSelection: globalConfig.strictModelSelection ?? config.strictModelSelection,
                     strategies: mergeStrategies(config.strategies, globalConfig.strategies as any),
                     pruning_summary: globalConfig.pruning_summary ?? config.pruning_summary,
@@ -230,6 +242,8 @@ export function getConfig(ctx?: PluginInput): ConfigResult {
                     protectedTools: [...new Set([...config.protectedTools, ...(projectConfig.protectedTools ?? [])])],
                     model: projectConfig.model ?? config.model,
                     showModelErrorToasts: projectConfig.showModelErrorToasts ?? config.showModelErrorToasts,
+                    showUpdateToasts: projectConfig.showUpdateToasts ?? config.showUpdateToasts,
+                    autoUpdate: projectConfig.autoUpdate ?? config.autoUpdate,
                     strictModelSelection: projectConfig.strictModelSelection ?? config.strictModelSelection,
                     strategies: mergeStrategies(config.strategies, projectConfig.strategies as any),
                     pruning_summary: projectConfig.pruning_summary ?? config.pruning_summary,

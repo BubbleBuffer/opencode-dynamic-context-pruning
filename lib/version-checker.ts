@@ -12,9 +12,22 @@ const __dirname = dirname(__filename)
 
 export function getLocalVersion(): string {
     try {
-        const pkgPath = join(__dirname, '../../package.json')
-        const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'))
-        return pkg.version
+        // Walk up from the current module to find the project's package.json
+        // This works whether running from dist/lib/, lib/, or installed in node_modules
+        let dir = __dirname
+        for (let i = 0; i < 5; i++) {
+            const pkgPath = join(dir, 'package.json')
+            try {
+                const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'))
+                if (pkg.name === '@tarquinen/opencode-dcp') {
+                    return pkg.version
+                }
+            } catch {
+                // Not found at this level, go up
+            }
+            dir = join(dir, '..')
+        }
+        return '0.0.0'
     } catch {
         return '0.0.0'
     }

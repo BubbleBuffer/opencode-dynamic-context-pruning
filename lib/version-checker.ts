@@ -1,6 +1,8 @@
 import { readFileSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import { spawn } from 'child_process'
+import { homedir } from 'os'
 
 export const PACKAGE_NAME = '@tarquinen/opencode-dcp'
 export const NPM_REGISTRY_URL = `https://registry.npmjs.org/${PACKAGE_NAME}/latest`
@@ -50,7 +52,65 @@ export function isOutdated(local: string, remote: string): boolean {
     return false
 }
 
-export async function checkForUpdates(client: any, logger?: { info: (component: string, message: string, data?: any) => void }, showToast: boolean = true): Promise<void> {
+export async function performUpdate(targetVersion: string, logger?: { info: (component: string, message: string, data?: any) => void }): Promise<boolean> {
+    // OpenCode installs packages to ~/.cache/opencode/node_modules/
+    const cacheDir = join(homedir(), '.cache', 'opencode')
+    const packageSpec = `${PACKAGE_NAME}@${targetVersion}`
+
+    logger?.info("version", "Starting auto-update", { targetVersion, cacheDir })
+
+    return new Promise((resolve) => {
+        let resolved = false
+
+        const proc = spawn('npm', ['install', '--legacy-peer-deps', packageSpec], {
+            cwd: cacheDir,
+            stdio: 'pipe'
+        })
+
+        let stderr = ''
+        proc.stderr?.on('data', (data) => {
+            stderr += data.toString()
+        })
+
+        proc.on('close', (code) => {
+            if (resolved) return
+            resolved = true
+            clearTimeout(timeoutId)
+            if (code === 0) {
+                logger?.info("version", "Auto-update succeeded", { targetVersion })
+                resolve(true)
+            } else {
+                logger?.info("version", "Auto-update failed", { targetVersion, code, stderr: stderr.slice(0, 500) })
+                resolve(false)
+            }
+        })
+
+        proc.on('error', (err) => {
+            if (resolved) return
+            resolved = true
+            clearTimeout(timeoutId)
+            logger?.info("version", "Auto-update error", { targetVersion, error: err.message })
+            resolve(false)
+        })
+
+        // Timeout after 60 seconds
+        const timeoutId = setTimeout(() => {
+            if (resolved) return
+            resolved = true
+            proc.kill()
+            logger?.info("version", "Auto-update timed out", { targetVersion })
+            resolve(false)
+        }, 60000)
+    })
+}
+
+export async function checkForUpdates(
+    client: any,
+    logger?: { info: (component: string, message: string, data?: any) => void },
+    options: { showToast?: boolean; autoUpdate?: boolean } = {}
+): Promise<void> {
+    const { showToast = true, autoUpdate = false } = options
+
     try {
         const local = getLocalVersion()
         const npm = await getNpmVersion()
@@ -65,20 +125,41 @@ export async function checkForUpdates(client: any, logger?: { info: (component: 
             return
         }
 
-        logger?.info("version", "Update available", { local, npm })
+        logger?.info("version", "Update available", { local, npm, autoUpdate })
 
-        if (!showToast) {
-            return
-        }
+        if (autoUpdate) {
+            // Attempt auto-update
+            const success = await performUpdate(npm, logger)
 
-        await client.tui.showToast({
-            body: {
-                title: "DCP: Update available",
-                message: `v${local} → v${npm}\nUpdate opencode.jsonc: ${PACKAGE_NAME}@${npm}`,
-                variant: "info",
-                duration: 6000
+            if (success && showToast) {
+                await client.tui.showToast({
+                    body: {
+                        title: "DCP: Updated!",
+                        message: `v${local} → v${npm}\nRestart OpenCode to apply`,
+                        variant: "success",
+                        duration: 6000
+                    }
+                })
+            } else if (!success && showToast) {
+                await client.tui.showToast({
+                    body: {
+                        title: "DCP: Update failed",
+                        message: `v${local} → v${npm}\nManual: npm install ${PACKAGE_NAME}@${npm}`,
+                        variant: "warning",
+                        duration: 6000
+                    }
+                })
             }
-        })
+        } else if (showToast) {
+            await client.tui.showToast({
+                body: {
+                    title: "DCP: Update available",
+                    message: `v${local} → v${npm}`,
+                    variant: "info",
+                    duration: 6000
+                }
+            })
+        }
     } catch {
     }
 }

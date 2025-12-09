@@ -36,7 +36,7 @@ const defaultConfig: PluginConfig = {
     showUpdateToasts: true,
     strictModelSelection: false,
     pruning_summary: 'detailed',
-    nudge_freq: 10,
+    nudge_freq: 0,
     strategies: {
         onIdle: ['ai-analysis'],
         onTool: ['ai-analysis']

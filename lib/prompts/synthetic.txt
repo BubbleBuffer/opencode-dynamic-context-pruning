@@ -1,7 +1,5 @@
 <system-reminder>
-The <prunable-tools> list and any pruning nudges are injected by a plugin as assistant messages and are invisible to the user. Do NOT repeat, acknowledge, or respond to these in your output - simply use the information when deciding what to prune.
-
-IMPORTANT: Your thinking/reasoning blocks must NOT reference, discuss, or address the <prunable-tools> list or any nudges about pruning. The user can see your thinking blocks, and referencing invisible plugin content will confuse them. In your thinking, focus only on the user's task and your problem-solving approach.
+The <prunable-tools> list and any pruning nudges are injected by the environment as assistant messages, use this information when deciding what to prune.
 </system-reminder>
 
 <instruction name=context_management_protocol>
@@ -26,7 +24,7 @@ Apply the correct mode for each situation:
 
 1. TASK COMPLETION: When work is done, prune the tools used. No distillation needed - just state the task is complete.
 2. NOISE REMOVAL: If outputs are irrelevant, unhelpful, or outdated (superseded by newer info), prune IMMEDIATELY. No distillation - just cut it out.
-3. CONTEXT CONSERVATION: When pruning useful research, you MUST distill key findings into your narrative *before* pruning. Extract only what matters (e.g., a specific function signature from a large file).
+3. CONTEXT CONSOLIDATION: When pruning useful research, you MUST distill key findings into your narrative *before* pruning. Extract only what matters (e.g., a specific function signature from a large file).
 
 FAILURE TO PRUNE will result in context overflow and degraded performance.
 </instruction>

@@ -4,7 +4,7 @@
 
 Automatically reduces token usage in OpenCode by removing obsolete tool outputs from conversation history.
 
-![DCP in action](dcp-demo3.png)
+![DCP in action](dcp-demo.png)
 
 ## Installation
 
@@ -13,7 +13,7 @@ Add to your OpenCode config:
 ```jsonc
 // opencode.jsonc
 {
-  "plugin": ["@tarquinen/opencode-dcp"],
+  "plugin": ["@tarquinen/opencode-dcp@0.4.2"],
   "experimental": {
     "primary_tools": ["prune"]
   }
@@ -22,7 +22,9 @@ Add to your OpenCode config:
 
 The `experimental.primary_tools` setting ensures the `prune` tool is only available to the primary agent (not subagents).
 
-DCP automatically checks for new versions in the background. You'll see a toast notification when an update is available. To enable automatic background updates, set `"autoUpdate": true` in your DCP config.
+When a new version is available, DCP will show a toast notification. Update by changing the version number in your config.
+
+> **Note:** Using `@latest` (e.g. `@tarquinen/opencode-dcp@latest`) does not reliably force the latest update in Opencode. Please use specific version numbers (e.g. `@0.4.2`).
 
 Restart OpenCode. The plugin will automatically start optimizing your sessions.
 
@@ -63,15 +65,14 @@ DCP uses its own config file (`~/.config/opencode/dcp.jsonc` or `.opencode/dcp.j
 | `model` | (session) | Model for analysis (e.g., `"anthropic/claude-haiku-4-5"`) |
 | `showModelErrorToasts` | `true` | Show notifications on model fallback |
 | `showUpdateToasts` | `true` | Show notifications when a new version is available |
-| `autoUpdate` | `false` | Automatically download new versions (restart to apply) |
 | `strictModelSelection` | `false` | Only run AI analysis with session or configured model (disables fallback models) |
 | `pruning_summary` | `"detailed"` | `"off"`, `"minimal"`, or `"detailed"` |
 | `nudge_freq` | `10` | How often to remind AI to prune (lower = more frequent) |
-| `protectedTools` | `["task", "todowrite", "todoread", "prune", "batch", "edit", "write"]` | Tools that are never pruned |
+| `protectedTools` | `["task", "todowrite", "todoread", "prune"]` | Tools that are never pruned |
 | `strategies.onIdle` | `["ai-analysis"]` | Strategies for automatic pruning |
 | `strategies.onTool` | `["ai-analysis"]` | Strategies when AI calls `prune` |
 
-**Strategies:** `"ai-analysis"` uses LLM to identify prunable outputs. Empty array disables that trigger. Deduplication always runs automatically. More strategies coming soon.
+**Strategies:** `"ai-analysis"` uses LLM to identify prunable outputs. Empty array disables that trigger. Deduplication runs automatically on every request.
 
 ```jsonc
 {
@@ -80,7 +81,7 @@ DCP uses its own config file (`~/.config/opencode/dcp.jsonc` or `.opencode/dcp.j
     "onIdle": ["ai-analysis"],
     "onTool": ["ai-analysis"]
   },
-  "protectedTools": ["task", "todowrite", "todoread", "prune", "batch", "edit", "write"]
+  "protectedTools": ["task", "todowrite", "todoread", "prune"]
 }
 ```
 

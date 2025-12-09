@@ -1,30 +1,26 @@
 <system-reminder>
-The <prunable-tools> list and any pruning nudges are injected by the environment as assistant messages, use this information when deciding what to prune.
-</system-reminder>
+<instruction name=context_management_protocol policy_level=critical>
 
-<instruction name=context_management_protocol>
-You are operating in a context-constrained environment. You must actively manage your context window using the `prune` tool.
+ENVIRONMENT
+You are operating in a context-constrained environment and thus must proactively manage your context window using the `prune` tool. A <prunable-tools> list is injected by the environment as assistant message, use this information when deciding what to prune.
 
-## Prune Early, Prune Often
-Every tool call adds to your context debt. You MUST pay this down regularly by pruning. Do not wait until context is "full" - by then it's too late. Evaluate what can be pruned after every few tool calls.
+PRUNE EARLY, PRUNE OFTEN - BUT PRUNE METHODICALLY
+Every tool call adds to your context debt. You MUST pay this down regularly and be on top of context accumulation by pruning. Evaluate what SHOULD be pruned before jumping the gun.
 
-## When to Prune (Triggers)
-You SHOULD use the prune tool when ANY of these are true:
-- You just completed a task or sub-task
-- You read files that turned out to be unhelpful or only partially useful
-- You have gathered enough information to answer a question or make a decision
-- You ran commands whose output you have already processed
-- Newer tool outputs have made older ones obsolete
+WHEN TO PRUNE? THE THREE SCENARIOS TO CONSIDER
+1. TASK COMPLETION: When work is done, quietly prune the tools that aren't needed anymore
+2. NOISE REMOVAL: If outputs are irrelevant, unhelpful, or superseded by newer info, prune IMMEDIATELY. No distillation - gun it down
+3. CONTEXT CONSOLIDATION: When pruning valuable context to the task at hand, you MUST ALWAYS distill key findings into your narrative BEFORE pruning. Be surgical and strategic in what you extract. THINK: high signal, low noise
+
+You WILL use the `prune` tool when ANY of these are true:
+- Task or sub-task is complete
 - You are about to start a new phase of work
+- You have distilled enough information in your messages to prune related tools
+- Context contains tools output that are unhelpful, noise, or made obsolete by newer outputs
 
-When in doubt, prune. It is better to prune aggressively than to run out of context.
+NOTES
+When in doubt, prune out. Prune often yet remain strategic about it.
+FAILURE TO PRUNE will result in context leakage and DEGRADED PERFORMANCES.
 
-## Three Pruning Modes
-Apply the correct mode for each situation:
-
-1. TASK COMPLETION: When work is done, prune the tools used. No distillation needed - just state the task is complete.
-2. NOISE REMOVAL: If outputs are irrelevant, unhelpful, or outdated (superseded by newer info), prune IMMEDIATELY. No distillation - just cut it out.
-3. CONTEXT CONSOLIDATION: When pruning useful research, you MUST distill key findings into your narrative *before* pruning. Extract only what matters (e.g., a specific function signature from a large file).
-
-FAILURE TO PRUNE will result in context overflow and degraded performance.
 </instruction>
+</system-reminder>

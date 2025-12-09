@@ -33,13 +33,29 @@ export const anthropicFormat: FormatDescriptor = {
         return true
     },
 
-    injectUserMessage(body: any, injection: string): boolean {
-        if (!injection || !body.messages) return false
-        body.messages.push({
-            role: 'user',
-            content: [{ type: 'text', text: injection }]
-        })
-        return true
+    appendToLastAssistantMessage(body: any, injection: string): boolean {
+        if (!injection || !body.messages || body.messages.length === 0) return false
+        
+        // Find the last assistant message
+        for (let i = body.messages.length - 1; i >= 0; i--) {
+            const msg = body.messages[i]
+            if (msg.role === 'assistant') {
+                // Append to existing content array
+                if (Array.isArray(msg.content)) {
+                    msg.content.push({ type: 'text', text: injection })
+                } else if (typeof msg.content === 'string') {
+                    // Convert string content to array format
+                    msg.content = [
+                        { type: 'text', text: msg.content },
+                        { type: 'text', text: injection }
+                    ]
+                } else {
+                    msg.content = [{ type: 'text', text: injection }]
+                }
+                return true
+            }
+        }
+        return false
     },
 
     extractToolOutputs(data: any[], state: PluginState): ToolOutput[] {

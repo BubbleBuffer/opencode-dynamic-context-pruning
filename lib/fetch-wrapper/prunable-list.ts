@@ -42,7 +42,7 @@ export function buildPrunableToolsList(
     }
 }
 
-export function buildUserInjection(
+export function buildAssistantInjection(
     prunableList: string,
     includeNudge: boolean
 ): string {

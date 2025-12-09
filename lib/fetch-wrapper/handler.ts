@@ -1,7 +1,7 @@
 import type { FetchHandlerContext, FetchHandlerResult, FormatDescriptor, PrunedIdData } from "./types"
 import { type PluginState, ensureSessionRestored } from "../state"
 import type { Logger } from "../logger"
-import { buildPrunableToolsList, buildUserInjection } from "./prunable-list"
+import { buildPrunableToolsList, buildAssistantInjection } from "./prunable-list"
 import { syncToolCache } from "../state/tool-cache"
 import { loadPrompt } from "../core/prompt"
 
@@ -96,11 +96,11 @@ export async function handleFormat(
                 modified = true
             }
 
-            const userInjection = buildUserInjection(prunableList, includeNudge)
+            const assistantInjection = buildAssistantInjection(prunableList, includeNudge)
 
-            if (format.injectUserMessage && format.injectUserMessage(body, userInjection)) {
+            if (format.appendToLastAssistantMessage && format.appendToLastAssistantMessage(body, assistantInjection)) {
                 const nudgeMsg = includeNudge ? " with nudge" : ""
-                ctx.logger.debug("fetch", `Injected prunable tools list${nudgeMsg} into user message (${format.name})`, {
+                ctx.logger.debug("fetch", `Appended prunable tools list${nudgeMsg} to last assistant message (${format.name})`, {
                     ids: numericIds,
                     nudge: includeNudge,
                     toolsSincePrune: ctx.toolTracker.toolResultCount

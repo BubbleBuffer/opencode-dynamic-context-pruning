@@ -109,8 +109,11 @@ export function updateConfigVersion(newVersion: string, logger?: { info: (compon
 
 export async function checkForUpdates(
     client: any,
-    logger?: { info: (component: string, message: string, data?: any) => void }
+    logger?: { info: (component: string, message: string, data?: any) => void },
+    options: { showToast?: boolean; autoUpdate?: boolean } = {}
 ): Promise<void> {
+    const { showToast = true, autoUpdate = false } = options
+
     try {
         const local = getLocalVersion()
         const npm = await getNpmVersion()
@@ -125,22 +128,33 @@ export async function checkForUpdates(
             return
         }
 
-        logger?.info("version", "Update available", { local, npm })
+        logger?.info("version", "Update available", { local, npm, autoUpdate })
 
-        // Update any configs found
-        const updated = updateConfigVersion(npm, logger)
+        if (autoUpdate) {
+            // Attempt config update
+            const updated = updateConfigVersion(npm, logger)
 
-        if (updated) {
-            await client.tui.showToast({
-                body: {
-                    title: "DCP: Update available",
-                    message: `v${local} → v${npm}\nRestart OpenCode to apply`,
-                    variant: "info",
-                    duration: 6000
-                }
-            })
-        } else {
-            // Config update failed or plugin not found in config, show manual instructions
+            if (updated && showToast) {
+                await client.tui.showToast({
+                    body: {
+                        title: "DCP: Updated!",
+                        message: `v${local} → v${npm}\nRestart OpenCode to apply`,
+                        variant: "success",
+                        duration: 6000
+                    }
+                })
+            } else if (!updated && showToast) {
+                 // Config update failed or plugin not found in config, show manual instructions
+                await client.tui.showToast({
+                    body: {
+                        title: "DCP: Update available",
+                        message: `v${local} → v${npm}\nUpdate opencode.jsonc:\n"${PACKAGE_NAME}@${npm}"`,
+                        variant: "info",
+                        duration: 8000
+                    }
+                })
+            }
+        } else if (showToast) {
             await client.tui.showToast({
                 body: {
                     title: "DCP: Update available",

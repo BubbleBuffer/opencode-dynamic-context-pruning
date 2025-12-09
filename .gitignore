@@ -32,3 +32,4 @@ AGENTS.md
 # Tests (local development only)
 tests/
 notes/
+test-update.ts

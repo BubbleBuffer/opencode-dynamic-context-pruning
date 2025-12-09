@@ -58,21 +58,11 @@ export async function performUpdate(targetVersion: string, logger?: { info: (com
 
     logger?.info("version", "Starting auto-update", { targetVersion, cacheDir })
 
-    try {
-        const { rmSync, existsSync } = await import('fs')
-        const lockFile = join(cacheDir, 'node_modules', '.package-lock.json')
-        if (existsSync(lockFile)) {
-            rmSync(lockFile, { force: true })
-            logger?.info("version", "Removed package-lock.json to force fresh resolution")
-        }
-    } catch (err) {
-        logger?.info("version", "Could not remove lock file", { error: (err as Error).message })
-    }
-
     return new Promise((resolve) => {
         let resolved = false
 
-        const proc = spawn('npm', ['install', '--legacy-peer-deps', packageSpec], {
+        // Use bun since opencode uses bun to manage its plugin dependencies
+        const proc = spawn('bun', ['add', packageSpec], {
             cwd: cacheDir,
             stdio: 'pipe'
         })

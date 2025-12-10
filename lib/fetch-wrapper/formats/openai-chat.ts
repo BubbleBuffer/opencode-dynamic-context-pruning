@@ -27,23 +27,10 @@ export const openaiChatFormat: FormatDescriptor = {
         return true
     },
 
-    appendToLastAssistantMessage(body: any, injection: string): boolean {
-        if (!injection || !body.messages || body.messages.length === 0) return false
-
-        for (let i = body.messages.length - 1; i >= 0; i--) {
-            const msg = body.messages[i]
-            if (msg.role === 'assistant') {
-                if (typeof msg.content === 'string') {
-                    msg.content = msg.content + '\n\n' + injection
-                } else if (Array.isArray(msg.content)) {
-                    msg.content.push({ type: 'text', text: injection })
-                } else {
-                    msg.content = injection
-                }
-                return true
-            }
-        }
-        return false
+    appendUserMessage(body: any, injection: string): boolean {
+        if (!injection || !body.messages) return false
+        body.messages.push({ role: 'user', content: injection })
+        return true
     },
 
     extractToolOutputs(data: any[], state: PluginState): ToolOutput[] {

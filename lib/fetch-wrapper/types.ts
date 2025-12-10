@@ -19,7 +19,7 @@ export interface FormatDescriptor {
     detect(body: any): boolean
     getDataArray(body: any): any[] | undefined
     injectSystemMessage(body: any, injection: string): boolean
-    appendToLastAssistantMessage?(body: any, injection: string): boolean
+    appendUserMessage?(body: any, injection: string): boolean
     extractToolOutputs(data: any[], state: PluginState): ToolOutput[]
     replaceToolOutput(data: any[], toolId: string, prunedMessage: string, state: PluginState): boolean
     hasToolOutputs(data: any[]): boolean

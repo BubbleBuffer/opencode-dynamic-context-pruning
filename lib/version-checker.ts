@@ -74,7 +74,7 @@ export async function checkForUpdates(client: any, logger?: { info: (component: 
         await client.tui.showToast({
             body: {
                 title: "DCP: Update available",
-                message: `v${local} → v${npm}\nUpdate opencode.jsonc: ${PACKAGE_NAME}@${npm}`,
+                message: `v${local} → v${npm}\nUse ${PACKAGE_NAME}@latest to auto-update`,
                 variant: "info",
                 duration: 6000
             }

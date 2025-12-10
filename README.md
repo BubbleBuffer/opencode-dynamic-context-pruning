@@ -13,7 +13,7 @@ Add to your OpenCode config:
 ```jsonc
 // opencode.jsonc
 {
-  "plugin": ["@tarquinen/opencode-dcp@0.4.13"],
+  "plugin": ["@tarquinen/opencode-dcp@latest"],
   "experimental": {
     "primary_tools": ["prune"]
   }
@@ -22,9 +22,7 @@ Add to your OpenCode config:
 
 The `experimental.primary_tools` setting ensures the `prune` tool is only available to the primary agent (not subagents).
 
-When a new version is available, DCP will show a toast notification. Update by changing the version number in your config.
-
-> **Note:** Using `@latest` (e.g. `@tarquinen/opencode-dcp@latest`) does not reliably force the latest update in Opencode. Please use specific version numbers (e.g. `@0.4.13`).
+Using `@latest` ensures you always get the newest version automatically when OpenCode starts.
 
 Restart OpenCode. The plugin will automatically start optimizing your sessions.
 

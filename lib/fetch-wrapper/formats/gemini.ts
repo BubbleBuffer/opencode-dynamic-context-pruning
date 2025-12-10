@@ -31,21 +31,10 @@ export const geminiFormat: FormatDescriptor = {
         return true
     },
 
-    appendToLastAssistantMessage(body: any, injection: string): boolean {
-        if (!injection || !body.contents || body.contents.length === 0) return false
-
-        for (let i = body.contents.length - 1; i >= 0; i--) {
-            const content = body.contents[i]
-            if (content.role === 'model') {
-                if (Array.isArray(content.parts)) {
-                    content.parts.push({ text: injection })
-                } else {
-                    content.parts = [{ text: injection }]
-                }
-                return true
-            }
-        }
-        return false
+    appendUserMessage(body: any, injection: string): boolean {
+        if (!injection || !body.contents) return false
+        body.contents.push({ role: 'user', parts: [{ text: injection }] })
+        return true
     },
 
     extractToolOutputs(data: any[], state: PluginState): ToolOutput[] {

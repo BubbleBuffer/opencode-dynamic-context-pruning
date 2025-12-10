@@ -32,21 +32,10 @@ export const bedrockFormat: FormatDescriptor = {
         return true
     },
 
-    appendToLastAssistantMessage(body: any, injection: string): boolean {
-        if (!injection || !body.messages || body.messages.length === 0) return false
-
-        for (let i = body.messages.length - 1; i >= 0; i--) {
-            const msg = body.messages[i]
-            if (msg.role === 'assistant') {
-                if (Array.isArray(msg.content)) {
-                    msg.content.push({ text: injection })
-                } else {
-                    msg.content = [{ text: injection }]
-                }
-                return true
-            }
-        }
-        return false
+    appendUserMessage(body: any, injection: string): boolean {
+        if (!injection || !body.messages) return false
+        body.messages.push({ role: 'user', content: [{ text: injection }] })
+        return true
     },
 
     extractToolOutputs(data: any[], state: PluginState): ToolOutput[] {

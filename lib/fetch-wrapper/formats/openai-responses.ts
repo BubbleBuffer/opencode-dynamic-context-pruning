@@ -23,23 +23,10 @@ export const openaiResponsesFormat: FormatDescriptor = {
         return true
     },
 
-    appendToLastAssistantMessage(body: any, injection: string): boolean {
-        if (!injection || !body.input || body.input.length === 0) return false
-
-        for (let i = body.input.length - 1; i >= 0; i--) {
-            const item = body.input[i]
-            if (item.type === 'message' && item.role === 'assistant') {
-                if (typeof item.content === 'string') {
-                    item.content = item.content + '\n\n' + injection
-                } else if (Array.isArray(item.content)) {
-                    item.content.push({ type: 'output_text', text: injection })
-                } else {
-                    item.content = injection
-                }
-                return true
-            }
-        }
-        return false
+    appendUserMessage(body: any, injection: string): boolean {
+        if (!injection || !body.input) return false
+        body.input.push({ type: 'message', role: 'user', content: injection })
+        return true
     },
 
     extractToolOutputs(data: any[], state: PluginState): ToolOutput[] {

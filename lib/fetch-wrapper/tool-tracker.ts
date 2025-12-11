@@ -11,3 +11,9 @@ export function createToolTracker(): ToolTracker {
 export function resetToolTrackerCount(tracker: ToolTracker): void {
     tracker.toolResultCount = 0
 }
+
+export function clearToolTracker(tracker: ToolTracker): void {
+    tracker.seenToolResultIds.clear()
+    tracker.toolResultCount = 0
+    tracker.skipNextIdle = false
+}

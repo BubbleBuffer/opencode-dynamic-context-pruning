@@ -1,4 +1,4 @@
-import type { PluginState, ToolStatus } from "./index"
+import type { SessionState, ToolStatus } from "./index"
 import type { Logger } from "../logger"
 import type { ToolTracker } from "../fetch-wrapper/tool-tracker"
 
@@ -13,7 +13,7 @@ const MAX_TOOL_CACHE_SIZE = 500
 export async function syncToolCache(
     client: any,
     sessionId: string,
-    state: PluginState,
+    state: SessionState,
     tracker?: ToolTracker,
     protectedTools?: Set<string>,
     logger?: Logger
@@ -87,7 +87,7 @@ export async function syncToolCache(
  * Trim the tool parameters cache to prevent unbounded memory growth.
  * Uses FIFO eviction - removes oldest entries first.
  */
-export function trimToolParametersCache(state: PluginState): void {
+export function trimToolParametersCache(state: SessionState): void {
     if (state.toolParameters.size <= MAX_TOOL_CACHE_SIZE) {
         return
     }

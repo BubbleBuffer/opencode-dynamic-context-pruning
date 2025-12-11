@@ -37,7 +37,7 @@ Two complementary strategies in `lib/`:
 
 ### State Management
 
-`lib/state.ts` defines `PluginState` with Maps for:
+`lib/state.ts` defines `SessionState` with Maps for:
 - `prunedIds`: Session → pruned tool call IDs
 - `stats`: Session → token savings statistics
 - `toolParameters`: Tool call ID → parameters (for display and deduplication)
@@ -63,7 +63,7 @@ Two complementary strategies in `lib/`:
 1. `~/.config/opencode/dcp.jsonc` (global)
 2. `.opencode/dcp.jsonc` (project, overrides global)
 
-Key config options: `enabled`, `debug`, `model`, `strategies.onIdle`, `strategies.onTool`, `protectedTools`, `nudge_freq`
+Key config options: `enabled`, `debug`, `model`, `strategies.onIdle`, `strategies.onTool`, `protectedTools`, `nudgeFreq`
 
 ### Synthetic Instructions
 

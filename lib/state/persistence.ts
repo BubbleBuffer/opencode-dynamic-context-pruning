@@ -8,7 +8,7 @@ import * as fs from "fs/promises";
 import { existsSync } from "fs";
 import { homedir } from "os";
 import { join } from "path";
-import type { SessionStats } from "../core/janitor";
+import type { SessionState, SessionStats } from "./types"
 import type { Logger } from "../logger";
 
 export interface PersistedSessionState {
@@ -39,34 +39,36 @@ function getSessionFilePath(sessionId: string): string {
 }
 
 export async function saveSessionState(
-    sessionId: string,
-    prunedIds: Set<string>,
-    stats: SessionStats,
-    logger?: Logger,
+    sessionState: SessionState,
+    logger: Logger,
     sessionName?: string
 ): Promise<void> {
     try {
+        if (!sessionState.sessionId) {
+            return;
+        }
+
         await ensureStorageDir();
 
         const state: PersistedSessionState = {
-            ...(sessionName && { sessionName }),
-            prunedIds: Array.from(prunedIds),
-            stats,
+            sessionName: sessionName,
+            prunedIds: sessionState.prunedIds,
+            stats: sessionState.stats,
             lastUpdated: new Date().toISOString(),
         };
 
-        const filePath = getSessionFilePath(sessionId);
+        const filePath = getSessionFilePath(sessionState.sessionId);
         const content = JSON.stringify(state, null, 2);
         await fs.writeFile(filePath, content, "utf-8");
 
-        logger?.info("persist", "Saved session state to disk", {
-            sessionId: sessionId.slice(0, 8),
-            prunedIds: prunedIds.size,
-            totalTokensSaved: stats.totalTokensSaved,
+        logger.info("persist", "Saved session state to disk", {
+            sessionId: sessionState.sessionId.slice(0, 8),
+            prunedIds: state.prunedIds.length,
+            totalTokensSaved: state.stats.totalTokensSaved,
         });
     } catch (error: any) {
-        logger?.error("persist", "Failed to save session state", {
-            sessionId: sessionId.slice(0, 8),
+        logger.error("persist", "Failed to save session state", {
+            sessionId: sessionState.sessionId?.slice(0, 8),
             error: error?.message,
         });
     }

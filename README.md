@@ -33,7 +33,7 @@ DCP uses two complementary techniques:
 
 When `strategies.onTool` is enabled, DCP exposes a `prune` tool to Opencode that the AI can call to trigger pruning on demand.
 
-Adjust `nudge_freq` to control how aggressively the AI is prompted to prune — lower values trigger reminders sooner and more often.
+Adjust `nudgeFreq` to control how aggressively the AI is prompted to prune — lower values trigger reminders sooner and more often.
 
 ## How It Works
 
@@ -59,8 +59,8 @@ DCP uses its own config file (`~/.config/opencode/dcp.jsonc` or `.opencode/dcp.j
 | `showModelErrorToasts` | `true` | Show notifications on model fallback |
 | `showUpdateToasts` | `true` | Show notifications when a new version is available |
 | `strictModelSelection` | `false` | Only run AI analysis with session or configured model (disables fallback models) |
-| `pruning_summary` | `"detailed"` | `"off"`, `"minimal"`, or `"detailed"` |
-| `nudge_freq` | `10` | How often to remind AI to prune (lower = more frequent) |
+| `pruningSummary` | `"detailed"` | `"off"`, `"minimal"`, or `"detailed"` |
+| `nudgeFreq` | `10` | How often to remind AI to prune (lower = more frequent) |
 | `protectedTools` | `["task", "todowrite", "todoread", "prune", "batch", "write", "edit"]` | Tools that are never pruned |
 | `strategies.onIdle` | `["ai-analysis"]` | Strategies for automatic pruning |
 | `strategies.onTool` | `["ai-analysis"]` | Strategies when AI calls `prune` |

@@ -1,113 +1,29 @@
 import type { Logger } from "../logger"
 import type { SessionStats, GCStats } from "../core/janitor"
-import type { ToolMetadata, PruneReason } from "../fetch-wrapper/types"
-import { PRUNE_REASON_LABELS } from "../fetch-wrapper/types"
 import { formatTokenCount } from "../tokenizer"
 import { formatPrunedItemsList } from "./display-utils"
+import { ToolParameterEntry } from "../state"
+import { PluginConfig } from "../config"
 
-export type PruningSummaryLevel = "off" | "minimal" | "detailed"
-
-export interface NotificationConfig {
-    pruningSummary: PruningSummaryLevel
-    workingDirectory?: string
+export type PruneReason = "completion" | "noise" | "consolidation"
+export const PRUNE_REASON_LABELS: Record<PruneReason, string> = {
+    completion: "Task Complete",
+    noise: "Noise Removal",
+    consolidation: "Consolidation"
 }
 
-export interface NotificationContext {
-    client: any
-    logger: Logger
-    config: NotificationConfig
-}
-
-export interface NotificationData {
-    aiPrunedCount: number
-    aiTokensSaved: number
-    aiPrunedIds: string[]
-    toolMetadata: Map<string, ToolMetadata>
-    gcPending: GCStats | null
-    sessionStats: SessionStats | null
-    reason?: PruneReason
-}
-
-export async function sendUnifiedNotification(
-    ctx: NotificationContext,
-    sessionID: string,
-    data: NotificationData,
-    agent?: string
-): Promise<boolean> {
-    const hasAiPruning = data.aiPrunedCount > 0
-    const hasGcActivity = data.gcPending && data.gcPending.toolsDeduped > 0
-
-    if (!hasAiPruning && !hasGcActivity) {
-        return false
-    }
-
-    if (ctx.config.pruningSummary === 'off') {
-        return false
-    }
-
-    const message = ctx.config.pruningSummary === 'minimal'
-        ? buildMinimalMessage(data)
-        : buildDetailedMessage(data, ctx.config.workingDirectory)
-
-    await sendIgnoredMessage(ctx, sessionID, message, agent)
-    return true
-}
-
-export async function sendIgnoredMessage(
-    ctx: NotificationContext,
-    sessionID: string,
-    text: string,
-    agent?: string
-): Promise<void> {
-    try {
-        await ctx.client.session.prompt({
-            path: { id: sessionID },
-            body: {
-                noReply: true,
-                agent: agent,
-                parts: [{
-                    type: 'text',
-                    text: text,
-                    ignored: true
-                }]
-            }
-        })
-    } catch (error: any) {
-        ctx.logger.error("notification", "Failed to send notification", { error: error.message })
-    }
-}
-
-function buildMinimalMessage(data: NotificationData): string {
-    const { justNowTokens, totalTokens } = calculateStats(data)
-    const reasonSuffix = data.reason ? ` [${PRUNE_REASON_LABELS[data.reason]}]` : ''
-    return formatStatsHeader(totalTokens, justNowTokens) + reasonSuffix
-}
-
-function buildDetailedMessage(data: NotificationData, workingDirectory?: string): string {
-    const { justNowTokens, totalTokens } = calculateStats(data)
-
-    let message = formatStatsHeader(totalTokens, justNowTokens)
-
-    if (data.aiPrunedCount > 0) {
-        const justNowTokensStr = `~${formatTokenCount(justNowTokens)}`
-        const reasonLabel = data.reason ? ` — ${PRUNE_REASON_LABELS[data.reason]}` : ''
-        message += `\n\n▣ Pruned tools (${justNowTokensStr})${reasonLabel}`
-
-        const itemLines = formatPrunedItemsList(data.aiPrunedIds, data.toolMetadata, workingDirectory)
-        message += '\n' + itemLines.join('\n')
-    }
-
-    return message.trim()
-}
-
-function calculateStats(data: NotificationData): {
+function calculateStats(
+    tokensSaved: number,
+    gcPending: GCStats | null,
+    sessionStats: SessionStats
+): {
     justNowTokens: number
     totalTokens: number
 } {
-    const justNowTokens = data.aiTokensSaved + (data.gcPending?.tokensCollected ?? 0)
+    const justNowTokens = tokensSaved + (gcPending?.tokensCollected ?? 0)
 
-    const totalTokens = data.sessionStats
-        ? data.sessionStats.totalTokensSaved + data.sessionStats.totalGCTokens
+    const totalTokens = sessionStats
+        ? sessionStats.totalTokensSaved + sessionStats.totalGCTokens
         : justNowTokens
 
     return { justNowTokens, totalTokens }
@@ -127,3 +43,99 @@ function formatStatsHeader(
         `▣ DCP | ${totalTokensPadded} saved total`,
     ].join('\n')
 }
+
+function buildMinimalMessage(
+    tokensSaved: number,
+    gcPending: GCStats | null,
+    sessionStats: SessionStats,
+    reason: PruneReason | undefined
+): string {
+    const { justNowTokens, totalTokens } = calculateStats(tokensSaved, gcPending, sessionStats)
+    const reasonSuffix = reason ? ` [${PRUNE_REASON_LABELS[reason]}]` : ''
+    return formatStatsHeader(totalTokens, justNowTokens) + reasonSuffix
+}
+
+function buildDetailedMessage(
+    tokensSaved: number,
+    gcPending: GCStats | null,
+    sessionStats: SessionStats,
+    reason: PruneReason | undefined,
+    prunedIds: string[],
+    toolMetadata: Map<string, ToolParameterEntry>,
+    workingDirectory?: string
+): string {
+    const { justNowTokens, totalTokens } = calculateStats(tokensSaved, gcPending, sessionStats)
+
+    let message = formatStatsHeader(totalTokens, justNowTokens)
+
+    if (data.aiPrunedCount > 0) {
+        const justNowTokensStr = `~${formatTokenCount(justNowTokens)}`
+        const reasonLabel = reason ? ` — ${PRUNE_REASON_LABELS[reason]}` : ''
+        message += `\n\n▣ Pruned tools (${justNowTokensStr})${reasonLabel}`
+
+        const itemLines = formatPrunedItemsList(prunedIds, toolMetadata, workingDirectory)
+        message += '\n' + itemLines.join('\n')
+    }
+
+    return message.trim()
+}
+
+export async function sendUnifiedNotification(
+    client: any,
+    logger: Logger,
+    config: PluginConfig,
+    sessionId: string,
+    prunedCount: number,
+    tokensSaved: number,
+    prunedIds: string[],
+    toolMetadata: Map<string, ToolParameterEntry>,
+    gcPending: GCStats | null,
+    sessionStats: SessionStats,
+    reason: PruneReason | undefined,
+    agent: string | undefined,
+    workingDirectory: string
+): Promise<boolean> {
+    const hasPruned = prunedCount > 0
+    const hasGcActivity = gcPending && gcPending.toolsDeduped > 0
+
+    if (!hasPruned && !hasGcActivity) {
+        return false
+    }
+
+    if (config.pruningSummary === 'off') {
+        return false
+    }
+
+    const message = config.pruningSummary === 'minimal'
+        ? buildMinimalMessage(tokensSaved, gcPending, sessionStats, reason)
+        : buildDetailedMessage(tokensSaved, gcPending, sessionStats, reason, prunedIds, toolMetadata, workingDirectory)
+
+    await sendIgnoredMessage(client, logger, sessionId, message, agent)
+    return true
+}
+
+export async function sendIgnoredMessage(
+    client: any,
+    logger: Logger,
+    sessionID: string,
+    text: string,
+    agent?: string
+): Promise<void> {
+    try {
+        await client.session.prompt({
+            path: { id: sessionID },
+            body: {
+                noReply: true,
+                agent: agent,
+                parts: [{
+                    type: 'text',
+                    text: text,
+                    ignored: true
+                }]
+            }
+        })
+    } catch (error: any) {
+        logger.error("notification", "Failed to send notification", { error: error.message })
+    }
+}
+

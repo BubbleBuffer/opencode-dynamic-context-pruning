@@ -1,18 +1,13 @@
 import { tool } from "@opencode-ai/plugin"
-import type { PluginState } from "./state"
+import type { SessionState, ToolParameterEntry} from "./state"
 import type { PluginConfig } from "./config"
-import type { ToolTracker } from "./fetch-wrapper/tool-tracker"
-import type { ToolMetadata, PruneReason } from "./fetch-wrapper/types"
-import { resetToolTrackerCount } from "./fetch-wrapper/tool-tracker"
-import { findCurrentAgent } from "./hooks"
-import { getActualId } from "./state/id-mapping"
-import { sendUnifiedNotification, type NotificationContext } from "./ui/notification"
+import { findCurrentAgent, buildToolIdList, getPrunedIds } from "./utils"
+import { PruneReason, sendUnifiedNotification } from "./ui/notification"
 import { formatPruningResultForTool } from "./ui/display-utils"
 import { ensureSessionInitialized } from "./state"
 import { saveSessionState } from "./state/persistence"
 import type { Logger } from "./logger"
 import { estimateTokensBatch } from "./tokenizer"
-import type { SessionStats, PruningResult } from "./core/janitor"
 import { loadPrompt } from "./core/prompt"
 
 /** Tool description loaded from prompts/tool.txt */
@@ -20,11 +15,10 @@ const TOOL_DESCRIPTION = loadPrompt("tool")
 
 export interface PruneToolContext {
     client: any
-    state: PluginState
+    state: SessionState
     logger: Logger
     config: PluginConfig
-    notificationCtx: NotificationContext
-    workingDirectory?: string
+    workingDirectory: string
 }
 
 /**
@@ -33,7 +27,6 @@ export interface PruneToolContext {
  */
 export function createPruningTool(
     ctx: PruneToolContext,
-    toolTracker: ToolTracker
 ): ReturnType<typeof tool> {
     return tool({
         description: TOOL_DESCRIPTION,
@@ -48,7 +41,7 @@ export function createPruningTool(
             ),
         },
         async execute(args, toolCtx) {
-            const { client, state, logger, config, notificationCtx } = ctx
+            const { client, state, logger, config, workingDirectory } = ctx
             const sessionId = toolCtx.sessionID
 
             if (!args.ids || args.ids.length === 0) {
@@ -70,84 +63,55 @@ export function createPruningTool(
 
             await ensureSessionInitialized(state, sessionId, logger)
 
-            const prunedIds = numericIds
-                .map(numId => getActualId(sessionId, numId))
-                .filter((id): id is string => id !== undefined)
-
-            if (prunedIds.length === 0) {
-                return "None of the provided IDs were valid. Check the <prunable-tools> list for available IDs."
-            }
-
             // Fetch messages to calculate tokens and find current agent
-            const messagesResponse = await client.session.messages({
-                path: { id: sessionId },
-                query: { limit: 200 }
+            const messages = await client.session.messages({
+                path: { id: sessionId }
             })
-            const messages = messagesResponse.data || messagesResponse
+            // const messages = messagesResponse.data || messagesResponse // Need this?
 
-            const currentAgent = findCurrentAgent(messages)
+            const currentAgent: string | undefined = findCurrentAgent(messages)
+            const toolIdList: string[] = buildToolIdList(messages)
+            const prunedIds: string[] = getPrunedIds(numericIds, toolIdList)
             const tokensSaved = await calculateTokensSavedFromMessages(messages, prunedIds)
 
-            const currentStats = state.stats.get(sessionId) ?? {
-                totalToolsPruned: 0,
-                totalTokensSaved: 0,
-                totalGCTokens: 0,
-                totalGCTools: 0
-            }
-            const sessionStats: SessionStats = {
-                ...currentStats,
-                totalToolsPruned: currentStats.totalToolsPruned + prunedIds.length,
-                totalTokensSaved: currentStats.totalTokensSaved + tokensSaved
-            }
-            state.stats.set(sessionId, sessionStats)
+            state.stats.totalTokensSaved += tokensSaved
+            state.stats.totalToolsPruned += prunedIds.length
+            state.prunedIds.push(...prunedIds)
 
-            const alreadyPrunedIds = state.prunedIds.get(sessionId) ?? []
-            const allPrunedIds = [...alreadyPrunedIds, ...prunedIds]
-            state.prunedIds.set(sessionId, allPrunedIds)
-
-            saveSessionState(sessionId, new Set(allPrunedIds), sessionStats, logger)
+            saveSessionState(state, logger)
                 .catch(err => logger.error("prune-tool", "Failed to persist state", { error: err.message }))
 
-            const toolMetadata = new Map<string, ToolMetadata>()
+            const toolMetadata = new Map<string, ToolParameterEntry>()
             for (const id of prunedIds) {
-                const meta = state.toolParameters.get(id.toLowerCase())
-                if (meta) {
-                    toolMetadata.set(id.toLowerCase(), meta)
+                const toolParameters = state.toolParameters.get(id)
+                if (toolParameters) {
+                    toolMetadata.set(id, toolParameters)
                 } else {
-                    logger.debug("prune-tool", "No metadata found for ID", {
-                        id,
-                        idLower: id.toLowerCase(),
-                        hasLower: state.toolParameters.has(id.toLowerCase())
-                    })
+                    logger.debug("prune-tool", "No metadata found for ID", { id })
                 }
             }
 
-            await sendUnifiedNotification(notificationCtx, sessionId, {
-                aiPrunedCount: prunedIds.length,
-                aiTokensSaved: tokensSaved,
-                aiPrunedIds: prunedIds,
-                toolMetadata,
-                gcPending: null,
-                sessionStats,
-                reason
-            }, currentAgent)
-
-            toolTracker.skipNextIdle = true
-
-            if (config.nudge_freq > 0) {
-                resetToolTrackerCount(toolTracker)
-            }
-
-            const result: PruningResult = {
-                prunedCount: prunedIds.length,
+            await sendUnifiedNotification(
+                client,
+                logger,
+                config,
+                sessionId,
+                prunedIds.length,
                 tokensSaved,
-                llmPrunedIds: prunedIds,
+                prunedIds,
                 toolMetadata,
-                sessionStats,
-                reason
-            }
+                null,
+                state.stats,
+                reason as PruneReason,
+                currentAgent,
+                workingDirectory
+            )
 
-            return formatPruningResultForTool(result, ctx.workingDirectory)
+            return formatPruningResultForTool(
+                prunedIds,
+                toolMetadata,
+                workingDirectory
+            )
         },
     })
 }

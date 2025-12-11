@@ -1,5 +1,5 @@
 import type { WithParts } from "@opencode-ai/plugin"
-import type { PluginState } from "./state"
+import type { SessionState } from "./state"
 import type { Logger } from "./logger"
 import type { JanitorContext } from "./core/janitor"
 import { runOnIdle } from "./core/janitor"
@@ -43,7 +43,7 @@ export function createEventHandler(
             try {
                 const result = await runOnIdle(janitorCtx, event.properties.sessionID, config.strategies.onIdle)
 
-                if (result && result.prunedCount > 0 && toolTracker && config.nudge_freq > 0) {
+                if (result && result.prunedCount > 0 && toolTracker && config.nudgeFreq > 0) {
                     if (toolStrategiesCoveredByIdle(config.strategies.onIdle, config.strategies.onTool)) {
                         resetToolTrackerCount(toolTracker)
                     }
@@ -69,7 +69,7 @@ export function createChatMessageTransformHandler() {
  */
 export function createChatParamsHandler(
     client: any,
-    state: PluginState,
+    state: SessionState,
     logger: Logger,
     toolTracker?: ToolTracker
 ) {

@@ -1,5 +1,5 @@
-import type { ToolMetadata } from "../fetch-wrapper/types"
 import type { PruningResult } from "../core/janitor"
+import { ToolParameterEntry } from "../state"
 
 /**
  * Extracts a human-readable key from tool metadata for display purposes.
@@ -110,7 +110,7 @@ function shortenSinglePath(path: string, workingDirectory?: string): string {
  */
 export function formatPrunedItemsList(
     prunedIds: string[],
-    toolMetadata: Map<string, ToolMetadata>,
+    toolMetadata: Map<string, ToolParameterEntry>,
     workingDirectory?: string
 ): string[] {
     const lines: string[] = []
@@ -147,16 +147,17 @@ export function formatPrunedItemsList(
  * Formats a PruningResult into a human-readable string for the prune tool output.
  */
 export function formatPruningResultForTool(
-    result: PruningResult,
+    prunedIds: string[],
+    toolMetadata: Map<string, ToolParameterEntry>,
     workingDirectory?: string
 ): string {
     const lines: string[] = []
-    lines.push(`Context pruning complete. Pruned ${result.prunedCount} tool outputs.`)
+    lines.push(`Context pruning complete. Pruned ${prunedIds.length} tool outputs.`)
     lines.push('')
 
-    if (result.llmPrunedIds.length > 0) {
-        lines.push(`Semantically pruned (${result.llmPrunedIds.length}):`)
-        lines.push(...formatPrunedItemsList(result.llmPrunedIds, result.toolMetadata, workingDirectory))
+    if (prunedIds.length > 0) {
+        lines.push(`Semantically pruned (${prunedIds.length}):`)
+        lines.push(...formatPrunedItemsList(prunedIds, toolMetadata, workingDirectory))
     }
 
     return lines.join('\n').trim()

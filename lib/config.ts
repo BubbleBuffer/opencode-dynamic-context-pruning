@@ -15,8 +15,8 @@ export interface PluginConfig {
     showModelErrorToasts?: boolean
     showUpdateToasts?: boolean
     strictModelSelection?: boolean
-    pruning_summary: "off" | "minimal" | "detailed"
-    nudge_freq: number
+    pruningSummary: "off" | "minimal" | "detailed"
+    nudgeFreq: number
     strategies: {
         onIdle: PruningStrategy[]
         onTool: PruningStrategy[]
@@ -35,8 +35,8 @@ const defaultConfig: PluginConfig = {
     showModelErrorToasts: true,
     showUpdateToasts: true,
     strictModelSelection: false,
-    pruning_summary: 'detailed',
-    nudge_freq: 10,
+    pruningSummary: 'detailed',
+    nudgeFreq: 10,
     strategies: {
         onIdle: ['ai-analysis'],
         onTool: ['ai-analysis']
@@ -51,8 +51,8 @@ const VALID_CONFIG_KEYS = new Set([
     'showModelErrorToasts',
     'showUpdateToasts',
     'strictModelSelection',
-    'pruning_summary',
-    'nudge_freq',
+    'pruningSummary',
+    'nudgeFreq',
     'strategies'
 ])
 
@@ -125,9 +125,9 @@ function createDefaultConfig(): void {
     "onTool": ["ai-analysis"]
   },
   // Summary display: "off", "minimal", or "detailed"
-  "pruning_summary": "detailed",
+  "pruningSummary": "detailed",
   // How often to nudge the AI to prune (every N tool results, 0 = disabled)
-  "nudge_freq": 10
+  "nudgeFreq": 10
   // Additional tools to protect from pruning
   // "protectedTools": ["bash"]
 }
@@ -207,8 +207,8 @@ export function getConfig(ctx?: PluginInput): ConfigResult {
                     showUpdateToasts: globalConfig.showUpdateToasts ?? config.showUpdateToasts,
                     strictModelSelection: globalConfig.strictModelSelection ?? config.strictModelSelection,
                     strategies: mergeStrategies(config.strategies, globalConfig.strategies as any),
-                    pruning_summary: globalConfig.pruning_summary ?? config.pruning_summary,
-                    nudge_freq: globalConfig.nudge_freq ?? config.nudge_freq
+                    pruningSummary: globalConfig.pruningSummary ?? config.pruningSummary,
+                    nudgeFreq: globalConfig.nudgeFreq ?? config.nudgeFreq
                 }
                 logger.info('config', 'Loaded global config', { path: configPaths.global })
             }
@@ -239,8 +239,8 @@ export function getConfig(ctx?: PluginInput): ConfigResult {
                     showUpdateToasts: projectConfig.showUpdateToasts ?? config.showUpdateToasts,
                     strictModelSelection: projectConfig.strictModelSelection ?? config.strictModelSelection,
                     strategies: mergeStrategies(config.strategies, projectConfig.strategies as any),
-                    pruning_summary: projectConfig.pruning_summary ?? config.pruning_summary,
-                    nudge_freq: projectConfig.nudge_freq ?? config.nudge_freq
+                    pruningSummary: projectConfig.pruningSummary ?? config.pruningSummary,
+                    nudgeFreq: projectConfig.nudgeFreq ?? config.nudgeFreq
                 }
                 logger.info('config', 'Loaded project config (overrides global)', { path: configPaths.project })
             }

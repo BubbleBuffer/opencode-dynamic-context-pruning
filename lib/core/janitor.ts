@@ -1,7 +1,7 @@
 import { z } from "zod"
 import type { Logger } from "../logger"
 import type { PruningStrategy } from "../config"
-import type { PluginState } from "../state"
+import type { SessionState } from "../state"
 import type { ToolMetadata, SessionStats, GCStats, PruningResult } from "../fetch-wrapper/types"
 import { findCurrentAgent } from "../hooks"
 import { buildAnalysisPrompt } from "./prompt"
@@ -32,7 +32,7 @@ export interface JanitorConfig {
 
 export interface JanitorContext {
     client: any
-    state: PluginState
+    state: SessionState
     logger: Logger
     config: JanitorConfig
     notificationCtx: NotificationContext
@@ -44,7 +44,7 @@ export interface JanitorContext {
 
 export function createJanitorContext(
     client: any,
-    state: PluginState,
+    state: SessionState,
     logger: Logger,
     config: JanitorConfig
 ): JanitorContext {

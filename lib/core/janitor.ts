@@ -116,7 +116,9 @@ async function runWithStrategies(
         const { toolCallIds, toolOutputs, toolMetadata } = parseMessages(messages, state.toolParameters)
 
         const alreadyPrunedIds = state.prunedIds.get(sessionID) ?? []
-        const unprunedToolCallIds = toolCallIds.filter(id => !alreadyPrunedIds.includes(id))
+        // Normalized set for filtering to avoid re-processing already pruned tools with different casing
+        const alreadyPrunedLower = new Set(alreadyPrunedIds.map(id => id.toLowerCase()))
+        const unprunedToolCallIds = toolCallIds.filter(id => !alreadyPrunedLower.has(id))
 
         const gcPending = state.gcPending.get(sessionID) ?? null
 
@@ -145,7 +147,7 @@ async function runWithStrategies(
             )
         }
 
-        const finalNewlyPrunedIds = llmPrunedIds.filter(id => !alreadyPrunedIds.includes(id))
+        const finalNewlyPrunedIds = llmPrunedIds.filter(id => !alreadyPrunedLower.has(id.toLowerCase()))
 
         if (finalNewlyPrunedIds.length === 0 && !gcPending) {
             return null

@@ -4,7 +4,7 @@ import type { JanitorContext } from "./core/janitor"
 import { runOnIdle } from "./core/janitor"
 import type { PluginConfig, PruningStrategy } from "./config"
 import type { ToolTracker } from "./fetch-wrapper/tool-tracker"
-import { resetToolTrackerCount } from "./fetch-wrapper/tool-tracker"
+import { resetToolTrackerCount, clearToolTracker } from "./fetch-wrapper/tool-tracker"
 import { clearAllMappings } from "./state/id-mapping"
 
 export async function isSubagentSession(client: any, sessionID: string): Promise<boolean> {
@@ -80,7 +80,7 @@ export function createChatParamsHandler(
             clearAllMappings()
             state.toolParameters.clear()
             if (toolTracker) {
-                resetToolTrackerCount(toolTracker)
+                clearToolTracker(toolTracker)
             }
         }
 

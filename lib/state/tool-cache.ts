@@ -30,6 +30,10 @@ export async function syncToolCache(
         }
 
         let synced = 0
+        // Build lowercase set of pruned IDs for comparison (IDs in state may be mixed case)
+        const prunedIdsLower = tracker
+            ? new Set((state.prunedIds.get(sessionId) ?? []).map(id => id.toLowerCase()))
+            : null
 
         for (const msg of messages) {
             if (!msg.parts) continue
@@ -43,7 +47,8 @@ export async function syncToolCache(
                 if (tracker && !tracker.seenToolResultIds.has(id)) {
                     tracker.seenToolResultIds.add(id)
                     // Only count non-protected tools toward nudge threshold
-                    if (!part.tool || !protectedTools?.has(part.tool)) {
+                    // Also skip already-pruned tools to avoid re-counting on restart
+                    if ((!part.tool || !protectedTools?.has(part.tool)) && !prunedIdsLower?.has(id)) {
                         tracker.toolResultCount++
                     }
                 }

@@ -74,7 +74,7 @@ export async function saveSessionState(
 
 export async function loadSessionState(
     sessionId: string,
-    logger?: Logger
+    logger: Logger
 ): Promise<PersistedSessionState | null> {
     try {
         const filePath = getSessionFilePath(sessionId);
@@ -87,13 +87,13 @@ export async function loadSessionState(
         const state = JSON.parse(content) as PersistedSessionState;
 
         if (!state || !Array.isArray(state.prunedIds) || !state.stats) {
-            logger?.warn("persist", "Invalid session state file, ignoring", {
+            logger.warn("persist", "Invalid session state file, ignoring", {
                 sessionId: sessionId.slice(0, 8),
             });
             return null;
         }
 
-        logger?.info("persist", "Loaded session state from disk", {
+        logger.info("persist", "Loaded session state from disk", {
             sessionId: sessionId.slice(0, 8),
             prunedIds: state.prunedIds.length,
             totalTokensSaved: state.stats.totalTokensSaved,
@@ -101,7 +101,7 @@ export async function loadSessionState(
 
         return state;
     } catch (error: any) {
-        logger?.warn("persist", "Failed to load session state", {
+        logger.warn("persist", "Failed to load session state", {
             sessionId: sessionId.slice(0, 8),
             error: error?.message,
         });

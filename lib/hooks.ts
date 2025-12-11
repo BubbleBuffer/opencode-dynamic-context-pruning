@@ -1,3 +1,4 @@
+import type { WithParts } from "@opencode-ai/plugin"
 import type { PluginState } from "./state"
 import type { Logger } from "./logger"
 import type { JanitorContext } from "./core/janitor"
@@ -51,6 +52,15 @@ export function createEventHandler(
                 logger.error("janitor", "Failed", { error: err.message })
             }
         }
+    }
+}
+
+export function createChatMessageTransformHandler() {
+    return async(
+        input: {}, 
+        output: { messages: WithParts[] }
+    ) => {
+
     }
 }
 

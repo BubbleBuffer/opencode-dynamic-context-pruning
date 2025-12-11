@@ -6,7 +6,7 @@ import { checkForUpdates } from "./lib/version-checker"
 import { createPluginState } from "./lib/state"
 import { installFetchWrapper } from "./lib/fetch-wrapper"
 import { createPruningTool } from "./lib/pruning-tool"
-import { createEventHandler, createChatParamsHandler } from "./lib/hooks"
+import { createEventHandler, createChatParamsHandler, createChatMessageTransformHandler } from "./lib/hooks"
 import { createToolTracker } from "./lib/fetch-wrapper/tool-tracker"
 
 const plugin: Plugin = (async (ctx) => {
@@ -25,25 +25,25 @@ const plugin: Plugin = (async (ctx) => {
     const logger = new Logger(config.debug)
     const state = createPluginState()
 
-    const janitorCtx = createJanitorContext(
-        ctx.client,
-        state,
-        logger,
-        {
-            protectedTools: config.protectedTools,
-            model: config.model,
-            showModelErrorToasts: config.showModelErrorToasts ?? true,
-            strictModelSelection: config.strictModelSelection ?? false,
-            pruningSummary: config.pruning_summary,
-            workingDirectory: ctx.directory
-        }
-    )
+    // const janitorCtx = createJanitorContext(
+    //     ctx.client,
+    //     state,
+    //     logger,
+    //     {
+    //         protectedTools: config.protectedTools,
+    //         model: config.model,
+    //         showModelErrorToasts: config.showModelErrorToasts ?? true,
+    //         strictModelSelection: config.strictModelSelection ?? false,
+    //         pruningSummary: config.pruning_summary,
+    //         workingDirectory: ctx.directory
+    //     }
+    // )
 
     // Create tool tracker for nudge injection
-    const toolTracker = createToolTracker()
+    // const toolTracker = createToolTracker()
 
     // Install global fetch wrapper for context pruning and system message injection
-    installFetchWrapper(state, logger, ctx.client, config, toolTracker)
+    // installFetchWrapper(state, logger, ctx.client, config, toolTracker)
 
     // Log initialization
     logger.info("plugin", "DCP initialized", {
@@ -52,9 +52,9 @@ const plugin: Plugin = (async (ctx) => {
     })
 
     // Check for updates after a delay
-    setTimeout(() => {
-        checkForUpdates(ctx.client, logger, config.showUpdateToasts ?? true).catch(() => { })
-    }, 5000)
+    // setTimeout(() => {
+    //     checkForUpdates(ctx.client, logger, config.showUpdateToasts ?? true).catch(() => { })
+    // }, 5000)
 
     // Show migration toast if there were config migrations
     if (migrations.length > 0) {
@@ -75,18 +75,18 @@ const plugin: Plugin = (async (ctx) => {
     }
 
     return {
-        event: createEventHandler(ctx.client, janitorCtx, logger, config, toolTracker),
-        "chat.params": createChatParamsHandler(ctx.client, state, logger, toolTracker),
-        tool: config.strategies.onTool.length > 0 ? {
-            prune: createPruningTool({
-                client: ctx.client,
-                state,
-                logger,
-                config,
-                notificationCtx: janitorCtx.notificationCtx,
-                workingDirectory: ctx.directory
-            }, toolTracker),
-        } : undefined,
+        "experimental.chat.messages.transform": createChatMessageTransformHandler(),
+        // "chat.params": createChatParamsHandler(ctx.client, state, logger, toolTracker),
+        // tool: config.strategies.onTool.length > 0 ? {
+        //     prune: createPruningTool({
+        //         client: ctx.client,
+        //         state,
+        //         logger,
+        //         config,
+        //         notificationCtx: janitorCtx.notificationCtx,
+        //         workingDirectory: ctx.directory
+        //     }, toolTracker),
+        // } : undefined,
     }
 }) satisfies Plugin
 

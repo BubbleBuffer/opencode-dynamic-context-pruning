@@ -3,16 +3,17 @@ import type { Logger } from "../logger"
 import { loadSessionState } from "./persistence"
 
 export interface PluginState {
+    sessionId: string | null
     prunedIds: Map<string, string[]>
     stats: Map<string, SessionStats>
     gcPending: Map<string, GCStats>
-    toolParameters: Map<string, ToolParameterEntry>
-    model: Map<string, ModelInfo>
-    googleToolCallMapping: Map<string, Map<string, string>>
-    restoredSessions: Set<string>
-    checkedSessions: Set<string>
-    subagentSessions: Set<string>
-    lastSeenSessionId: string | null
+    // toolParameters: Map<string, ToolParameterEntry>
+    // model: Map<string, ModelInfo>
+    // googleToolCallMapping: Map<string, Map<string, string>>
+    // restoredSessions: Set<string>
+    // checkedSessions: Set<string>
+    // subagentSessions: Set<string>
+    // lastSeenSessionId: string | null
 }
 
 export type ToolStatus = "pending" | "running" | "completed" | "error"
@@ -31,29 +32,30 @@ export interface ModelInfo {
 
 export function createPluginState(): PluginState {
     return {
+        sessionId: null,
         prunedIds: new Map(),
         stats: new Map(),
         gcPending: new Map(),
-        toolParameters: new Map(),
-        model: new Map(),
-        googleToolCallMapping: new Map(),
-        restoredSessions: new Set(),
-        checkedSessions: new Set(),
-        subagentSessions: new Set(),
-        lastSeenSessionId: null,
+        // toolParameters: new Map(),
+        // model: new Map(),
+        // googleToolCallMapping: new Map(),
+        // restoredSessions: new Set(),
+        // checkedSessions: new Set(),
+        // subagentSessions: new Set(),
+        // lastSeenSessionId: null,
     }
 }
 
-export async function ensureSessionRestored(
+export async function ensureSessionInitialized(
     state: PluginState,
     sessionId: string,
-    logger?: Logger
+    logger: Logger
 ): Promise<void> {
-    if (state.restoredSessions.has(sessionId)) {
-        return
-    }
-
-    state.restoredSessions.add(sessionId)
+    // if (state.restoredSessions.has(sessionId)) {
+    //     return
+    // }
+    //
+    // state.restoredSessions.add(sessionId)
 
     const persisted = await loadSessionState(sessionId, logger)
     if (persisted) {

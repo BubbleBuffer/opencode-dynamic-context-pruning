@@ -8,7 +8,7 @@ import { isSubagentSession, findCurrentAgent } from "./hooks"
 import { getActualId } from "./state/id-mapping"
 import { sendUnifiedNotification, type NotificationContext } from "./ui/notification"
 import { formatPruningResultForTool } from "./ui/display-utils"
-import { ensureSessionRestored } from "./state"
+import { ensureSessionInitialized } from "./state"
 import { saveSessionState } from "./state/persistence"
 import type { Logger } from "./logger"
 import { estimateTokensBatch } from "./tokenizer"
@@ -60,23 +60,19 @@ export function createPruningTool(
             }
 
             // Parse reason from first element, numeric IDs from the rest
-            const firstElement = args.ids[0]
-            const validReasons = ["completion", "noise", "consolidation"] as const
-            let reason: PruneReason | undefined
-            let numericIds: number[]
 
-            if (typeof firstElement === "string" && validReasons.includes(firstElement as any)) {
-                reason = firstElement as PruneReason
-                numericIds = args.ids.slice(1).filter((id): id is number => typeof id === "number")
-            } else {
-                numericIds = args.ids.filter((id): id is number => typeof id === "number")
+            const reason = args.ids[0];
+            const validReasons = ["completion", "noise", "consolidation"] as const
+            if (typeof reason !== "string" || !validReasons.includes(reason as any)) {
+                return "No valid pruning reason found. Use 'completion', 'noise', or 'consolidation' as the first element."
             }
 
+            const numericIds: number[] = args.ids.slice(1).filter((id): id is number => typeof id === "number")
             if (numericIds.length === 0) {
                 return "No numeric IDs provided. Format: [reason, id1, id2, ...] where reason is 'completion', 'noise', or 'consolidation'."
             }
 
-            await ensureSessionRestored(state, sessionId, logger)
+            await ensureSessionInitialized(state, sessionId, logger)
 
             const prunedIds = numericIds
                 .map(numId => getActualId(sessionId, numId))

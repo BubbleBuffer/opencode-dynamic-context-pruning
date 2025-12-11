@@ -3,7 +3,7 @@ import { getConfig } from "./lib/config"
 import { Logger } from "./lib/logger"
 import { createSessionState } from "./lib/state"
 import { createPruningTool } from "./lib/pruning-tool"
-import { createEventHandler, createChatParamsHandler, createChatMessageTransformHandler } from "./lib/hooks"
+import { createChatMessageTransformHandler } from "./lib/hooks"
 
 const plugin: Plugin = (async (ctx) => {
     const { config, migrations } = getConfig(ctx)
@@ -47,7 +47,6 @@ const plugin: Plugin = (async (ctx) => {
 
     return {
         "experimental.chat.messages.transform": createChatMessageTransformHandler(),
-        // "chat.params": createChatParamsHandler(ctx.client, state, logger, toolTracker),
         tool: config.strategies.onTool.length > 0 ? {
             prune: createPruningTool({
                 client: ctx.client,
@@ -57,30 +56,6 @@ const plugin: Plugin = (async (ctx) => {
                 workingDirectory: ctx.directory
             }),
         } : undefined,
-        // config: async (opencodeConfig) => {
-        //     // Add prune to primary_tools by mutating the opencode config
-        //     // This works because config is cached and passed by reference
-        //     if (config.strategies.onTool.length > 0) {
-        //         const existingPrimaryTools = opencodeConfig.experimental?.primary_tools ?? []
-        //         opencodeConfig.experimental = {
-        //             ...opencodeConfig.experimental,
-        //             primary_tools: [...existingPrimaryTools, "prune"],
-        //         }
-        //         logger.info("plugin", "Added 'prune' to experimental.primary_tools via config mutation")
-        //     }
-        // },
-        // event: createEventHandler(ctx.client, janitorCtx, logger, config, toolTracker),
-        // "chat.params": createChatParamsHandler(ctx.client, state, logger, toolTracker),
-        // tool: config.strategies.onTool.length > 0 ? {
-        //     prune: createPruningTool({
-        //         client: ctx.client,
-        //         state,
-        //         logger,
-        //         config,
-        //         notificationCtx: janitorCtx.notificationCtx,
-        //         workingDirectory: ctx.directory
-        //     }, toolTracker),
-        // } : undefined,
     }
 }) satisfies Plugin
 

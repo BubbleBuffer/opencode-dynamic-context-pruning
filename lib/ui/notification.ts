@@ -68,7 +68,7 @@ function buildDetailedMessage(
 
     let message = formatStatsHeader(totalTokens, justNowTokens)
 
-    if (data.aiPrunedCount > 0) {
+    if (prunedIds.length > 0) {
         const justNowTokensStr = `~${formatTokenCount(justNowTokens)}`
         const reasonLabel = reason ? ` — ${PRUNE_REASON_LABELS[reason]}` : ''
         message += `\n\n▣ Pruned tools (${justNowTokensStr})${reasonLabel}`

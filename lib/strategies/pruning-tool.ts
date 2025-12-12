@@ -1,14 +1,14 @@
 import { tool } from "@opencode-ai/plugin"
-import type { SessionState, ToolParameterEntry} from "./state"
-import type { PluginConfig } from "./config"
-import { findCurrentAgent, buildToolIdList, getPrunedIds } from "./utils"
-import { PruneReason, sendUnifiedNotification } from "./ui/notification"
-import { formatPruningResultForTool } from "./ui/display-utils"
-import { ensureSessionInitialized } from "./state"
-import { saveSessionState } from "./state/persistence"
-import type { Logger } from "./logger"
-import { estimateTokensBatch } from "./tokenizer"
-import { loadPrompt } from "./prompt"
+import type { SessionState, ToolParameterEntry} from "../state"
+import type { PluginConfig } from "../config"
+import { findCurrentAgent, buildToolIdList, getPruneToolIds } from "../utils"
+import { PruneReason, sendUnifiedNotification } from "../ui/notification"
+import { formatPruningResultForTool } from "../ui/display-utils"
+import { ensureSessionInitialized } from "../state"
+import { saveSessionState } from "../state/persistence"
+import type { Logger } from "../logger"
+import { estimateTokensBatch } from "../tokenizer"
+import { loadPrompt } from "../prompt"
 
 /** Tool description loaded from prompts/tool.txt */
 const TOOL_DESCRIPTION = loadPrompt("tool")
@@ -56,8 +56,8 @@ export function createPruningTool(
                 return "No valid pruning reason found. Use 'completion', 'noise', or 'consolidation' as the first element."
             }
 
-            const numericIds: number[] = args.ids.slice(1).filter((id): id is number => typeof id === "number")
-            if (numericIds.length === 0) {
+            const numericToolIds: number[] = args.ids.slice(1).filter((id): id is number => typeof id === "number")
+            if (numericToolIds.length === 0) {
                 return "No numeric IDs provided. Format: [reason, id1, id2, ...] where reason is 'completion', 'noise', or 'consolidation'."
             }
 
@@ -67,22 +67,20 @@ export function createPruningTool(
             const messages = await client.session.messages({
                 path: { id: sessionId }
             })
-            // const messages = messagesResponse.data || messagesResponse // Need this?
 
             const currentAgent: string | undefined = findCurrentAgent(messages)
             const toolIdList: string[] = buildToolIdList(messages)
-            const prunedIds: string[] = getPrunedIds(numericIds, toolIdList)
-            const tokensSaved = await calculateTokensSavedFromMessages(messages, prunedIds)
+            const pruneToolIds: string[] = getPruneToolIds(numericToolIds, toolIdList)
+            const tokensSaved = await calculateTokensSavedFromMessages(messages, pruneToolIds)
 
-            state.stats.totalTokensSaved += tokensSaved
-            state.stats.totalToolsPruned += prunedIds.length
-            state.prunedIds.push(...prunedIds)
+            state.stats.pruneTokenCounter += tokensSaved
+            state.prune.toolIds.push(...pruneToolIds)
 
             saveSessionState(state, logger)
                 .catch(err => logger.error("prune-tool", "Failed to persist state", { error: err.message }))
 
             const toolMetadata = new Map<string, ToolParameterEntry>()
-            for (const id of prunedIds) {
+            for (const id of pruneToolIds) {
                 const toolParameters = state.toolParameters.get(id)
                 if (toolParameters) {
                     toolMetadata.set(id, toolParameters)
@@ -95,20 +93,17 @@ export function createPruningTool(
                 client,
                 logger,
                 config,
+                state,
                 sessionId,
-                prunedIds.length,
-                tokensSaved,
-                prunedIds,
+                pruneToolIds,
                 toolMetadata,
-                null,
-                state.stats,
                 reason as PruneReason,
                 currentAgent,
                 workingDirectory
             )
 
             return formatPruningResultForTool(
-                prunedIds,
+                pruneToolIds,
                 toolMetadata,
                 workingDirectory
             )

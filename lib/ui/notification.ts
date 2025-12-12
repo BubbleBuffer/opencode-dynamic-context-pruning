@@ -1,5 +1,5 @@
 import type { Logger } from "../logger"
-import type { SessionStats, GCStats } from "../state"
+import type { SessionState } from "../state"
 import { formatTokenCount } from "../tokenizer"
 import { formatPrunedItemsList } from "./display-utils"
 import { ToolParameterEntry } from "../state"
@@ -12,32 +12,15 @@ export const PRUNE_REASON_LABELS: Record<PruneReason, string> = {
     consolidation: "Consolidation"
 }
 
-function calculateStats(
-    tokensSaved: number,
-    gcPending: GCStats | null,
-    sessionStats: SessionStats
-): {
-    justNowTokens: number
-    totalTokens: number
-} {
-    const justNowTokens = tokensSaved + (gcPending?.tokensCollected ?? 0)
-
-    const totalTokens = sessionStats
-        ? sessionStats.totalTokensSaved + sessionStats.totalGCTokens
-        : justNowTokens
-
-    return { justNowTokens, totalTokens }
-}
-
 function formatStatsHeader(
-    totalTokens: number,
-    justNowTokens: number
+    totalTokensSaved: number,
+    pruneTokenCounter: number
 ): string {
-    const totalTokensStr = `~${formatTokenCount(totalTokens)}`
-    const justNowTokensStr = `~${formatTokenCount(justNowTokens)}`
+    const totalTokensSavedStr = `~${formatTokenCount(totalTokensSaved)}`
+    const pruneTokenCounterStr = `~${formatTokenCount(pruneTokenCounter)}`
 
-    const maxTokenLen = Math.max(totalTokensStr.length, justNowTokensStr.length)
-    const totalTokensPadded = totalTokensStr.padStart(maxTokenLen)
+    const maxTokenLen = Math.max(pruneTokenCounterStr.length, pruneTokenCounterStr.length)
+    const totalTokensPadded = totalTokensSavedStr.padStart(maxTokenLen)
 
     return [
         `▣ DCP | ${totalTokensPadded} saved total`,
@@ -45,31 +28,27 @@ function formatStatsHeader(
 }
 
 function buildMinimalMessage(
-    tokensSaved: number,
-    gcPending: GCStats | null,
-    sessionStats: SessionStats,
+    state: SessionState,
     reason: PruneReason | undefined
 ): string {
-    const { justNowTokens, totalTokens } = calculateStats(tokensSaved, gcPending, sessionStats)
     const reasonSuffix = reason ? ` [${PRUNE_REASON_LABELS[reason]}]` : ''
-    return formatStatsHeader(totalTokens, justNowTokens) + reasonSuffix
+    return formatStatsHeader(
+        state.stats.totalPruneTokens,
+        state.stats.pruneTokenCounter
+    ) + reasonSuffix
 }
 
 function buildDetailedMessage(
-    tokensSaved: number,
-    gcPending: GCStats | null,
-    sessionStats: SessionStats,
+    state: SessionState,
     reason: PruneReason | undefined,
     prunedIds: string[],
     toolMetadata: Map<string, ToolParameterEntry>,
     workingDirectory?: string
 ): string {
-    const { justNowTokens, totalTokens } = calculateStats(tokensSaved, gcPending, sessionStats)
-
-    let message = formatStatsHeader(totalTokens, justNowTokens)
+    let message = formatStatsHeader(state.stats.totalPruneTokens, state.stats.pruneTokenCounter)
 
     if (prunedIds.length > 0) {
-        const justNowTokensStr = `~${formatTokenCount(justNowTokens)}`
+        const justNowTokensStr = `~${formatTokenCount(state.stats.pruneTokenCounter)}`
         const reasonLabel = reason ? ` — ${PRUNE_REASON_LABELS[reason]}` : ''
         message += `\n\n▣ Pruned tools (${justNowTokensStr})${reasonLabel}`
 
@@ -84,21 +63,16 @@ export async function sendUnifiedNotification(
     client: any,
     logger: Logger,
     config: PluginConfig,
+    state: SessionState,
     sessionId: string,
-    prunedCount: number,
-    tokensSaved: number,
-    prunedIds: string[],
+    pruneToolIds: string[],
     toolMetadata: Map<string, ToolParameterEntry>,
-    gcPending: GCStats | null,
-    sessionStats: SessionStats,
     reason: PruneReason | undefined,
     agent: string | undefined,
     workingDirectory: string
 ): Promise<boolean> {
-    const hasPruned = prunedCount > 0
-    const hasGcActivity = gcPending && gcPending.toolsDeduped > 0
-
-    if (!hasPruned && !hasGcActivity) {
+    const hasPruned = pruneToolIds.length > 0
+    if (!hasPruned) {
         return false
     }
 
@@ -107,8 +81,8 @@ export async function sendUnifiedNotification(
     }
 
     const message = config.pruningSummary === 'minimal'
-        ? buildMinimalMessage(tokensSaved, gcPending, sessionStats, reason)
-        : buildDetailedMessage(tokensSaved, gcPending, sessionStats, reason, prunedIds, toolMetadata, workingDirectory)
+        ? buildMinimalMessage(state, reason)
+        : buildDetailedMessage(state, reason, pruneToolIds, toolMetadata, workingDirectory)
 
     await sendIgnoredMessage(client, logger, sessionId, message, agent)
     return true

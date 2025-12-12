@@ -2,7 +2,7 @@ import type { Plugin } from "@opencode-ai/plugin"
 import { getConfig } from "./lib/config"
 import { Logger } from "./lib/logger"
 import { createSessionState } from "./lib/state"
-import { createPruningTool } from "./lib/pruning-tool"
+import { createPruningTool } from "./lib/strategies/pruning-tool"
 import { createChatMessageTransformHandler } from "./lib/hooks"
 
 const plugin: Plugin = (async (ctx) => {

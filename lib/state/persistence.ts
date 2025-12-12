@@ -8,12 +8,12 @@ import * as fs from "fs/promises";
 import { existsSync } from "fs";
 import { homedir } from "os";
 import { join } from "path";
-import type { SessionState, SessionStats } from "./types"
+import type { SessionState, SessionStats, Prune } from "./types"
 import type { Logger } from "../logger";
 
 export interface PersistedSessionState {
     sessionName?: string;
-    prunedIds: string[];
+    prune: Prune
     stats: SessionStats;
     lastUpdated: string;
 }
@@ -52,7 +52,7 @@ export async function saveSessionState(
 
         const state: PersistedSessionState = {
             sessionName: sessionName,
-            prunedIds: sessionState.prunedIds,
+            prune: sessionState.prune,
             stats: sessionState.stats,
             lastUpdated: new Date().toISOString(),
         };
@@ -63,7 +63,6 @@ export async function saveSessionState(
 
         logger.info("persist", "Saved session state to disk", {
             sessionId: sessionState.sessionId.slice(0, 8),
-            prunedIds: state.prunedIds.length,
             totalTokensSaved: state.stats.totalTokensSaved,
         });
     } catch (error: any) {
@@ -88,7 +87,11 @@ export async function loadSessionState(
         const content = await fs.readFile(filePath, "utf-8");
         const state = JSON.parse(content) as PersistedSessionState;
 
-        if (!state || !Array.isArray(state.prunedIds) || !state.stats) {
+        if (!state ||
+            !state.prune ||
+            !Array.isArray(state.prune.toolIds) ||
+            !state.stats
+        ) {
             logger.warn("persist", "Invalid session state file, ignoring", {
                 sessionId: sessionId.slice(0, 8),
             });
@@ -97,7 +100,6 @@ export async function loadSessionState(
 
         logger.info("persist", "Loaded session state from disk", {
             sessionId: sessionId.slice(0, 8),
-            prunedIds: state.prunedIds.length,
             totalTokensSaved: state.stats.totalTokensSaved,
         });
 

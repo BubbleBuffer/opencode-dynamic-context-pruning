@@ -5,7 +5,9 @@ import { loadSessionState } from "./persistence"
 export function createSessionState(): SessionState {
     return {
         sessionId: null,
-        prunedIds: [],
+        prune: {
+            toolIds: []
+        },
         stats: {
             totalToolsPruned: 0,
             totalTokensSaved: 0,
@@ -22,7 +24,9 @@ export function createSessionState(): SessionState {
 
 export function resetSessionState(state: SessionState): void {
     state.sessionId = null
-    state.prunedIds = []
+    state.prune = {
+        toolIds: []
+    }
     state.stats = {
         totalToolsPruned: 0,
         totalTokensSaved: 0,
@@ -56,7 +60,9 @@ export async function ensureSessionInitialized(
     }
 
     // Populate state with loaded data
-    state.prunedIds = persisted.prunedIds || []
+    state.prune = {
+        toolIds: persisted.prune.toolIds || []
+    }
     state.stats = {
         totalToolsPruned: persisted.stats.totalToolsPruned || 0,
         totalTokensSaved: persisted.stats.totalTokensSaved || 0,

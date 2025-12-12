@@ -14,16 +14,9 @@ export interface ToolParameterEntry {
     error?: string
 }
 
-export interface GCStats {
-    tokensCollected: number
-    toolsDeduped: number
-}
-
 export interface SessionStats {
-    totalToolsPruned: number
-    totalTokensSaved: number
-    totalGCTokens: number
-    totalGCTools: number
+    pruneTokenCounter: number
+    totalPruneTokens: number
 }
 
 export interface Prune {
@@ -34,6 +27,5 @@ export interface SessionState {
     sessionId: string | null
     prune: Prune
     stats: SessionStats
-    gcPending: GCStats
     toolParameters: Map<string, ToolParameterEntry>
 }

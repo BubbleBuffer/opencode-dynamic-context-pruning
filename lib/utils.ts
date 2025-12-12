@@ -42,14 +42,14 @@ export function buildToolIdList(messages: any[]): string[] {
 }
 
 /**
- * Prunes numeric IDs to valid tool call IDs based on the provided tool ID list.
+ * Prunes numeric tool IDs to valid tool call IDs based on the provided tool ID list.
  */
-export function getPrunedIds(numericIds: number[], toolIdList: string[]): string[] {
-    const prunedIds: string[] = []
-    for (const index of numericIds) {
+export function getPruneToolIds(numericToolIds: number[], toolIdList: string[]): string[] {
+    const pruneToolIds: string[] = []
+    for (const index of numericToolIds) {
         if (!isNaN(index) && index >= 0 && index < toolIdList.length) {
-            prunedIds.push(toolIdList[index])
+            pruneToolIds.push(toolIdList[index])
         }
     }
-    return prunedIds
+    return pruneToolIds
 }

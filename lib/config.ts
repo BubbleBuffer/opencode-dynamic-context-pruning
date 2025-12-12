@@ -6,6 +6,7 @@ import type { PluginInput } from '@opencode-ai/plugin'
 
 export interface Deduplication {
     enabled: boolean
+    protectedTools: string[]
 }
 
 export interface PruneThinkingBlocks {
@@ -52,6 +53,7 @@ export const VALID_CONFIG_KEYS = new Set([
     // strategies.deduplication
     'strategies.deduplication',
     'strategies.deduplication.enabled',
+    'strategies.deduplication.protectedTools',
     // strategies.pruneThinkingBlocks
     'strategies.pruneThinkingBlocks',
     'strategies.pruneThinkingBlocks.enabled',
@@ -121,6 +123,9 @@ function validateConfigTypes(config: Record<string, any>): ValidationError[] {
         // deduplication
         if (strategies.deduplication?.enabled !== undefined && typeof strategies.deduplication.enabled !== 'boolean') {
             errors.push({ key: 'strategies.deduplication.enabled', expected: 'boolean', actual: typeof strategies.deduplication.enabled })
+        }
+        if (strategies.deduplication?.protectedTools !== undefined && !Array.isArray(strategies.deduplication.protectedTools)) {
+            errors.push({ key: 'strategies.deduplication.protectedTools', expected: 'string[]', actual: typeof strategies.deduplication.protectedTools })
         }
 
         // pruneThinkingBlocks
@@ -217,7 +222,8 @@ const defaultConfig: PluginConfig = {
     pruningSummary: 'detailed',
     strategies: {
         deduplication: {
-            enabled: true
+            enabled: true,
+            protectedTools: [...DEFAULT_PROTECTED_TOOLS]
         },
         pruneThinkingBlocks: {
             enabled: true
@@ -297,7 +303,9 @@ function createDefaultConfig(): void {
   "strategies": {
     // Remove duplicate tool calls (same tool with same arguments)
     "deduplication": {
-      "enabled": true
+      "enabled": true,
+      // Additional tools to protect from pruning
+      "protectedTools": []
     },
     // Remove thinking/reasoning LLM blocks
     "pruneThinkingBlocks": {
@@ -362,7 +370,13 @@ function mergeStrategies(
 
     return {
         deduplication: {
-            enabled: override.deduplication?.enabled ?? base.deduplication.enabled
+            enabled: override.deduplication?.enabled ?? base.deduplication.enabled,
+            protectedTools: [
+                ...new Set([
+                    ...base.deduplication.protectedTools,
+                    ...(override.deduplication?.protectedTools ?? [])
+                ])
+            ]
         },
         pruneThinkingBlocks: {
             enabled: override.pruneThinkingBlocks?.enabled ?? base.pruneThinkingBlocks.enabled
@@ -396,7 +410,10 @@ function deepCloneConfig(config: PluginConfig): PluginConfig {
     return {
         ...config,
         strategies: {
-            deduplication: { ...config.strategies.deduplication },
+            deduplication: {
+                ...config.strategies.deduplication,
+                protectedTools: [...config.strategies.deduplication.protectedTools]
+            },
             pruneThinkingBlocks: { ...config.strategies.pruneThinkingBlocks },
             onIdle: {
                 ...config.strategies.onIdle,
@@ -476,4 +493,4 @@ export function getConfig(ctx: PluginInput): PluginConfig {
     }
 
     return config
-}
+

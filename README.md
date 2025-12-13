@@ -87,8 +87,11 @@ DCP uses its own config file (`~/.config/opencode/dcp.jsonc` or `.opencode/dcp.j
       "enabled": false,
       // Additional tools to protect from pruning
       "protectedTools": [],
-      // How often to nudge the AI to prune (every N tool results, 0 = disabled)
-      "nudgeFrequency": 10
+      // Nudge the LLM to use the prune tool (every <frequency> tool results)
+      "nudge": {
+        "enabled": true,
+        "frequency": 10
+      }
     }
   }
 }

@@ -48,7 +48,7 @@ export const insertPruneToolContext = (
     const prunableToolsList = buildPrunableToolsList(state, config, logger, messages)
 
     let nudgeString = ""
-    if (state.nudgeCounter >= config.strategies.pruneTool.nudgeFrequency) {
+    if (config.strategies.pruneTool.nudge.enabled && state.nudgeCounter >= config.strategies.pruneTool.nudge.frequency) {
         logger.info("Inserting prune nudge message")
         nudgeString = "\n" + NUDGE_STRING
     }

@@ -68,11 +68,11 @@ DCP uses its own config file (`~/.config/opencode/dcp.jsonc` or `.opencode/dcp.j
     },
     // Remove thinking/reasoning LLM blocks
     "pruneThinkingBlocks": {
-      "enabled": true
+      "enabled": false
     },
     // Run an LLM to analyze what tool calls are no longer relevant on idle
     "onIdle": {
-      "enabled": true,
+      "enabled": false,
       // Override model for analysis (format: "provider/model")
       // "model": "anthropic/claude-haiku-4-5",
       // Show toast notifications when model selection fails

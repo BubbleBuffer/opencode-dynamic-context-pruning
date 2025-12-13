@@ -238,10 +238,10 @@ const defaultConfig: PluginConfig = {
             protectedTools: [...DEFAULT_PROTECTED_TOOLS]
         },
         pruneThinkingBlocks: {
-            enabled: true
+            enabled: false
         },
         onIdle: {
-            enabled: true,
+            enabled: false,
             showModelErrorToasts: true,
             strictModelSelection: false,
             protectedTools: [...DEFAULT_PROTECTED_TOOLS]
@@ -324,11 +324,11 @@ function createDefaultConfig(): void {
     },
     // Remove thinking/reasoning LLM blocks
     "pruneThinkingBlocks": {
-      "enabled": true
+      "enabled": false
     },
     // Run an LLM to analyze what tool calls are no longer relevant on idle
     "onIdle": {
-      "enabled": true,
+      "enabled": false,
       // Override model for analysis (format: "provider/model")
       // "model": "anthropic/claude-haiku-4-5",
       // Show toast notifications when model selection fails

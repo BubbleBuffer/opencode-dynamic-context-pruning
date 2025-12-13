@@ -24,6 +24,9 @@ const buildPrunableToolsList = (
         if (config.strategies.pruneTool.protectedTools.includes(toolParameterEntry.tool)) {
             return
         }
+        if (toolParameterEntry.compacted) {
+            return
+        }
         const numericId = toolIdList.indexOf(toolCallId)
         const paramKey = extractParameterKey(toolParameterEntry.tool, toolParameterEntry.parameters)
         const description = paramKey ? `${toolParameterEntry.tool}, ${paramKey}` : toolParameterEntry.tool

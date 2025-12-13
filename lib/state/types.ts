@@ -12,6 +12,7 @@ export interface ToolParameterEntry {
     parameters: any
     status?: ToolStatus
     error?: string
+    compacted?: boolean
 }
 
 export interface SessionStats {

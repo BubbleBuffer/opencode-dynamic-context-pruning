@@ -102,6 +102,7 @@ export function createPruneTool(
             )
             state.stats.totalPruneTokens += state.stats.pruneTokenCounter
             state.stats.pruneTokenCounter = 0
+            state.nudgeCounter = 0
 
             return formatPruningResultForTool(
                 pruneToolIds,

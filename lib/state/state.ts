@@ -38,7 +38,8 @@ export function createSessionState(): SessionState {
             pruneTokenCounter: 0,
             totalPruneTokens: 0,
         },
-        toolParameters: new Map<string, ToolParameterEntry>()
+        toolParameters: new Map<string, ToolParameterEntry>(),
+        nudgeCounter: 0
     }
 }
 
@@ -52,6 +53,7 @@ export function resetSessionState(state: SessionState): void {
         totalPruneTokens: 0,
     }
     state.toolParameters.clear()
+    state.nudgeCounter = 0
 }
 
 export async function ensureSessionInitialized(

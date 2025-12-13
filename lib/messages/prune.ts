@@ -3,8 +3,10 @@ import type { Logger } from "../logger"
 import type { PluginConfig } from "../config"
 import { buildToolIdList } from "../utils"
 import { getLastUserMessage, extractParameterKey } from "./utils"
+import { loadPrompt } from "../prompt"
 
 const PRUNED_TOOL_OUTPUT_REPLACEMENT = '[Output removed to save context - information superseded or no longer needed]'
+const NUDGE_STRING = loadPrompt("nudge")
 
 const buildPrunableToolsList = (
     state: SessionState,
@@ -45,6 +47,12 @@ export const insertPruneToolContext = (
 
     const prunableToolsList = buildPrunableToolsList(state, config, logger, messages)
 
+    let nudgeString = ""
+    if (state.nudgeCounter >= config.strategies.pruneTool.nudgeFrequency) {
+        logger.info("Inserting prune nudge message")
+        nudgeString = "\n" + NUDGE_STRING
+    }
+
     const userMessage: WithParts = {
         info: {
             id: "msg_01234567890123456789012345",
@@ -63,7 +71,7 @@ export const insertPruneToolContext = (
                 sessionID: lastUserMessage.info.sessionID,
                 messageID: "msg_01234567890123456789012345",
                 type: "text",
-                text: prunableToolsList,
+                text: prunableToolsList + nudgeString,
             }
         ]
     }

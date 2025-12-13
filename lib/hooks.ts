@@ -18,7 +18,8 @@ export function createChatMessageTransformHandler(
         output: { messages: WithParts[] }
     ) => {
         checkSession(state, logger, output.messages);
-        syncToolCache(state, logger, output.messages);
+        syncToolCache(state, config, logger, output.messages);
+
 
         deduplicate(state, logger, config, output.messages)
 

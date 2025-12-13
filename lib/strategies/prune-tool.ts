@@ -1,13 +1,12 @@
 import { tool } from "@opencode-ai/plugin"
 import type { SessionState, ToolParameterEntry, WithParts } from "../state"
 import type { PluginConfig } from "../config"
-import { findCurrentAgent, buildToolIdList, getPruneToolIds } from "../utils"
+import { findCurrentAgent, buildToolIdList, getPruneToolIds, calculateTokensSaved } from "../utils"
 import { PruneReason, sendUnifiedNotification } from "../ui/notification"
 import { formatPruningResultForTool } from "../ui/display-utils"
 import { ensureSessionInitialized } from "../state"
 import { saveSessionState } from "../state/persistence"
 import type { Logger } from "../logger"
-import { estimateTokensBatch } from "../tokenizer"
 import { loadPrompt } from "../prompt"
 
 /** Tool description loaded from prompts/tool.txt */
@@ -67,18 +66,15 @@ export function createPruneTool(
             const messagesResponse = await client.session.messages({
                 path: { id: sessionId }
             })
-            const messages = messagesResponse.data || messagesResponse
+            const messages: WithParts[] = messagesResponse.data || messagesResponse
 
             const currentAgent: string | undefined = findCurrentAgent(messages)
             const toolIdList: string[] = buildToolIdList(messages)
             const pruneToolIds: string[] = getPruneToolIds(numericToolIds, toolIdList)
-            const tokensSaved = await calculateTokensSavedFromMessages(messages, pruneToolIds)
-
-            state.stats.pruneTokenCounter += tokensSaved
             state.prune.toolIds.push(...pruneToolIds)
 
             saveSessionState(state, logger)
-                .catch(err => logger.error("prune-tool", "Failed to persist state", { error: err.message }))
+                .catch(err => logger.error("Failed to persist state", { error: err.message }))
 
             const toolMetadata = new Map<string, ToolParameterEntry>()
             for (const id of pruneToolIds) {
@@ -86,9 +82,11 @@ export function createPruneTool(
                 if (toolParameters) {
                     toolMetadata.set(id, toolParameters)
                 } else {
-                    logger.debug("prune-tool", "No metadata found for ID", { id })
+                    logger.debug("No metadata found for ID", { id })
                 }
             }
+
+            state.stats.pruneTokenCounter += calculateTokensSaved(messages, pruneToolIds)
 
             await sendUnifiedNotification(
                 client,
@@ -102,6 +100,8 @@ export function createPruneTool(
                 currentAgent,
                 workingDirectory
             )
+            state.stats.totalPruneTokens += state.stats.pruneTokenCounter
+            state.stats.pruneTokenCounter = 0
 
             return formatPruningResultForTool(
                 pruneToolIds,
@@ -112,50 +112,3 @@ export function createPruneTool(
     })
 }
 
-/**
- * Calculates approximate tokens saved by pruning the given tool call IDs.
- * Uses pre-fetched messages to avoid duplicate API calls.
- */
-async function calculateTokensSavedFromMessages(
-    messages: any[],
-    prunedIds: string[]
-): Promise<number> {
-    try {
-        const toolOutputs = new Map<string, string>()
-        for (const msg of messages) {
-            if (msg.role === 'tool' && msg.tool_call_id) {
-                const content = typeof msg.content === 'string'
-                    ? msg.content
-                    : JSON.stringify(msg.content)
-                toolOutputs.set(msg.tool_call_id.toLowerCase(), content)
-            }
-            if (msg.role === 'user' && Array.isArray(msg.content)) {
-                for (const part of msg.content) {
-                    if (part.type === 'tool_result' && part.tool_use_id) {
-                        const content = typeof part.content === 'string'
-                            ? part.content
-                            : JSON.stringify(part.content)
-                        toolOutputs.set(part.tool_use_id.toLowerCase(), content)
-                    }
-                }
-            }
-        }
-
-        const contents: string[] = []
-        for (const id of prunedIds) {
-            const content = toolOutputs.get(id.toLowerCase())
-            if (content) {
-                contents.push(content)
-            }
-        }
-
-        if (contents.length === 0) {
-            return prunedIds.length * 500
-        }
-
-        const tokenCounts = await estimateTokensBatch(contents)
-        return tokenCounts.reduce((sum, count) => sum + count, 0)
-    } catch (error: any) {
-        return prunedIds.length * 500
-    }
-}

@@ -1,6 +1,7 @@
 import { PluginConfig } from "../config"
 import { Logger } from "../logger"
 import type { SessionState, WithParts } from "../state"
+import { calculateTokensSaved } from "../utils"
 
 /**
  * Deduplication strategy - prunes older tool calls that have identical
@@ -39,7 +40,7 @@ export const deduplicate = (
     for (const id of unprunedIds) {
         const metadata = state.toolParameters.get(id)
         if (!metadata) {
-            logger.warn("deduplication", `Missing metadata for tool call ID: ${id}`)
+            logger.warn(`Missing metadata for tool call ID: ${id}`)
             continue
         }
 
@@ -66,9 +67,11 @@ export const deduplicate = (
         }
     }
 
+    state.stats.totalPruneTokens += calculateTokensSaved(messages, newPruneIds)
+
     if (newPruneIds.length > 0) {
         state.prune.toolIds.push(...newPruneIds)
-        logger.debug("deduplication", `Marked ${newPruneIds.length} duplicate tool calls for pruning`)
+        logger.debug(`Marked ${newPruneIds.length} duplicate tool calls for pruning`)
     }
 }
 

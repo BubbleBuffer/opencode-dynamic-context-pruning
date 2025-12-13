@@ -108,15 +108,14 @@ function shortenSinglePath(path: string, workingDirectory?: string): string {
  * Formats a list of pruned items in the style: "→ tool: parameter"
  */
 export function formatPrunedItemsList(
-    prunedIds: string[],
+    pruneToolIds: string[],
     toolMetadata: Map<string, ToolParameterEntry>,
     workingDirectory?: string
 ): string[] {
     const lines: string[] = []
 
-    for (const prunedId of prunedIds) {
-        const normalizedId = prunedId.toLowerCase()
-        const metadata = toolMetadata.get(normalizedId)
+    for (const id of pruneToolIds) {
+        const metadata = toolMetadata.get(id)
 
         if (metadata) {
             const paramKey = extractParameterKey(metadata)
@@ -130,10 +129,10 @@ export function formatPrunedItemsList(
         }
     }
 
-    const knownCount = prunedIds.filter(id =>
-        toolMetadata.has(id.toLowerCase())
+    const knownCount = pruneToolIds.filter(id =>
+        toolMetadata.has(id)
     ).length
-    const unknownCount = prunedIds.length - knownCount
+    const unknownCount = pruneToolIds.length - knownCount
 
     if (unknownCount > 0) {
         lines.push(`→ (${unknownCount} tool${unknownCount > 1 ? 's' : ''} with unknown metadata)`)

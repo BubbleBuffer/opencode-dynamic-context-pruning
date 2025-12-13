@@ -1,6 +1,32 @@
-import type { SessionState, ToolParameterEntry } from "./types"
+import type { SessionState, ToolParameterEntry, WithParts } from "./types"
 import type { Logger } from "../logger"
 import { loadSessionState } from "./persistence"
+import { getLastUserMessage } from "../messages/utils"
+
+export const checkSession = (
+    state: SessionState,
+    logger: Logger,
+    messages: WithParts[]
+) => {
+
+    const lastUserMessage = getLastUserMessage(messages)
+    if (!lastUserMessage) {
+        return
+    }
+
+    const lastSessionId = lastUserMessage.info.sessionID
+
+    if (state.sessionId === null || state.sessionId !== lastSessionId) {
+        logger.info(`Session changed: ${state.sessionId} -> ${lastSessionId}`)
+        ensureSessionInitialized(
+            state,
+            lastSessionId,
+            logger
+        ).catch((err) => {
+            logger.error("Failed to initialize session state", { error: err.message })
+        } )
+    }
+}
 
 export function createSessionState(): SessionState {
     return {
@@ -36,6 +62,9 @@ export async function ensureSessionInitialized(
     if (state.sessionId === sessionId) {
         return;
     }
+
+    logger.info("session ID = " + sessionId)
+    logger.info("Initializing session state", { sessionId: sessionId })
 
     // Clear previous session data
     resetSessionState(state)

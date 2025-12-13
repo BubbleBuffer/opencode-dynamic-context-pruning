@@ -14,11 +14,8 @@ export async function syncToolCache(
     messages: WithParts[],
 ): Promise<void> {
     try {
+        logger.info("Syncing tool parameters from OpenCode messages")
         for (const msg of messages) {
-            if (!msg.parts) {
-                continue
-            }
-
             for (const part of msg.parts) {
                 if (part.type !== "tool" || !part.callID || state.toolParameters.has(part.callID)) {
                     continue
@@ -38,7 +35,7 @@ export async function syncToolCache(
 
         trimToolParametersCache(state)
     } catch (error) {
-        logger.warn("tool-cache", "Failed to sync tool parameters from OpenCode", {
+        logger.warn("Failed to sync tool parameters from OpenCode", {
             error: error instanceof Error ? error.message : String(error)
         })
     }

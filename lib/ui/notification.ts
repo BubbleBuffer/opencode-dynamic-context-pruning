@@ -1,6 +1,6 @@
 import type { Logger } from "../logger"
 import type { SessionState } from "../state"
-import { formatTokenCount } from "../tokenizer"
+import { formatTokenCount } from "../utils"
 import { formatPrunedItemsList } from "./display-utils"
 import { ToolParameterEntry } from "../state"
 import { PluginConfig } from "../config"
@@ -16,14 +16,9 @@ function formatStatsHeader(
     totalTokensSaved: number,
     pruneTokenCounter: number
 ): string {
-    const totalTokensSavedStr = `~${formatTokenCount(totalTokensSaved)}`
-    const pruneTokenCounterStr = `~${formatTokenCount(pruneTokenCounter)}`
-
-    const maxTokenLen = Math.max(pruneTokenCounterStr.length, pruneTokenCounterStr.length)
-    const totalTokensPadded = totalTokensSavedStr.padStart(maxTokenLen)
-
+    const totalTokensSavedStr = `~${formatTokenCount(totalTokensSaved + pruneTokenCounter)}`
     return [
-        `▣ DCP | ${totalTokensPadded} saved total`,
+        `▣ DCP | ${totalTokensSavedStr} saved total`,
     ].join('\n')
 }
 
@@ -41,18 +36,18 @@ function buildMinimalMessage(
 function buildDetailedMessage(
     state: SessionState,
     reason: PruneReason | undefined,
-    prunedIds: string[],
+    pruneToolIds: string[],
     toolMetadata: Map<string, ToolParameterEntry>,
     workingDirectory?: string
 ): string {
     let message = formatStatsHeader(state.stats.totalPruneTokens, state.stats.pruneTokenCounter)
 
-    if (prunedIds.length > 0) {
-        const justNowTokensStr = `~${formatTokenCount(state.stats.pruneTokenCounter)}`
+    if (pruneToolIds.length > 0) {
+        const pruneTokenCounterStr = `~${formatTokenCount(state.stats.pruneTokenCounter)}`
         const reasonLabel = reason ? ` — ${PRUNE_REASON_LABELS[reason]}` : ''
-        message += `\n\n▣ Pruned tools (${justNowTokensStr})${reasonLabel}`
+        message += `\n\n▣ Pruned tools (${pruneTokenCounterStr})${reasonLabel}`
 
-        const itemLines = formatPrunedItemsList(prunedIds, toolMetadata, workingDirectory)
+        const itemLines = formatPrunedItemsList(pruneToolIds, toolMetadata, workingDirectory)
         message += '\n' + itemLines.join('\n')
     }
 
@@ -109,7 +104,7 @@ export async function sendIgnoredMessage(
             }
         })
     } catch (error: any) {
-        logger.error("notification", "Failed to send notification", { error: error.message })
+        logger.error("Failed to send notification", { error: error.message })
     }
 }
 

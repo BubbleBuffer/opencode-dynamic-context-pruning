@@ -4,6 +4,7 @@ import type { PluginConfig } from "./config"
 import { syncToolCache } from "./state/tool-cache"
 import { deduplicate } from "./strategies"
 import { prune, insertPruneToolContext } from "./messages"
+import { checkSession } from "./state"
 
 
 export function createChatMessageTransformHandler(
@@ -16,6 +17,7 @@ export function createChatMessageTransformHandler(
         input: {},
         output: { messages: WithParts[] }
     ) => {
+        checkSession(state, logger, output.messages);
         syncToolCache(state, logger, output.messages);
 
         deduplicate(state, logger, config, output.messages)

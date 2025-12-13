@@ -61,13 +61,13 @@ export async function saveSessionState(
         const content = JSON.stringify(state, null, 2);
         await fs.writeFile(filePath, content, "utf-8");
 
-        logger.info("persist", "Saved session state to disk", {
-            sessionId: sessionState.sessionId.slice(0, 8),
+        logger.info("Saved session state to disk", {
+            sessionId: sessionState.sessionId,
             totalTokensSaved: state.stats.totalPruneTokens
         });
     } catch (error: any) {
-        logger.error("persist", "Failed to save session state", {
-            sessionId: sessionState.sessionId?.slice(0, 8),
+        logger.error("Failed to save session state", {
+            sessionId: sessionState.sessionId,
             error: error?.message,
         });
     }
@@ -92,21 +92,21 @@ export async function loadSessionState(
             !Array.isArray(state.prune.toolIds) ||
             !state.stats
         ) {
-            logger.warn("persist", "Invalid session state file, ignoring", {
-                sessionId: sessionId.slice(0, 8),
+            logger.warn("Invalid session state file, ignoring", {
+                sessionId: sessionId,
             });
             return null;
         }
 
-        logger.info("persist", "Loaded session state from disk", {
-            sessionId: sessionId.slice(0, 8),
+        logger.info("Loaded session state from disk", {
+            sessionId: sessionId,
             totalTokensSaved: state.stats.totalPruneTokens
         });
 
         return state;
     } catch (error: any) {
-        logger.warn("persist", "Failed to load session state", {
-            sessionId: sessionId.slice(0, 8),
+        logger.warn("Failed to load session state", {
+            sessionId: sessionId,
             error: error?.message,
         });
         return null;

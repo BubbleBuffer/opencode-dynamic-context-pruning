@@ -22,7 +22,7 @@ const plugin: Plugin = (async (ctx) => {
     const state = createSessionState()
 
     // Log initialization
-    logger.info("plugin", "DCP initialized", {
+    logger.info("DCP initialized", {
         strategies: config.strategies,
     })
 

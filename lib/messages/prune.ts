@@ -26,6 +26,7 @@ const buildPrunableToolsList = (
         const paramKey = extractParameterKey(toolParameterEntry.tool, toolParameterEntry.parameters)
         const description = paramKey ? `${toolParameterEntry.tool}, ${paramKey}` : toolParameterEntry.tool
         lines.push(`${numericId}: ${description}`)
+        logger.debug(`Prunable tool found - ID: ${numericId}, Tool: ${toolParameterEntry.tool}, Call ID: ${toolCallId}`)
     })
 
     return `<prunable-tools>\nThe following tools have been invoked and are available for pruning. This list does not mandate immediate action. Consider your current goals and the resources you need before discarding valuable tool outputs. Keep the context free of noise.\n${lines.join('\n')}\n</prunable-tools>`
@@ -89,7 +90,7 @@ const pruneToolOutputs = (
             if (part.type !== 'tool') {
                 continue
             }
-            if (!state.prune.toolIds.includes(part.id)) {
+            if (!state.prune.toolIds.includes(part.callID)) {
                 continue
             }
             if (part.state.status === 'completed') {

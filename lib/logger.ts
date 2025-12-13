@@ -45,6 +45,29 @@ export class Logger {
         return parts.join(" ")
     }
 
+    private getCallerFile(skipFrames: number = 3): string {
+        const originalPrepareStackTrace = Error.prepareStackTrace
+        try {
+            const err = new Error()
+            Error.prepareStackTrace = (_, stack) => stack
+            const stack = err.stack as unknown as NodeJS.CallSite[]
+            Error.prepareStackTrace = originalPrepareStackTrace
+
+            // Skip specified number of frames to get to actual caller
+            for (let i = skipFrames; i < stack.length; i++) {
+                const filename = stack[i]?.getFileName()
+                if (filename && !filename.includes('/logger.')) {
+                    // Extract just the filename without path and extension
+                    const match = filename.match(/([^/\\]+)\.[tj]s$/)
+                    return match ? match[1] : filename
+                }
+            }
+            return 'unknown'
+        } catch {
+            return 'unknown'
+        }
+    }
+
     private async write(level: string, component: string, message: string, data?: any) {
         if (!this.enabled) return
 
@@ -67,19 +90,23 @@ export class Logger {
         }
     }
 
-    info(component: string, message: string, data?: any) {
+    info(message: string, data?: any) {
+        const component = this.getCallerFile(2)
         return this.write("INFO", component, message, data)
     }
 
-    debug(component: string, message: string, data?: any) {
+    debug(message: string, data?: any) {
+        const component = this.getCallerFile(2)
         return this.write("DEBUG", component, message, data)
     }
 
-    warn(component: string, message: string, data?: any) {
+    warn(message: string, data?: any) {
+        const component = this.getCallerFile(2)
         return this.write("WARN", component, message, data)
     }
 
-    error(component: string, message: string, data?: any) {
+    error(message: string, data?: any) {
+        const component = this.getCallerFile(2)
         return this.write("ERROR", component, message, data)
     }
 

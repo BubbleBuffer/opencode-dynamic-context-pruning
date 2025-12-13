@@ -17,6 +17,7 @@ export async function syncToolCache(
 ): Promise<void> {
     try {
         logger.info("Syncing tool parameters from OpenCode messages")
+
         for (const msg of messages) {
             for (const part of msg.parts) {
                 if (part.type !== "tool" || !part.callID || state.toolParameters.has(part.callID)) {
@@ -36,6 +37,9 @@ export async function syncToolCache(
                 if (!config.strategies.pruneTool.protectedTools.includes(part.tool)) {
                     state.nudgeCounter++
                 }
+
+                state.lastToolPrune = part.tool === "prune"
+                logger.info("lastToolPrune=" + String(state.lastToolPrune))
             }
         }
 

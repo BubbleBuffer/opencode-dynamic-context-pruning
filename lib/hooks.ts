@@ -31,3 +31,24 @@ export function createChatMessageTransformHandler(
         insertPruneToolContext(state, config, logger, output.messages)
     }
 }
+
+export function createEventHandler(
+    client: any,
+    config: PluginConfig,
+    state: SessionState,
+    logger: Logger
+) {
+    return async (
+        { event }: { event: any }
+    ) => {
+        if (state.sessionId === null || state.isSubAgent) {
+            return
+        }
+
+        if (event.type === "session.status" && event.properties.status.type === "idle") {
+            if (!config.strategies.onIdle.enabled) {
+                return
+            }
+        }
+    }
+}

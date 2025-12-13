@@ -326,7 +326,7 @@ function createDefaultConfig(): void {
     "pruneThinkingBlocks": {
       "enabled": false
     },
-    // Run an LLM to analyze what tool calls are no longer relevant on idle
+    // (Legacy) Run an LLM to analyze what tool calls are no longer relevant on idle
     "onIdle": {
       "enabled": false,
       // Override model for analysis (format: "provider/model")

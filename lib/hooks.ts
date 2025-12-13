@@ -24,8 +24,7 @@ export function createChatMessageTransformHandler(
 
         syncToolCache(state, config, logger, output.messages);
 
-
-        deduplicate(client, state, logger, config, output.messages)
+        deduplicate(state, logger, config, output.messages)
 
         prune(state, logger, config, output.messages)
 

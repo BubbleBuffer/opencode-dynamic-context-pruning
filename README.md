@@ -33,8 +33,6 @@ DCP uses multiple strategies to reduce context size:
 
 **Prune Tool** — Exposes a `prune` tool that the AI can call to manually trigger pruning when it determines context cleanup is needed.
 
-## How It Works
-
 Your session history is never modified. DCP replaces pruned outputs with a placeholder before sending requests to your LLM.
 
 ## Impact on Prompt Caching

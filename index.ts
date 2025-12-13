@@ -2,7 +2,7 @@ import type { Plugin } from "@opencode-ai/plugin"
 import { getConfig } from "./lib/config"
 import { Logger } from "./lib/logger"
 import { createSessionState } from "./lib/state"
-import { createPruneTool } from "./lib/strategies/prune-tool"
+import { createPruneTool } from "./lib/strategies"
 import { createChatMessageTransformHandler, createEventHandler } from "./lib/hooks"
 
 const plugin: Plugin = (async (ctx) => {
@@ -54,7 +54,7 @@ const plugin: Plugin = (async (ctx) => {
                 logger.info("Added 'prune' to experimental.primary_tools via config mutation")
             }
         },
-        event: createEventHandler(ctx.client, config, state, logger),
+        event: createEventHandler(ctx.client, config, state, logger, ctx.directory),
     }
 }) satisfies Plugin
 

@@ -40,6 +40,10 @@ export const insertPruneToolContext = (
     logger: Logger,
     messages: WithParts[]
 ): void => {
+    if (!config.strategies.pruneTool.enabled) {
+        return
+    }
+
     const lastUserMessage = getLastUserMessage(messages)
     if (!lastUserMessage || lastUserMessage.info.role !== 'user') {
         return
@@ -48,7 +52,7 @@ export const insertPruneToolContext = (
     const prunableToolsList = buildPrunableToolsList(state, config, logger, messages)
 
     let nudgeString = ""
-    if (config.strategies.pruneTool.nudge.enabled && state.nudgeCounter >= config.strategies.pruneTool.nudge.frequency) {
+    if (state.nudgeCounter >= config.strategies.pruneTool.nudge.frequency) {
         logger.info("Inserting prune nudge message")
         nudgeString = "\n" + NUDGE_STRING
     }

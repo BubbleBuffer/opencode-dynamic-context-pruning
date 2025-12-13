@@ -28,4 +28,5 @@ export interface SessionState {
     prune: Prune
     stats: SessionStats
     toolParameters: Map<string, ToolParameterEntry>
+    nudgeCounter: number
 }

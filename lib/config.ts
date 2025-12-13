@@ -21,10 +21,15 @@ export interface OnIdle {
     protectedTools: string[]
 }
 
+export interface PruneToolNudge {
+    enabled: boolean
+    frequency: number
+}
+
 export interface PruneTool {
     enabled: boolean
     protectedTools: string[]
-    nudgeFrequency: number
+    nudge: PruneToolNudge
 }
 
 export interface PluginConfig {
@@ -68,7 +73,9 @@ export const VALID_CONFIG_KEYS = new Set([
     'strategies.pruneTool',
     'strategies.pruneTool.enabled',
     'strategies.pruneTool.protectedTools',
-    'strategies.pruneTool.nudgeFrequency',
+    'strategies.pruneTool.nudge',
+    'strategies.pruneTool.nudge.enabled',
+    'strategies.pruneTool.nudge.frequency',
 ])
 
 // Extract all key paths from a config object for validation
@@ -160,8 +167,13 @@ function validateConfigTypes(config: Record<string, any>): ValidationError[] {
             if (strategies.pruneTool.protectedTools !== undefined && !Array.isArray(strategies.pruneTool.protectedTools)) {
                 errors.push({ key: 'strategies.pruneTool.protectedTools', expected: 'string[]', actual: typeof strategies.pruneTool.protectedTools })
             }
-            if (strategies.pruneTool.nudgeFrequency !== undefined && typeof strategies.pruneTool.nudgeFrequency !== 'number') {
-                errors.push({ key: 'strategies.pruneTool.nudgeFrequency', expected: 'number', actual: typeof strategies.pruneTool.nudgeFrequency })
+            if (strategies.pruneTool.nudge) {
+                if (strategies.pruneTool.nudge.enabled !== undefined && typeof strategies.pruneTool.nudge.enabled !== 'boolean') {
+                    errors.push({ key: 'strategies.pruneTool.nudge.enabled', expected: 'boolean', actual: typeof strategies.pruneTool.nudge.enabled })
+                }
+                if (strategies.pruneTool.nudge.frequency !== undefined && typeof strategies.pruneTool.nudge.frequency !== 'number') {
+                    errors.push({ key: 'strategies.pruneTool.nudge.frequency', expected: 'number', actual: typeof strategies.pruneTool.nudge.frequency })
+                }
             }
         }
     }
@@ -226,10 +238,10 @@ const defaultConfig: PluginConfig = {
             protectedTools: [...DEFAULT_PROTECTED_TOOLS]
         },
         pruneThinkingBlocks: {
-            enabled: true
+            enabled: false
         },
         onIdle: {
-            enabled: true,
+            enabled: false,
             showModelErrorToasts: true,
             strictModelSelection: false,
             protectedTools: [...DEFAULT_PROTECTED_TOOLS]
@@ -237,7 +249,10 @@ const defaultConfig: PluginConfig = {
         pruneTool: {
             enabled: false,
             protectedTools: [...DEFAULT_PROTECTED_TOOLS],
-            nudgeFrequency: 10
+            nudge: {
+                enabled: true,
+                frequency: 10
+            }
         }
     }
 }
@@ -309,11 +324,11 @@ function createDefaultConfig(): void {
     },
     // Remove thinking/reasoning LLM blocks
     "pruneThinkingBlocks": {
-      "enabled": true
+      "enabled": false
     },
-    // Run an LLM to analyze what tool calls are no longer relevant on idle
+    // (Legacy) Run an LLM to analyze what tool calls are no longer relevant on idle
     "onIdle": {
-      "enabled": true,
+      "enabled": false,
       // Override model for analysis (format: "provider/model")
       // "model": "anthropic/claude-haiku-4-5",
       // Show toast notifications when model selection fails
@@ -328,8 +343,11 @@ function createDefaultConfig(): void {
       "enabled": false,
       // Additional tools to protect from pruning
       "protectedTools": [],
-      // How often to nudge the AI to prune (every N tool results, 0 = disabled)
-      "nudgeFrequency": 10
+      // Nudge the LLM to use the prune tool (every <frequency> tool results)
+      "nudge": {
+        "enabled": true,
+        "frequency": 10
+      }
     }
   }
 }
@@ -401,7 +419,10 @@ function mergeStrategies(
                     ...(override.pruneTool?.protectedTools ?? [])
                 ])
             ],
-            nudgeFrequency: override.pruneTool?.nudgeFrequency ?? base.pruneTool.nudgeFrequency
+            nudge: {
+                enabled: override.pruneTool?.nudge?.enabled ?? base.pruneTool.nudge.enabled,
+                frequency: override.pruneTool?.nudge?.frequency ?? base.pruneTool.nudge.frequency
+            }
         }
     }
 }
@@ -421,7 +442,8 @@ function deepCloneConfig(config: PluginConfig): PluginConfig {
             },
             pruneTool: {
                 ...config.strategies.pruneTool,
-                protectedTools: [...config.strategies.pruneTool.protectedTools]
+                protectedTools: [...config.strategies.pruneTool.protectedTools],
+                nudge: { ...config.strategies.pruneTool.nudge }
             }
         }
     }

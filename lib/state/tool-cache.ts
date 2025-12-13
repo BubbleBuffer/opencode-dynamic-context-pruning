@@ -1,5 +1,6 @@
 import type { SessionState, ToolStatus, WithParts } from "./index"
 import type { Logger } from "../logger"
+import { PluginConfig } from "../config"
 
 const MAX_TOOL_CACHE_SIZE = 500
 
@@ -10,6 +11,7 @@ const MAX_TOOL_CACHE_SIZE = 500
  */
 export async function syncToolCache(
     state: SessionState,
+    config: PluginConfig,
     logger: Logger,
     messages: WithParts[],
 ): Promise<void> {
@@ -30,6 +32,10 @@ export async function syncToolCache(
                         error: part.state.status === "error" ? part.state.error : undefined,
                     }
                 )
+
+                if (!config.strategies.pruneTool.protectedTools.includes(part.tool)) {
+                    state.nudgeCounter++
+                }
             }
         }
 

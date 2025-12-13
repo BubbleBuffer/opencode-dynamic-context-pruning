@@ -31,6 +31,7 @@ export async function syncToolCache(
                         parameters: part.state?.input ?? {},
                         status: part.state.status as ToolStatus | undefined,
                         error: part.state.status === "error" ? part.state.error : undefined,
+                        compacted: part.state.status === "completed" && !!part.state.time.compacted,
                     }
                 )
 

@@ -6,8 +6,6 @@ const MAX_TOOL_CACHE_SIZE = 500
 
 /**
  * Sync tool parameters from OpenCode's session.messages() API.
- * This is the single source of truth for tool parameters, replacing
- * format-specific parsing from LLM API requests.
  */
 export async function syncToolCache(
     state: SessionState,
@@ -24,6 +22,8 @@ export async function syncToolCache(
                     continue
                 }
 
+                const alreadyPruned = state.prune.toolIds.includes(part.callID)
+
                 state.toolParameters.set(
                     part.callID,
                     {
@@ -35,7 +35,7 @@ export async function syncToolCache(
                     }
                 )
 
-                if (!config.strategies.pruneTool.protectedTools.includes(part.tool)) {
+                if (!alreadyPruned && !config.strategies.pruneTool.protectedTools.includes(part.tool)) {
                     state.nudgeCounter++
                 }
 

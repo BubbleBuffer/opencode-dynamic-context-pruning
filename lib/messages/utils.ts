@@ -2,7 +2,6 @@ import type { WithParts } from "../state"
 
 /**
  * Extracts a human-readable key from tool metadata for display purposes.
- * Used by both deduplication and AI analysis to show what was pruned.
  */
 export const extractParameterKey = (tool: string, parameters: any): string => {
     if (!parameters) return ''
@@ -84,18 +83,12 @@ export const getLastUserMessage = (
     return null
 }
 
-/**
- * Finds the current agent from messages by scanning backward for user messages.
- */
 export function findCurrentAgent(messages: WithParts[]): string | undefined {
     const userMsg = getLastUserMessage(messages)
     if (!userMsg) return undefined
     return (userMsg.info as any).agent || 'build'
 }
 
-/**
- * Builds a list of tool call IDs from messages.
- */
 export function buildToolIdList(messages: WithParts[]): string[] {
     const toolIds: string[] = []
     for (const msg of messages) {
@@ -110,9 +103,6 @@ export function buildToolIdList(messages: WithParts[]): string[] {
     return toolIds
 }
 
-/**
- * Prunes numeric tool IDs to valid tool call IDs based on the provided tool ID list.
- */
 export function getPruneToolIds(numericToolIds: number[], toolIdList: string[]): string[] {
     const pruneToolIds: string[] = []
     for (const index of numericToolIds) {

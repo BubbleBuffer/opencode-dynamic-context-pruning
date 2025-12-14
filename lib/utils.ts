@@ -3,7 +3,6 @@ import { encode } from 'gpt-tokenizer'
 
 /**
  * Estimates token counts for a batch of texts using gpt-tokenizer.
- * TODO: ensure we aren't falling back to catch branch
  */
 function estimateTokensBatch(texts: string[]): number[] {
     try {
@@ -15,7 +14,6 @@ function estimateTokensBatch(texts: string[]): number[] {
 
 /**
  * Calculates approximate tokens saved by pruning the given tool call IDs.
- * Uses pre-fetched messages to avoid duplicate API calls.
  * TODO: Make it count message content that are not tool outputs. Currently it ONLY covers tool outputs and errors
  */
 export const calculateTokensSaved = (
@@ -57,9 +55,6 @@ export function formatTokenCount(tokens: number): string {
     return tokens.toString() + ' tokens'
 }
 
-/**
- * Checks if a session is a subagent session by looking for a parentID.
- */
 export async function isSubAgentSession(client: any, sessionID: string): Promise<boolean> {
     try {
         const result = await client.session.get({ path: { id: sessionID } })

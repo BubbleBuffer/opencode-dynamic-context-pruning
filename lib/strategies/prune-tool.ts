@@ -70,7 +70,12 @@ export function createPruneTool(
 
             const currentAgent: string | undefined = findCurrentAgent(messages)
             const toolIdList: string[] = buildToolIdList(messages)
-            const pruneToolIds: string[] = getPruneToolIds(numericToolIds, toolIdList)
+            const pruneToolIds: string[] = getPruneToolIds(
+                numericToolIds,
+                toolIdList,
+                state.toolParameters,
+                config.strategies.pruneTool.protectedTools
+            )
             state.prune.toolIds.push(...pruneToolIds)
 
             const toolMetadata = new Map<string, ToolParameterEntry>()

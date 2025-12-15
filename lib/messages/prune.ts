@@ -92,6 +92,7 @@ export const prune = (
     messages: WithParts[]
 ): void => {
     pruneToolOutputs(state, logger, messages)
+    // more prune methods coming here
 }
 
 const pruneToolOutputs = (

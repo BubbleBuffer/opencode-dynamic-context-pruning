@@ -1,6 +1,7 @@
 import type { Plugin } from "@opencode-ai/plugin"
 import { getConfig } from "./lib/config"
 import { Logger } from "./lib/logger"
+import { loadPrompt } from "./lib/prompt"
 import { createSessionState } from "./lib/state"
 import { createPruneTool } from "./lib/strategies"
 import { createChatMessageTransformHandler, createEventHandler } from "./lib/hooks"
@@ -27,6 +28,10 @@ const plugin: Plugin = (async (ctx) => {
     })
 
     return {
+        "experimental.chat.system.transform": async (_input: unknown, output: { system: string[] }) => {
+            const syntheticPrompt = loadPrompt("synthetic")
+            output.system.push(syntheticPrompt)
+        },
         "experimental.chat.messages.transform": createChatMessageTransformHandler(
             ctx.client,
             state,

@@ -102,13 +102,3 @@ export function buildToolIdList(messages: WithParts[]): string[] {
     }
     return toolIds
 }
-
-export function getPruneToolIds(numericToolIds: number[], toolIdList: string[]): string[] {
-    const pruneToolIds: string[] = []
-    for (const index of numericToolIds) {
-        if (!isNaN(index) && index >= 0 && index < toolIdList.length) {
-            pruneToolIds.push(toolIdList[index])
-        }
-    }
-    return pruneToolIds
-}

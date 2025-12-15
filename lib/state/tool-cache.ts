@@ -1,83 +1,58 @@
-import type { PluginState, ToolStatus } from "./index"
+import type { SessionState, ToolStatus, WithParts } from "./index"
 import type { Logger } from "../logger"
-import type { ToolTracker } from "../fetch-wrapper/tool-tracker"
+import { PluginConfig } from "../config"
 
-/** Maximum number of entries to keep in the tool parameters cache */
-const MAX_TOOL_CACHE_SIZE = 500
+const MAX_TOOL_CACHE_SIZE = 1000
 
 /**
  * Sync tool parameters from OpenCode's session.messages() API.
- * This is the single source of truth for tool parameters, replacing
- * format-specific parsing from LLM API requests.
  */
 export async function syncToolCache(
-    client: any,
-    sessionId: string,
-    state: PluginState,
-    tracker?: ToolTracker,
-    protectedTools?: Set<string>,
-    logger?: Logger
+    state: SessionState,
+    config: PluginConfig,
+    logger: Logger,
+    messages: WithParts[],
 ): Promise<void> {
     try {
-        const messagesResponse = await client.session.messages({
-            path: { id: sessionId },
-            query: { limit: 500 }
-        })
-        const messages = messagesResponse.data || messagesResponse
+        logger.info("Syncing tool parameters from OpenCode messages")
 
-        if (!Array.isArray(messages)) {
-            return
-        }
-
-        let synced = 0
-        // Build lowercase set of pruned IDs for comparison (IDs in state may be mixed case)
-        const prunedIdsLower = tracker
-            ? new Set((state.prunedIds.get(sessionId) ?? []).map(id => id.toLowerCase()))
-            : null
+        state.nudgeCounter = 0
 
         for (const msg of messages) {
-            if (!msg.parts) continue
-
             for (const part of msg.parts) {
-                if (part.type !== "tool" || !part.callID) continue
-
-                const id = part.callID.toLowerCase()
-
-                // Track tool results for nudge injection
-                if (tracker && !tracker.seenToolResultIds.has(id)) {
-                    tracker.seenToolResultIds.add(id)
-                    // Only count non-protected tools toward nudge threshold
-                    // Also skip already-pruned tools to avoid re-counting on restart
-                    if ((!part.tool || !protectedTools?.has(part.tool)) && !prunedIdsLower?.has(id)) {
-                        tracker.toolResultCount++
-                    }
+                if (part.type !== "tool" || !part.callID) {
+                    continue
                 }
 
-                if (state.toolParameters.has(id)) continue
-                if (part.tool && protectedTools?.has(part.tool)) continue
+                if (part.tool === "prune") {
+                    state.nudgeCounter = 0
+                } else if (!config.strategies.pruneTool.protectedTools.includes(part.tool)) {
+                    state.nudgeCounter++
+                }
+                state.lastToolPrune = part.tool === "prune"
 
-                const status = part.state?.status as ToolStatus | undefined
-                state.toolParameters.set(id, {
-                    tool: part.tool,
-                    parameters: part.state?.input ?? {},
-                    status,
-                    error: status === "error" ? part.state?.error : undefined,
-                })
-                synced++
+                if (state.toolParameters.has(part.callID)) {
+                    continue
+                }
+
+                state.toolParameters.set(
+                    part.callID,
+                    {
+                        tool: part.tool,
+                        parameters: part.state?.input ?? {},
+                        status: part.state.status as ToolStatus | undefined,
+                        error: part.state.status === "error" ? part.state.error : undefined,
+                        compacted: part.state.status === "completed" && !!part.state.time.compacted,
+                    }
+                )
             }
         }
 
-        trimToolParametersCache(state)
+        // logger.info(`nudgeCounter=${state.nudgeCounter}, lastToolPrune=${state.lastToolPrune}`)
 
-        if (logger && synced > 0) {
-            logger.debug("tool-cache", "Synced tool parameters from OpenCode", {
-                sessionId: sessionId.slice(0, 8),
-                synced
-            })
-        }
+        trimToolParametersCache(state)
     } catch (error) {
-        logger?.warn("tool-cache", "Failed to sync tool parameters from OpenCode", {
-            sessionId: sessionId.slice(0, 8),
+        logger.warn("Failed to sync tool parameters from OpenCode", {
             error: error instanceof Error ? error.message : String(error)
         })
     }
@@ -87,7 +62,7 @@ export async function syncToolCache(
  * Trim the tool parameters cache to prevent unbounded memory growth.
  * Uses FIFO eviction - removes oldest entries first.
  */
-export function trimToolParametersCache(state: PluginState): void {
+export function trimToolParametersCache(state: SessionState): void {
     if (state.toolParameters.size <= MAX_TOOL_CACHE_SIZE) {
         return
     }

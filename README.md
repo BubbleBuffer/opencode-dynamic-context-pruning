@@ -23,19 +23,15 @@ Restart OpenCode. The plugin will automatically start optimizing your sessions.
 
 ## How Pruning Works
 
-DCP uses two complementary techniques:
+DCP uses multiple strategies to reduce context size:
 
-**Automatic Deduplication** — Silently identifies repeated tool calls (e.g., reading the same file multiple times) and keeps only the most recent output. Runs on every request with zero LLM cost.
+**Deduplication** — Identifies repeated tool calls (e.g., reading the same file multiple times) and keeps only the most recent output. Runs automatically on every request with zero LLM cost.
 
-**AI Analysis** — Uses a language model to semantically analyze conversation context and identify tool outputs that are no longer relevant to the current task.
+**On Idle Analysis** — Uses a language model to semantically analyze conversation context during idle periods and identify tool outputs that are no longer relevant.
 
-## Context Pruning Tool
+**Prune Tool** — Exposes a `prune` tool that the AI can call to manually trigger pruning when it determines context cleanup is needed.
 
-When `strategies.onTool` is enabled, DCP exposes a `prune` tool to Opencode that the AI can call to trigger pruning on demand.
-
-Adjust `nudge_freq` to control how aggressively the AI is prompted to prune — lower values trigger reminders sooner and more often.
-
-## How It Works
+*More strategies coming soon.*
 
 Your session history is never modified. DCP replaces pruned outputs with a placeholder before sending requests to your LLM.
 
@@ -47,40 +43,74 @@ LLM providers like Anthropic and OpenAI cache prompts based on exact prefix matc
 
 ## Configuration
 
-DCP uses its own config file (`~/.config/opencode/dcp.jsonc` or `.opencode/dcp.jsonc`), created automatically on first run.
+DCP uses its own config file:
 
-### Options
+- Global: `~/.config/opencode/dcp.jsonc` (or `dcp.json`), created automatically on first run
+- Custom config directory: `$OPENCODE_CONFIG_DIR/dcp.jsonc` (or `dcp.json`), if `OPENCODE_CONFIG_DIR` is set
+- Project: `.opencode/dcp.jsonc` (or `dcp.json`) in your project’s `.opencode` directory
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `enabled` | `true` | Enable/disable the plugin |
-| `debug` | `false` | Log to `~/.config/opencode/logs/dcp/` |
-| `model` | (session) | Model for analysis (e.g., `"anthropic/claude-haiku-4-5"`) |
-| `showModelErrorToasts` | `true` | Show notifications on model fallback |
-| `showUpdateToasts` | `true` | Show notifications when a new version is available |
-| `strictModelSelection` | `false` | Only run AI analysis with session or configured model (disables fallback models) |
-| `pruning_summary` | `"detailed"` | `"off"`, `"minimal"`, or `"detailed"` |
-| `nudge_freq` | `10` | How often to remind AI to prune (lower = more frequent) |
-| `protectedTools` | `["task", "todowrite", "todoread", "prune", "batch", "write", "edit"]` | Tools that are never pruned |
-| `strategies.onIdle` | `["ai-analysis"]` | Strategies for automatic pruning |
-| `strategies.onTool` | `["ai-analysis"]` | Strategies when AI calls `prune` |
-
-**Strategies:** `"ai-analysis"` uses LLM to identify prunable outputs. Empty array disables that trigger. Deduplication runs automatically on every request.
+<details>
+<summary><strong>Default Configuration</strong> (click to expand)</summary>
 
 ```jsonc
 {
+  // Enable or disable the plugin
   "enabled": true,
+  // Enable debug logging to ~/.config/opencode/logs/dcp/
+  "debug": false,
+  // Show toast notifications when a new version is available
+  "showUpdateToasts": true,
+  // Summary display: "off", "minimal", or "detailed"
+  "pruningSummary": "detailed",
+  // Strategies for pruning tokens from chat history
   "strategies": {
-    "onIdle": ["ai-analysis"],
-    "onTool": ["ai-analysis"]
-  },
-  "protectedTools": ["task", "todowrite", "todoread", "prune", "batch", "write", "edit"]
+    // Remove duplicate tool calls (same tool with same arguments)
+    "deduplication": {
+      "enabled": true,
+      // Additional tools to protect from pruning
+      "protectedTools": []
+    },
+    // Exposes a prune tool to your LLM to call when it determines pruning is necessary
+    "pruneTool": {
+      "enabled": true,
+      // Additional tools to protect from pruning
+      "protectedTools": [],
+      // Nudge the LLM to use the prune tool (every <frequency> tool results)
+      "nudge": {
+        "enabled": true,
+        "frequency": 10
+      }
+    },
+    // (Legacy) Run an LLM to analyze what tool calls are no longer relevant on idle
+    "onIdle": {
+      "enabled": false,
+      // Override model for analysis (format: "provider/model")
+      // "model": "anthropic/claude-haiku-4-5",
+      // Show toast notifications when model selection fails
+      "showModelErrorToasts": true,
+      // When true, fallback models are not permitted
+      "strictModelSelection": false,
+      // Additional tools to protect from pruning
+      "protectedTools": []
+    }
+  }
 }
 ```
 
+</details>
+
+### Protected Tools
+
+By default, these tools are always protected from pruning across all strategies:
+`task`, `todowrite`, `todoread`, `prune`, `batch`, `write`, `edit`
+
+The `protectedTools` arrays in each strategy add to this default list.
+
 ### Config Precedence
 
-Settings are merged in order: **Defaults** → **Global** (`~/.config/opencode/dcp.jsonc`) → **Project** (`.opencode/dcp.jsonc`). Each level overrides the previous, so project settings take priority over global, which takes priority over defaults.
+Settings are merged in order:
+Defaults → Global (`~/.config/opencode/dcp.jsonc`) → Config Dir (`$OPENCODE_CONFIG_DIR/dcp.jsonc`) → Project (`.opencode/dcp.jsonc`).
+Each level overrides the previous, so project settings take priority over config-dir and global, which take priority over defaults.
 
 Restart OpenCode after making config changes.
 

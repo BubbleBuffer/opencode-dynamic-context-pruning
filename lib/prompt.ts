@@ -2,7 +2,7 @@ import { readFileSync } from "fs"
 import { join } from "path"
 
 export function loadPrompt(name: string, vars?: Record<string, string>): string {
-    const filePath = join(__dirname, "..", "prompts", `${name}.txt`)
+    const filePath = join(__dirname, "prompts", `${name}.txt`)
     let content = readFileSync(filePath, "utf8").trim()
     if (vars) {
         for (const [key, value] of Object.entries(vars)) {
@@ -122,18 +122,12 @@ export function buildAnalysisPrompt(
     unprunedToolCallIds: string[],
     messages: any[],
     alreadyPrunedIds?: string[],
-    protectedToolCallIds?: string[],
-    reason?: string
+    protectedToolCallIds?: string[]
 ): string {
     const minimizedMessages = minimizeMessages(messages, alreadyPrunedIds, protectedToolCallIds)
     const messagesJson = JSON.stringify(minimizedMessages, null, 2).replace(/\\n/g, '\n')
 
-    const reasonContext = reason
-        ? `\nContext: The AI has requested pruning with the following reason: "${reason}"\nUse this context to inform your decisions about what is most relevant to keep.`
-        : ''
-
     return loadPrompt("pruning", {
-        reason_context: reasonContext,
         available_tool_call_ids: unprunedToolCallIds.join(", "),
         session_history: messagesJson
     })

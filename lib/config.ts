@@ -259,14 +259,30 @@ function findOpencodeDir(startDir: string): string | null {
     return null
 }
 
-function getConfigPaths(ctx?: PluginInput): { global: string | null, project: string | null } {
+function getConfigPaths(ctx?: PluginInput): { global: string | null, configDir: string | null, project: string | null} {
+
+    // Global: ~/.config/opencode/dcp.jsonc|json
     let globalPath: string | null = null
     if (existsSync(GLOBAL_CONFIG_PATH_JSONC)) {
         globalPath = GLOBAL_CONFIG_PATH_JSONC
     } else if (existsSync(GLOBAL_CONFIG_PATH_JSON)) {
         globalPath = GLOBAL_CONFIG_PATH_JSON
     }
-
+    
+    // Custom config directory: $OPENCODE_CONFIG_DIR/dcp.jsonc|json
+    let configDirPath: string | null = null
+    const opencodeConfigDir = process.env.OPENCODE_CONFIG_DIR
+    if (opencodeConfigDir) {
+        const configJsonc = join(opencodeConfigDir, 'dcp.jsonc')
+        const configJson = join(opencodeConfigDir, 'dcp.json')
+        if (existsSync(configJsonc)) {
+            configDirPath = configJsonc
+        } else if (existsSync(configJson)) {
+            configDirPath = configJson
+        }
+    }
+    
+    // Project: <project>/.opencode/dcp.jsonc|json
     let projectPath: string | null = null
     if (ctx?.directory) {
         const opencodeDir = findOpencodeDir(ctx.directory)
@@ -281,7 +297,7 @@ function getConfigPaths(ctx?: PluginInput): { global: string | null, project: st
         }
     }
 
-    return { global: globalPath, project: projectPath }
+    return { global: globalPath, configDir: configDirPath, project: projectPath }
 }
 
 function createDefaultConfig(): void {
@@ -425,6 +441,7 @@ function deepCloneConfig(config: PluginConfig): PluginConfig {
     }
 }
 
+
 export function getConfig(ctx: PluginInput): PluginConfig {
     let config = deepCloneConfig(defaultConfig)
     const configPaths = getConfigPaths(ctx)
@@ -459,6 +476,35 @@ export function getConfig(ctx: PluginInput): PluginConfig {
     } else {
         // No config exists, create default
         createDefaultConfig()
+    }
+
+    // Load and merge $OPENCODE_CONFIG_DIR/dcp.jsonc|json (overrides global)
+    if (configPaths.configDir) {
+        const result = loadConfigFile(configPaths.configDir)
+        if (result.parseError) {
+            setTimeout(async () => {
+                try {
+                    ctx.client.tui.showToast({
+                        body: {
+                            title: "DCP: Invalid configDir config",
+                            message: `${configPaths.configDir}\n${result.parseError}\nUsing global/default values`,
+                            variant: "warning",
+                            duration: 7000
+                        }
+                    })
+                } catch {}
+            }, 7000)
+        } else if (result.data) {
+            // Validate config keys and types
+            showConfigValidationWarnings(ctx, configPaths.configDir, result.data, true)
+            config = {
+                enabled: result.data.enabled ?? config.enabled,
+                debug: result.data.debug ?? config.debug,
+                showUpdateToasts: result.data.showUpdateToasts ?? config.showUpdateToasts,
+                pruningSummary: result.data.pruningSummary ?? config.pruningSummary,
+                strategies: mergeStrategies(config.strategies, result.data.strategies as any)
+            }
+        }
     }
 
     // Load and merge project config (overrides global)

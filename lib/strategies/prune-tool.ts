@@ -72,8 +72,7 @@ export function createPruneTool(
             const toolIdList: string[] = buildToolIdList(messages)
 
             // Validate that all numeric IDs are within bounds
-            const invalidIds = numericToolIds.filter(id => id < 0 || id >= toolIdList.length)
-            if (invalidIds.length > 0) {
+            if (numericToolIds.some(id => id < 0 || id >= toolIdList.length)) {
                 return "Invalid IDs provided. Only use numeric IDs from the <prunable-tools> list."
             }
 

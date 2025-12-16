@@ -1,4 +1,12 @@
-import { WithParts } from "./state"
+import { Logger } from "./logger"
+import { SessionState, WithParts } from "./state"
+
+export const isMessageCompacted = (
+    state: SessionState,
+    msg: WithParts
+): boolean => {
+    return msg.info.time.created < state.lastCompaction
+}
 
 export const getLastUserMessage = (
     messages: WithParts[]
@@ -10,4 +18,14 @@ export const getLastUserMessage = (
         }
     }
     return null
+}
+
+export const checkForCompaction = (
+    state: SessionState,
+    messages: WithParts[],
+    logger: Logger
+): void => {
+    for (const msg of messages) {
+
+    }
 }

@@ -1,6 +1,7 @@
 import type { SessionState, ToolStatus, WithParts } from "./index"
 import type { Logger } from "../logger"
 import { PluginConfig } from "../config"
+import { isMessageCompacted } from "../shared-utils"
 
 const MAX_TOOL_CACHE_SIZE = 1000
 
@@ -17,11 +18,17 @@ export async function syncToolCache(
         logger.info("Syncing tool parameters from OpenCode messages")
 
         state.nudgeCounter = 0
-        state.toolParameters.clear()
 
         for (const msg of messages) {
+            if (isMessageCompacted(state, msg)) {
+                continue
+            }
+
             for (const part of msg.parts) {
                 if (part.type !== "tool" || !part.callID) {
+                    continue
+                }
+                if (state.toolParameters.has(part.callID)) {
                     continue
                 }
 
@@ -32,10 +39,6 @@ export async function syncToolCache(
                 }
                 state.lastToolPrune = part.tool === "prune"
 
-                if (state.toolParameters.has(part.callID)) {
-                    continue
-                }
-
                 state.toolParameters.set(
                     part.callID,
                     {
@@ -43,11 +46,12 @@ export async function syncToolCache(
                         parameters: part.state?.input ?? {},
                         status: part.state.status as ToolStatus | undefined,
                         error: part.state.status === "error" ? part.state.error : undefined,
-                        compacted: part.state.status === "completed" && !!part.state.time.compacted,
                     }
                 )
+                logger.info("Cached tool id: " + part.callID)
             }
         }
+        logger.info("Synced cache - size: " + state.toolParameters.size)
         trimToolParametersCache(state)
     } catch (error) {
         logger.warn("Failed to sync tool parameters from OpenCode", {

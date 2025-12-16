@@ -1,8 +1,8 @@
-import { WithParts } from "../state"
+import { SessionState, WithParts } from "../state"
 import { UserMessage } from "@opencode-ai/sdk"
 import { Logger } from "../logger"
 import { encode } from 'gpt-tokenizer'
-import { getLastUserMessage } from "../shared-utils"
+import { getLastUserMessage, isMessageCompacted } from "../shared-utils"
 
 export function getCurrentParams(
     messages: WithParts[],
@@ -40,12 +40,16 @@ function estimateTokensBatch(texts: string[]): number[] {
  * TODO: Make it count message content that are not tool outputs. Currently it ONLY covers tool outputs and errors
  */
 export const calculateTokensSaved = (
+    state: SessionState,
     messages: WithParts[],
     pruneToolIds: string[]
 ): number => {
     try {
         const contents: string[] = []
         for (const msg of messages) {
+            if (isMessageCompacted(state, msg)) {
+                continue
+            }
             for (const part of msg.parts) {
                 if (part.type !== 'tool' || !pruneToolIds.includes(part.callID)) {
                     continue

@@ -3,7 +3,7 @@ import type { Logger } from "../logger"
 import type { PluginConfig } from "../config"
 import { loadPrompt } from "../prompt"
 import { extractParameterKey, buildToolIdList } from "./utils"
-import { getLastUserMessage } from "../shared-utils"
+import { getLastUserMessage, isMessageCompacted } from "../shared-utils"
 import { UserMessage } from "@opencode-ai/sdk"
 
 const PRUNED_TOOL_INPUT_REPLACEMENT = '[Input removed to save context]'
@@ -17,16 +17,13 @@ const buildPrunableToolsList = (
     messages: WithParts[],
 ): string => {
     const lines: string[] = []
-    const toolIdList: string[] = buildToolIdList(messages)
+    const toolIdList: string[] = buildToolIdList(state, messages, logger)
 
     state.toolParameters.forEach((toolParameterEntry, toolCallId) => {
         if (state.prune.toolIds.includes(toolCallId)) {
             return
         }
         if (config.strategies.pruneTool.protectedTools.includes(toolParameterEntry.tool)) {
-            return
-        }
-        if (toolParameterEntry.compacted) {
             return
         }
         const numericId = toolIdList.indexOf(toolCallId)
@@ -111,6 +108,10 @@ const pruneToolOutputs = (
     messages: WithParts[]
 ): void => {
     for (const msg of messages) {
+        if (isMessageCompacted(state, msg)) {
+            continue
+        }
+
         for (const part of msg.parts) {
             if (part.type !== 'tool') {
                 continue

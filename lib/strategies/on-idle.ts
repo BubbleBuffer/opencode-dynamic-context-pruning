@@ -273,7 +273,7 @@ export async function runOnIdle(
         const allPrunedIds = [...new Set([...alreadyPrunedIds, ...newlyPrunedIds])]
         state.prune.toolIds = allPrunedIds
 
-        state.stats.pruneTokenCounter += calculateTokensSaved(messages, newlyPrunedIds)
+        state.stats.pruneTokenCounter += calculateTokensSaved(state, messages, newlyPrunedIds)
 
         // Build tool metadata map for notification
         const prunedToolMetadata = new Map<string, ToolParameterEntry>()

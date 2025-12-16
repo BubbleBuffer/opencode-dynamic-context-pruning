@@ -1,5 +1,28 @@
-import { WithParts } from "./state"
+import { WithParts } from "../state"
+import { UserMessage } from "@opencode-ai/sdk"
+import { Logger } from "../logger"
 import { encode } from 'gpt-tokenizer'
+import { getLastUserMessage } from "../shared-utils"
+
+export function getCurrentParams(
+    messages: WithParts[],
+    logger: Logger
+): {
+    providerId: string | undefined,
+    modelId: string | undefined,
+    agent: string | undefined
+} {
+    const userMsg = getLastUserMessage(messages)
+    if (!userMsg) {
+        logger.debug("No user message found when determining current params")
+        return { providerId: undefined, modelId: undefined, agent: undefined }
+    }
+    const agent: string = (userMsg.info as UserMessage).agent
+    const providerId: string | undefined = (userMsg.info as UserMessage).model.providerID
+    const modelId: string | undefined = (userMsg.info as UserMessage).model.modelID
+
+    return { providerId, modelId, agent }
+}
 
 /**
  * Estimates token counts for a batch of texts using gpt-tokenizer.
@@ -45,21 +68,5 @@ export const calculateTokensSaved = (
         return tokenCounts.reduce((sum, count) => sum + count, 0)
     } catch (error: any) {
         return 0
-    }
-}
-
-export function formatTokenCount(tokens: number): string {
-    if (tokens >= 1000) {
-        return `${(tokens / 1000).toFixed(1)}K`.replace('.0K', 'K') + ' tokens'
-    }
-    return tokens.toString() + ' tokens'
-}
-
-export async function isSubAgentSession(client: any, sessionID: string): Promise<boolean> {
-    try {
-        const result = await client.session.get({ path: { id: sessionID } })
-        return !!result.data?.parentID
-    } catch (error: any) {
-        return false
     }
 }

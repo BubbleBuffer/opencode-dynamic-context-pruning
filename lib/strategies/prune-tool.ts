@@ -1,14 +1,14 @@
 import { tool } from "@opencode-ai/plugin"
 import type { SessionState, ToolParameterEntry, WithParts } from "../state"
 import type { PluginConfig } from "../config"
-import { getCurrentParams, buildToolIdList } from "../messages/utils"
-import { calculateTokensSaved } from "../utils"
+import { buildToolIdList } from "../messages/utils"
 import { PruneReason, sendUnifiedNotification } from "../ui/notification"
-import { formatPruningResultForTool } from "../ui/display-utils"
+import { formatPruningResultForTool } from "../ui/utils"
 import { ensureSessionInitialized } from "../state"
 import { saveSessionState } from "../state/persistence"
 import type { Logger } from "../logger"
 import { loadPrompt } from "../prompt"
+import { calculateTokensSaved, getCurrentParams } from "./utils"
 
 /** Tool description loaded from prompts/tool.txt */
 const TOOL_DESCRIPTION = loadPrompt("tool")

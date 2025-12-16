@@ -16,6 +16,7 @@ export interface PersistedSessionState {
     prune: Prune
     stats: SessionStats;
     lastUpdated: string;
+    lastCompacted: number
 }
 
 const STORAGE_DIR = join(
@@ -55,6 +56,7 @@ export async function saveSessionState(
             prune: sessionState.prune,
             stats: sessionState.stats,
             lastUpdated: new Date().toISOString(),
+            lastCompacted: sessionState.lastCompaction
         };
 
         const filePath = getSessionFilePath(sessionState.sessionId);
@@ -99,8 +101,7 @@ export async function loadSessionState(
         }
 
         logger.info("Loaded session state from disk", {
-            sessionId: sessionId,
-            totalTokensSaved: state.stats.totalPruneTokens
+            sessionId: sessionId
         });
 
         return state;

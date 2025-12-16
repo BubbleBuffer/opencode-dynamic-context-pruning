@@ -1,4 +1,6 @@
-import type { WithParts } from "../state"
+import { Logger } from "../logger"
+import { isMessageCompacted } from "../shared-utils"
+import type { SessionState, WithParts } from "../state"
 
 /**
  * Extracts a human-readable key from tool metadata for display purposes.
@@ -71,9 +73,16 @@ export const extractParameterKey = (tool: string, parameters: any): string => {
     return paramStr.substring(0, 50)
 }
 
-export function buildToolIdList(messages: WithParts[]): string[] {
+export function buildToolIdList(
+    state: SessionState,
+    messages: WithParts[],
+    logger: Logger
+): string[] {
     const toolIds: string[] = []
     for (const msg of messages) {
+        if (isMessageCompacted(state, msg)) {
+            continue
+        }
         if (msg.parts) {
             for (const part of msg.parts) {
                 if (part.type === 'tool' && part.callID && part.tool) {

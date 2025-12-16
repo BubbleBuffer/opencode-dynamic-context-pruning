@@ -20,7 +20,7 @@ export const deduplicate = (
     }
 
     // Build list of all tool call IDs from messages (chronological order)
-    const allToolIds = buildToolIdList(messages)
+    const allToolIds = buildToolIdList(state, messages, logger)
     if (allToolIds.length === 0) {
         return
     }
@@ -68,7 +68,7 @@ export const deduplicate = (
         }
     }
 
-    state.stats.totalPruneTokens += calculateTokensSaved(messages, newPruneIds)
+    state.stats.totalPruneTokens += calculateTokensSaved(state, messages, newPruneIds)
 
     if (newPruneIds.length > 0) {
         state.prune.toolIds.push(...newPruneIds)

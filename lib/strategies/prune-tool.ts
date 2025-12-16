@@ -41,6 +41,9 @@ export function createPruneTool(
             const { client, state, logger, config, workingDirectory } = ctx
             const sessionId = toolCtx.sessionID
 
+            logger.info("Prune tool invoked")
+            logger.info(JSON.stringify(args))
+
             if (!args.ids || args.ids.length === 0) {
                 logger.debug("Prune tool called but args.ids is empty or undefined: " + JSON.stringify(args))
                 return "No IDs provided. Check the <prunable-tools> list for available IDs to prune."
@@ -72,7 +75,7 @@ export function createPruneTool(
             const messages: WithParts[] = messagesResponse.data || messagesResponse
 
             const currentParams = getCurrentParams(messages, logger)
-            const toolIdList: string[] = buildToolIdList(messages)
+            const toolIdList: string[] = buildToolIdList(state, messages, logger)
 
             // Validate that all numeric IDs are within bounds
             if (numericToolIds.some(id => id < 0 || id >= toolIdList.length)) {
@@ -102,7 +105,7 @@ export function createPruneTool(
                 }
             }
 
-            state.stats.pruneTokenCounter += calculateTokensSaved(messages, pruneToolIds)
+            state.stats.pruneTokenCounter += calculateTokensSaved(state, messages, pruneToolIds)
 
             await sendUnifiedNotification(
                 client,

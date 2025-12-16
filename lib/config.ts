@@ -234,9 +234,9 @@ const defaultConfig: PluginConfig = {
         },
         onIdle: {
             enabled: false,
+            protectedTools: [...DEFAULT_PROTECTED_TOOLS],
             showModelErrorToasts: true,
-            strictModelSelection: false,
-            protectedTools: [...DEFAULT_PROTECTED_TOOLS]
+            strictModelSelection: false
         }
     }
 }
@@ -336,14 +336,14 @@ function createDefaultConfig(): void {
     // (Legacy) Run an LLM to analyze what tool calls are no longer relevant on idle
     "onIdle": {
       "enabled": false,
+      // Additional tools to protect from pruning
+      "protectedTools": [],
       // Override model for analysis (format: "provider/model")
       // "model": "anthropic/claude-haiku-4-5",
       // Show toast notifications when model selection fails
       "showModelErrorToasts": true,
       // When true, fallback models are not permitted
-      "strictModelSelection": false,
-      // Additional tools to protect from pruning
-      "protectedTools": []
+      "strictModelSelection": false
     }
   }
 }

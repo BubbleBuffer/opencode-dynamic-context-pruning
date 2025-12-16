@@ -7,6 +7,7 @@ import { selectModel, ModelInfo } from "../model-selector"
 import { saveSessionState } from "../state/persistence"
 import { sendUnifiedNotification } from "../ui/notification"
 import { calculateTokensSaved, getCurrentParams } from "./utils"
+import { isMessageCompacted } from "../shared-utils"
 
 export interface OnIdleResult {
     prunedCount: number
@@ -18,6 +19,7 @@ export interface OnIdleResult {
  * Parse messages to extract tool information.
  */
 function parseMessages(
+    state: SessionState,
     messages: WithParts[],
     toolParametersCache: Map<string, ToolParameterEntry>
 ): {
@@ -28,6 +30,9 @@ function parseMessages(
     const toolMetadata = new Map<string, ToolParameterEntry>()
 
     for (const msg of messages) {
+        if (isMessageCompacted(state, msg)) {
+            continue
+        }
         if (msg.parts) {
             for (const part of msg.parts) {
                 if (part.type === "tool" && part.callID) {
@@ -224,7 +229,7 @@ export async function runOnIdle(
         }
 
         const currentParams = getCurrentParams(messages, logger)
-        const { toolCallIds, toolMetadata } = parseMessages(messages, state.toolParameters)
+        const { toolCallIds, toolMetadata } = parseMessages(state, messages, state.toolParameters)
 
         const alreadyPrunedIds = state.prune.toolIds
         const unprunedToolCallIds = toolCallIds.filter(id => !alreadyPrunedIds.includes(id))

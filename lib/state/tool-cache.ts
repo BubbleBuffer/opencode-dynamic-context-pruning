@@ -17,6 +17,7 @@ export async function syncToolCache(
         logger.info("Syncing tool parameters from OpenCode messages")
 
         state.nudgeCounter = 0
+        state.toolParameters.clear()
 
         for (const msg of messages) {
             for (const part of msg.parts) {
@@ -47,9 +48,6 @@ export async function syncToolCache(
                 )
             }
         }
-
-        // logger.info(`nudgeCounter=${state.nudgeCounter}, lastToolPrune=${state.lastToolPrune}`)
-
         trimToolParametersCache(state)
     } catch (error) {
         logger.warn("Failed to sync tool parameters from OpenCode", {

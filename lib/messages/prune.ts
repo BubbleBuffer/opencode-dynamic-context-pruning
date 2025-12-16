@@ -1,8 +1,10 @@
 import type { SessionState, WithParts } from "../state"
 import type { Logger } from "../logger"
 import type { PluginConfig } from "../config"
-import { getLastUserMessage, extractParameterKey, buildToolIdList } from "./utils"
 import { loadPrompt } from "../prompt"
+import { extractParameterKey, buildToolIdList } from "./utils"
+import { getLastUserMessage } from "../shared-utils"
+import { UserMessage } from "@opencode-ai/sdk"
 
 const PRUNED_TOOL_OUTPUT_REPLACEMENT = '[Output removed to save context - information superseded or no longer needed]'
 const NUDGE_STRING = loadPrompt("nudge")
@@ -51,7 +53,7 @@ export const insertPruneToolContext = (
     }
 
     const lastUserMessage = getLastUserMessage(messages)
-    if (!lastUserMessage || lastUserMessage.info.role !== 'user') {
+    if (!lastUserMessage) {
         return
     }
 
@@ -72,10 +74,10 @@ export const insertPruneToolContext = (
             sessionID: lastUserMessage.info.sessionID,
             role: "user",
             time: { created: Date.now() },
-            agent: lastUserMessage.info.agent || "build",
+            agent: (lastUserMessage.info as UserMessage).agent || "build",
             model: {
-                providerID: lastUserMessage.info.model.providerID,
-                modelID: lastUserMessage.info.model.modelID
+                providerID: (lastUserMessage.info as UserMessage).model.providerID,
+                modelID: (lastUserMessage.info as UserMessage).model.modelID
             }
         },
         parts: [
@@ -118,9 +120,6 @@ const pruneToolOutputs = (
             if (part.state.status === 'completed') {
                 part.state.output = PRUNED_TOOL_OUTPUT_REPLACEMENT
             }
-            // if (part.state.status === 'error') {
-            //     part.state.error = PRUNED_TOOL_OUTPUT_REPLACEMENT
-            // }
         }
     }
 }

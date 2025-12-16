@@ -1,8 +1,8 @@
 import type { SessionState, ToolParameterEntry, WithParts } from "./types"
 import type { Logger } from "../logger"
 import { loadSessionState } from "./persistence"
-import { getLastUserMessage } from "../messages/utils"
-import { isSubAgentSession } from "../utils"
+import { isSubAgentSession } from "./utils"
+import { getLastUserMessage } from "../shared-utils"
 
 export const checkSession = async (
     client: any,

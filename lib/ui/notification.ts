@@ -1,7 +1,6 @@
 import type { Logger } from "../logger"
 import type { SessionState } from "../state"
-import { formatTokenCount } from "../utils"
-import { formatPrunedItemsList } from "./display-utils"
+import { formatPrunedItemsList, formatTokenCount } from "./utils"
 import { ToolParameterEntry } from "../state"
 import { PluginConfig } from "../config"
 

@@ -4,10 +4,9 @@ import type { Logger } from "../logger"
 import type { PluginConfig } from "../config"
 import { buildAnalysisPrompt } from "../prompt"
 import { selectModel, ModelInfo } from "../model-selector"
-import { calculateTokensSaved } from "../utils"
-import { getCurrentParams } from "../messages/utils"
 import { saveSessionState } from "../state/persistence"
 import { sendUnifiedNotification } from "../ui/notification"
+import { calculateTokensSaved, getCurrentParams } from "./utils"
 
 export interface OnIdleResult {
     prunedCount: number

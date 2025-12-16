@@ -1,8 +1,8 @@
 import { PluginConfig } from "../config"
 import { Logger } from "../logger"
 import type { SessionState, WithParts } from "../state"
-import { calculateTokensSaved } from "../utils"
 import { buildToolIdList } from "../messages/utils"
+import { calculateTokensSaved } from "./utils"
 
 /**
  * Deduplication strategy - prunes older tool calls that have identical

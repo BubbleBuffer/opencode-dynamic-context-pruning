@@ -102,7 +102,7 @@ DCP uses its own config file:
 ### Protected Tools
 
 By default, these tools are always protected from pruning across all strategies:
-`task`, `todowrite`, `todoread`, `prune`, `batch`, `write`, `edit`
+`task`, `todowrite`, `todoread`, `prune`, `batch`
 
 The `protectedTools` arrays in each strategy add to this default list.
 

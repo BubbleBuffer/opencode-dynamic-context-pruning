@@ -40,7 +40,7 @@ export interface PluginConfig {
     }
 }
 
-const DEFAULT_PROTECTED_TOOLS = ['task', 'todowrite', 'todoread', 'prune', 'batch', 'write', 'edit']
+const DEFAULT_PROTECTED_TOOLS = ['task', 'todowrite', 'todoread', 'prune', 'batch']
 
 // Valid config keys for validation against user config
 export const VALID_CONFIG_KEYS = new Set([

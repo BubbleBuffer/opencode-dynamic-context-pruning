@@ -3,11 +3,11 @@ import type { SessionState, WithParts, ToolParameterEntry } from "../state"
 import type { Logger } from "../logger"
 import type { PluginConfig } from "../config"
 import { buildAnalysisPrompt } from "../prompt"
-import { selectModel, extractModelFromSession, ModelInfo } from "../model-selector"
-import { calculateTokensSaved } from "../utils"
-import { findCurrentAgent } from "../messages/utils"
+import { selectModel, ModelInfo } from "../model-selector"
 import { saveSessionState } from "../state/persistence"
 import { sendUnifiedNotification } from "../ui/notification"
+import { calculateTokensSaved, getCurrentParams } from "./utils"
+import { isMessageCompacted } from "../shared-utils"
 
 export interface OnIdleResult {
     prunedCount: number
@@ -19,6 +19,7 @@ export interface OnIdleResult {
  * Parse messages to extract tool information.
  */
 function parseMessages(
+    state: SessionState,
     messages: WithParts[],
     toolParametersCache: Map<string, ToolParameterEntry>
 ): {
@@ -29,6 +30,9 @@ function parseMessages(
     const toolMetadata = new Map<string, ToolParameterEntry>()
 
     for (const msg of messages) {
+        if (isMessageCompacted(state, msg)) {
+            continue
+        }
         if (msg.parts) {
             for (const part of msg.parts) {
                 if (part.type === "tool" && part.callID) {
@@ -224,8 +228,8 @@ export async function runOnIdle(
             return null
         }
 
-        const currentAgent = findCurrentAgent(messages)
-        const { toolCallIds, toolMetadata } = parseMessages(messages, state.toolParameters)
+        const currentParams = getCurrentParams(messages, logger)
+        const { toolCallIds, toolMetadata } = parseMessages(state, messages, state.toolParameters)
 
         const alreadyPrunedIds = state.prune.toolIds
         const unprunedToolCallIds = toolCallIds.filter(id => !alreadyPrunedIds.includes(id))
@@ -274,7 +278,7 @@ export async function runOnIdle(
         const allPrunedIds = [...new Set([...alreadyPrunedIds, ...newlyPrunedIds])]
         state.prune.toolIds = allPrunedIds
 
-        state.stats.pruneTokenCounter += calculateTokensSaved(messages, newlyPrunedIds)
+        state.stats.pruneTokenCounter += calculateTokensSaved(state, messages, newlyPrunedIds)
 
         // Build tool metadata map for notification
         const prunedToolMetadata = new Map<string, ToolParameterEntry>()
@@ -295,7 +299,7 @@ export async function runOnIdle(
             newlyPrunedIds,
             prunedToolMetadata,
             undefined, // reason
-            currentAgent,
+            currentParams,
             workingDirectory || ""
         )
 

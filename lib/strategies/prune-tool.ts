@@ -1,14 +1,14 @@
 import { tool } from "@opencode-ai/plugin"
 import type { SessionState, ToolParameterEntry, WithParts } from "../state"
 import type { PluginConfig } from "../config"
-import { findCurrentAgent, buildToolIdList } from "../messages/utils"
-import { calculateTokensSaved } from "../utils"
+import { buildToolIdList } from "../messages/utils"
 import { PruneReason, sendUnifiedNotification } from "../ui/notification"
-import { formatPruningResultForTool } from "../ui/display-utils"
+import { formatPruningResultForTool } from "../ui/utils"
 import { ensureSessionInitialized } from "../state"
 import { saveSessionState } from "../state/persistence"
 import type { Logger } from "../logger"
 import { loadPrompt } from "../prompt"
+import { calculateTokensSaved, getCurrentParams } from "./utils"
 
 /** Tool description loaded from prompts/tool.txt */
 const TOOL_DESCRIPTION = loadPrompt("tool")
@@ -41,7 +41,11 @@ export function createPruneTool(
             const { client, state, logger, config, workingDirectory } = ctx
             const sessionId = toolCtx.sessionID
 
+            logger.info("Prune tool invoked")
+            logger.info(JSON.stringify(args))
+
             if (!args.ids || args.ids.length === 0) {
+                logger.debug("Prune tool called but args.ids is empty or undefined: " + JSON.stringify(args))
                 return "No IDs provided. Check the <prunable-tools> list for available IDs to prune."
             }
 
@@ -50,6 +54,7 @@ export function createPruneTool(
             const reason = args.ids[0];
             const validReasons = ["completion", "noise", "consolidation"] as const
             if (typeof reason !== "string" || !validReasons.includes(reason as any)) {
+                logger.debug("Invalid pruning reason provided: " + reason)
                 return "No valid pruning reason found. Use 'completion', 'noise', or 'consolidation' as the first element."
             }
 
@@ -57,6 +62,7 @@ export function createPruneTool(
                 .map(id => parseInt(id, 10))
                 .filter((n): n is number => !isNaN(n))
             if (numericToolIds.length === 0) {
+                logger.debug("No numeric tool IDs provided for pruning, yet prune tool was called: " + JSON.stringify(args))
                 return "No numeric IDs provided. Format: [reason, id1, id2, ...] where reason is 'completion', 'noise', or 'consolidation'."
             }
 
@@ -68,11 +74,12 @@ export function createPruneTool(
             })
             const messages: WithParts[] = messagesResponse.data || messagesResponse
 
-            const currentAgent: string | undefined = findCurrentAgent(messages)
-            const toolIdList: string[] = buildToolIdList(messages)
+            const currentParams = getCurrentParams(messages, logger)
+            const toolIdList: string[] = buildToolIdList(state, messages, logger)
 
             // Validate that all numeric IDs are within bounds
             if (numericToolIds.some(id => id < 0 || id >= toolIdList.length)) {
+                logger.debug("Invalid tool IDs provided: " + numericToolIds.join(", "))
                 return "Invalid IDs provided. Only use numeric IDs from the <prunable-tools> list."
             }
 
@@ -98,7 +105,7 @@ export function createPruneTool(
                 }
             }
 
-            state.stats.pruneTokenCounter += calculateTokensSaved(messages, pruneToolIds)
+            state.stats.pruneTokenCounter += calculateTokensSaved(state, messages, pruneToolIds)
 
             await sendUnifiedNotification(
                 client,
@@ -109,9 +116,10 @@ export function createPruneTool(
                 pruneToolIds,
                 toolMetadata,
                 reason as PruneReason,
-                currentAgent,
+                currentParams,
                 workingDirectory
             )
+
             state.stats.totalPruneTokens += state.stats.pruneTokenCounter
             state.stats.pruneTokenCounter = 0
             state.nudgeCounter = 0

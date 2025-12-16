@@ -12,7 +12,6 @@ export interface ToolParameterEntry {
     parameters: any
     status?: ToolStatus
     error?: string
-    compacted?: boolean
 }
 
 export interface SessionStats {
@@ -32,4 +31,5 @@ export interface SessionState {
     toolParameters: Map<string, ToolParameterEntry>
     nudgeCounter: number
     lastToolPrune: boolean
+    lastCompaction: number
 }

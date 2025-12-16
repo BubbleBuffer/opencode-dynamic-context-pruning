@@ -1,7 +1,6 @@
 import type { Logger } from "../logger"
 import type { SessionState } from "../state"
-import { formatTokenCount } from "../utils"
-import { formatPrunedItemsList } from "./display-utils"
+import { formatPrunedItemsList, formatTokenCount } from "./utils"
 import { ToolParameterEntry } from "../state"
 import { PluginConfig } from "../config"
 
@@ -45,7 +44,7 @@ function buildDetailedMessage(
     if (pruneToolIds.length > 0) {
         const pruneTokenCounterStr = `~${formatTokenCount(state.stats.pruneTokenCounter)}`
         const reasonLabel = reason ? ` — ${PRUNE_REASON_LABELS[reason]}` : ''
-        message += `\n\n▣ Pruned tools (${pruneTokenCounterStr})${reasonLabel}`
+        message += `\n\n▣ Pruning (${pruneTokenCounterStr})${reasonLabel}`
 
         const itemLines = formatPrunedItemsList(pruneToolIds, toolMetadata, workingDirectory)
         message += '\n' + itemLines.join('\n')
@@ -63,7 +62,7 @@ export async function sendUnifiedNotification(
     pruneToolIds: string[],
     toolMetadata: Map<string, ToolParameterEntry>,
     reason: PruneReason | undefined,
-    agent: string | undefined,
+    params: any,
     workingDirectory: string
 ): Promise<boolean> {
     const hasPruned = pruneToolIds.length > 0
@@ -79,23 +78,32 @@ export async function sendUnifiedNotification(
         ? buildMinimalMessage(state, reason)
         : buildDetailedMessage(state, reason, pruneToolIds, toolMetadata, workingDirectory)
 
-    await sendIgnoredMessage(client, logger, sessionId, message, agent)
+    await sendIgnoredMessage(client, sessionId, message, params, logger)
     return true
 }
 
 export async function sendIgnoredMessage(
     client: any,
-    logger: Logger,
     sessionID: string,
     text: string,
-    agent?: string
+    params: any,
+    logger: Logger
 ): Promise<void> {
+    const agent = params.agent || undefined
+    const model = params.providerId && params.modelId ? {
+        providerID: params.providerId,
+        modelID: params.modelId
+    } : undefined
+
     try {
         await client.session.prompt({
-            path: { id: sessionID },
+            path: {
+                id: sessionID
+            },
             body: {
                 noReply: true,
                 agent: agent,
+                model: model,
                 parts: [{
                     type: 'text',
                     text: text,

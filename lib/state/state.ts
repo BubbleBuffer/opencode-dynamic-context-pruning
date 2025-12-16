@@ -1,8 +1,8 @@
 import type { SessionState, ToolParameterEntry, WithParts } from "./types"
 import type { Logger } from "../logger"
 import { loadSessionState } from "./persistence"
-import { getLastUserMessage } from "../messages/utils"
-import { isSubAgentSession } from "../utils"
+import { isSubAgentSession } from "./utils"
+import { getLastUserMessage } from "../shared-utils"
 
 export const checkSession = async (
     client: any,
@@ -41,7 +41,8 @@ export function createSessionState(): SessionState {
         },
         toolParameters: new Map<string, ToolParameterEntry>(),
         nudgeCounter: 0,
-        lastToolPrune: false
+        lastToolPrune: false,
+        lastCompaction: 0
     }
 }
 
@@ -58,6 +59,7 @@ export function resetSessionState(state: SessionState): void {
     state.toolParameters.clear()
     state.nudgeCounter = 0
     state.lastToolPrune = false
+    state.lastCompaction = 0
 }
 
 export async function ensureSessionInitialized(
@@ -95,4 +97,5 @@ export async function ensureSessionInitialized(
         pruneTokenCounter: persisted.stats?.pruneTokenCounter || 0,
         totalPruneTokens: persisted.stats?.totalPruneTokens || 0,
     }
+    state.lastCompaction = persisted.lastCompacted || 0
 }

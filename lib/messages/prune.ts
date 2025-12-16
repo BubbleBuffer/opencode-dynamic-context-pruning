@@ -1,9 +1,12 @@
 import type { SessionState, WithParts } from "../state"
 import type { Logger } from "../logger"
 import type { PluginConfig } from "../config"
-import { getLastUserMessage, extractParameterKey, buildToolIdList } from "./utils"
 import { loadPrompt } from "../prompt"
+import { extractParameterKey, buildToolIdList } from "./utils"
+import { getLastUserMessage, isMessageCompacted } from "../shared-utils"
+import { UserMessage } from "@opencode-ai/sdk"
 
+const PRUNED_TOOL_INPUT_REPLACEMENT = '[Input removed to save context]'
 const PRUNED_TOOL_OUTPUT_REPLACEMENT = '[Output removed to save context - information superseded or no longer needed]'
 const NUDGE_STRING = loadPrompt("nudge")
 
@@ -14,16 +17,13 @@ const buildPrunableToolsList = (
     messages: WithParts[],
 ): string => {
     const lines: string[] = []
-    const toolIdList: string[] = buildToolIdList(messages)
+    const toolIdList: string[] = buildToolIdList(state, messages, logger)
 
     state.toolParameters.forEach((toolParameterEntry, toolCallId) => {
         if (state.prune.toolIds.includes(toolCallId)) {
             return
         }
         if (config.strategies.pruneTool.protectedTools.includes(toolParameterEntry.tool)) {
-            return
-        }
-        if (toolParameterEntry.compacted) {
             return
         }
         const numericId = toolIdList.indexOf(toolCallId)
@@ -37,7 +37,7 @@ const buildPrunableToolsList = (
         return ""
     }
 
-    return `<prunable-tools>\nThe following tools have been invoked and are available for pruning. This list does not mandate immediate action. Consider your current goals and the resources you need before discarding valuable tool outputs. Keep the context free of noise.\n${lines.join('\n')}\n</prunable-tools>`
+    return `<prunable-tools>\nThe following tools have been invoked and are available for pruning. This list does not mandate immediate action. Consider your current goals and the resources you need before discarding valuable tool inputs or outputs. Keep the context free of noise.\n${lines.join('\n')}\n</prunable-tools>`
 }
 
 export const insertPruneToolContext = (
@@ -51,7 +51,7 @@ export const insertPruneToolContext = (
     }
 
     const lastUserMessage = getLastUserMessage(messages)
-    if (!lastUserMessage || lastUserMessage.info.role !== 'user') {
+    if (!lastUserMessage) {
         return
     }
 
@@ -72,10 +72,10 @@ export const insertPruneToolContext = (
             sessionID: lastUserMessage.info.sessionID,
             role: "user",
             time: { created: Date.now() },
-            agent: lastUserMessage.info.agent || "build",
+            agent: (lastUserMessage.info as UserMessage).agent || "build",
             model: {
-                providerID: lastUserMessage.info.model.providerID,
-                modelID: lastUserMessage.info.model.modelID
+                providerID: (lastUserMessage.info as UserMessage).model.providerID,
+                modelID: (lastUserMessage.info as UserMessage).model.modelID
             }
         },
         parts: [
@@ -99,10 +99,38 @@ export const prune = (
     messages: WithParts[]
 ): void => {
     pruneToolOutputs(state, logger, messages)
-    // more prune methods coming here
+    pruneToolInputs(state, logger, messages)
 }
 
 const pruneToolOutputs = (
+    state: SessionState,
+    logger: Logger,
+    messages: WithParts[]
+): void => {
+    for (const msg of messages) {
+        if (isMessageCompacted(state, msg)) {
+            continue
+        }
+
+        for (const part of msg.parts) {
+            if (part.type !== 'tool') {
+                continue
+            }
+            if (!state.prune.toolIds.includes(part.callID)) {
+                continue
+            }
+            // Skip write and edit tools - their inputs are pruned instead
+            if (part.tool === 'write' || part.tool === 'edit') {
+                continue
+            }
+            if (part.state.status === 'completed') {
+                part.state.output = PRUNED_TOOL_OUTPUT_REPLACEMENT
+            }
+        }
+    }
+}
+
+const pruneToolInputs = (
     state: SessionState,
     logger: Logger,
     messages: WithParts[]
@@ -115,12 +143,13 @@ const pruneToolOutputs = (
             if (!state.prune.toolIds.includes(part.callID)) {
                 continue
             }
-            if (part.state.status === 'completed') {
-                part.state.output = PRUNED_TOOL_OUTPUT_REPLACEMENT
+            // Only prune inputs for write and edit tools
+            if (part.tool !== 'write' && part.tool !== 'edit') {
+                continue
             }
-            // if (part.state.status === 'error') {
-            //     part.state.error = PRUNED_TOOL_OUTPUT_REPLACEMENT
-            // }
+            if (part.state.input?.content !== undefined) {
+                part.state.input.content = PRUNED_TOOL_INPUT_REPLACEMENT
+            }
         }
     }
 }

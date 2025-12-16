@@ -1,6 +1,13 @@
 import { ToolParameterEntry } from "../state"
 import { extractParameterKey } from "../messages/utils"
 
+export function formatTokenCount(tokens: number): string {
+    if (tokens >= 1000) {
+        return `${(tokens / 1000).toFixed(1)}K`.replace('.0K', 'K') + ' tokens'
+    }
+    return tokens.toString() + ' tokens'
+}
+
 export function truncate(str: string, maxLen: number = 60): string {
     if (str.length <= maxLen) return str
     return str.slice(0, maxLen - 3) + '...'

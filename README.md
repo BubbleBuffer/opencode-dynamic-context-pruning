@@ -27,9 +27,9 @@ DCP uses multiple strategies to reduce context size:
 
 **Deduplication** — Identifies repeated tool calls (e.g., reading the same file multiple times) and keeps only the most recent output. Runs automatically on every request with zero LLM cost.
 
-**On Idle Analysis** — Uses a language model to semantically analyze conversation context during idle periods and identify tool outputs that are no longer relevant.
-
 **Prune Tool** — Exposes a `prune` tool that the AI can call to manually trigger pruning when it determines context cleanup is needed.
+
+**On Idle Analysis** — Uses a language model to semantically analyze conversation context during idle periods and identify tool outputs that are no longer relevant.
 
 *More strategies coming soon.*
 
@@ -84,14 +84,14 @@ DCP uses its own config file:
     // (Legacy) Run an LLM to analyze what tool calls are no longer relevant on idle
     "onIdle": {
       "enabled": false,
+      // Additional tools to protect from pruning
+      "protectedTools": [],
       // Override model for analysis (format: "provider/model")
       // "model": "anthropic/claude-haiku-4-5",
       // Show toast notifications when model selection fails
       "showModelErrorToasts": true,
       // When true, fallback models are not permitted
-      "strictModelSelection": false,
-      // Additional tools to protect from pruning
-      "protectedTools": []
+      "strictModelSelection": false
     }
   }
 }

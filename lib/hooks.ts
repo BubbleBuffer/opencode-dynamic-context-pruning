@@ -48,11 +48,6 @@ export function createEventHandler(
             return
         }
 
-        if (event.type === "session.compacted") {
-            logger.info("Session compaction detected - updating state")
-            state.lastCompaction = Date.now()
-        }
-
         if (event.type === "session.status" && event.properties.status.type === "idle") {
             if (!config.strategies.onIdle.enabled) {
                 return

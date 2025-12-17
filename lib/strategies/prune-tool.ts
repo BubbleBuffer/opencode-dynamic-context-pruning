@@ -66,13 +66,13 @@ export function createPruneTool(
                 return "No numeric IDs provided. Format: [reason, id1, id2, ...] where reason is 'completion', 'noise', or 'consolidation'."
             }
 
-            await ensureSessionInitialized(ctx.client, state, sessionId, logger)
-
             // Fetch messages to calculate tokens and find current agent
             const messagesResponse = await client.session.messages({
                 path: { id: sessionId }
             })
             const messages: WithParts[] = messagesResponse.data || messagesResponse
+
+            await ensureSessionInitialized(ctx.client, state, sessionId, logger, messages)
 
             const currentParams = getCurrentParams(messages, logger)
             const toolIdList: string[] = buildToolIdList(state, messages, logger)

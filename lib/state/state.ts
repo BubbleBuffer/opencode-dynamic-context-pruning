@@ -21,10 +21,17 @@ export const checkSession = async (
     if (state.sessionId === null || state.sessionId !== lastSessionId) {
         logger.info(`Session changed: ${state.sessionId} -> ${lastSessionId}`)
         try {
-            await ensureSessionInitialized(client, state, lastSessionId, logger)
+            await ensureSessionInitialized(client, state, lastSessionId, logger, messages)
         } catch (err: any) {
             logger.error("Failed to initialize session state", { error: err.message })
         }
+    }
+
+    // Always check for compaction on every message check
+    const lastCompactionTimestamp = findLastCompactionTimestamp(messages)
+    if (lastCompactionTimestamp > state.lastCompaction) {
+        state.lastCompaction = lastCompactionTimestamp
+        logger.info("Detected compaction from messages", { timestamp: lastCompactionTimestamp })
     }
 }
 
@@ -66,7 +73,8 @@ export async function ensureSessionInitialized(
     client: any,
     state: SessionState,
     sessionId: string,
-    logger: Logger
+    logger: Logger,
+    messages: WithParts[]
 ): Promise<void> {
     if (state.sessionId === sessionId) {
         return;
@@ -97,5 +105,17 @@ export async function ensureSessionInitialized(
         pruneTokenCounter: persisted.stats?.pruneTokenCounter || 0,
         totalPruneTokens: persisted.stats?.totalPruneTokens || 0,
     }
-    state.lastCompaction = persisted.lastCompacted || 0
+}
+
+function findLastCompactionTimestamp(messages: WithParts[]): number {
+    let lastTimestamp = 0
+    for (const msg of messages) {
+        if (msg.info.role === "assistant" && msg.info.summary === true) {
+            const created = msg.info.time.created
+            if (created > lastTimestamp) {
+                lastTimestamp = created
+            }
+        }
+    }
+    return lastTimestamp
 }

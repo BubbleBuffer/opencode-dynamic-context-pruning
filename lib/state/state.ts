@@ -111,14 +111,11 @@ export async function ensureSessionInitialized(
 }
 
 function findLastCompactionTimestamp(messages: WithParts[]): number {
-    let lastTimestamp = 0
-    for (const msg of messages) {
+    for (let i = messages.length - 1; i >= 0; i--) {
+        const msg = messages[i]
         if (msg.info.role === "assistant" && msg.info.summary === true) {
-            const created = msg.info.time.created
-            if (created > lastTimestamp) {
-                lastTimestamp = created
-            }
+            return msg.info.time.created
         }
     }
-    return lastTimestamp
+    return 0
 }

@@ -58,6 +58,9 @@ export const VALID_CONFIG_KEYS = new Set([
     'strategies.deduplication',
     'strategies.deduplication.enabled',
     'strategies.deduplication.protectedTools',
+    // strategies.supersedeWrites
+    'strategies.supersedeWrites',
+    'strategies.supersedeWrites.enabled',
     // strategies.onIdle
     'strategies.onIdle',
     'strategies.onIdle.enabled',
@@ -71,10 +74,7 @@ export const VALID_CONFIG_KEYS = new Set([
     'strategies.pruneTool.protectedTools',
     'strategies.pruneTool.nudge',
     'strategies.pruneTool.nudge.enabled',
-    'strategies.pruneTool.nudge.frequency',
-    // strategies.supersedeWrites
-    'strategies.supersedeWrites',
-    'strategies.supersedeWrites.enabled',
+    'strategies.pruneTool.nudge.frequency'
 ])
 
 // Extract all key paths from a config object for validation

@@ -83,11 +83,17 @@ export function createPruneTool(
                 return "Invalid IDs provided. Only use numeric IDs from the <prunable-tools> list."
             }
 
-            // Check for protected tools (model hallucinated an ID not in the prunable list)
+            // Validate that all IDs exist in cache and aren't protected
+            // (rejects hallucinated IDs and turn-protected tools not shown in <prunable-tools>)
             for (const index of numericToolIds) {
                 const id = toolIdList[index]
                 const metadata = state.toolParameters.get(id)
-                if (metadata && config.strategies.pruneTool.protectedTools.includes(metadata.tool)) {
+                if (!metadata) {
+                    logger.debug("Rejecting prune request - ID not in cache (turn-protected or hallucinated)", { index, id })
+                    return "Invalid IDs provided. Only use numeric IDs from the <prunable-tools> list."
+                }
+                if (config.strategies.pruneTool.protectedTools.includes(metadata.tool)) {
+                    logger.debug("Rejecting prune request - protected tool", { index, id, tool: metadata.tool })
                     return "Invalid IDs provided. Only use numeric IDs from the <prunable-tools> list."
                 }
             }

@@ -45,7 +45,8 @@ function parseMessages(
                         tool: part.tool,
                         parameters: parameters,
                         status: part.state?.status,
-                        error: part.state?.status === "error" ? part.state.error : undefined
+                        error: part.state?.status === "error" ? part.state.error : undefined,
+                        turn: cachedData?.turn ?? 0
                     })
                 }
             }

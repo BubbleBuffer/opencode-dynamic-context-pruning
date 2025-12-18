@@ -25,6 +25,7 @@ export interface PruneToolNudge {
 export interface PruneTool {
     enabled: boolean
     protectedTools: string[]
+    protectedTurns: number
     nudge: PruneToolNudge
 }
 
@@ -72,6 +73,7 @@ export const VALID_CONFIG_KEYS = new Set([
     'strategies.pruneTool',
     'strategies.pruneTool.enabled',
     'strategies.pruneTool.protectedTools',
+    'strategies.pruneTool.protectedTurns',
     'strategies.pruneTool.nudge',
     'strategies.pruneTool.nudge.enabled',
     'strategies.pruneTool.nudge.frequency'
@@ -158,6 +160,9 @@ function validateConfigTypes(config: Record<string, any>): ValidationError[] {
             if (strategies.pruneTool.protectedTools !== undefined && !Array.isArray(strategies.pruneTool.protectedTools)) {
                 errors.push({ key: 'strategies.pruneTool.protectedTools', expected: 'string[]', actual: typeof strategies.pruneTool.protectedTools })
             }
+            if (strategies.pruneTool.protectedTurns !== undefined && typeof strategies.pruneTool.protectedTurns !== 'number') {
+                errors.push({ key: 'strategies.pruneTool.protectedTurns', expected: 'number', actual: typeof strategies.pruneTool.protectedTurns })
+            }
             if (strategies.pruneTool.nudge) {
                 if (strategies.pruneTool.nudge.enabled !== undefined && typeof strategies.pruneTool.nudge.enabled !== 'boolean') {
                     errors.push({ key: 'strategies.pruneTool.nudge.enabled', expected: 'boolean', actual: typeof strategies.pruneTool.nudge.enabled })
@@ -240,6 +245,7 @@ const defaultConfig: PluginConfig = {
         pruneTool: {
             enabled: true,
             protectedTools: [...DEFAULT_PROTECTED_TOOLS],
+            protectedTurns: 4,
             nudge: {
                 enabled: true,
                 frequency: 10
@@ -341,6 +347,8 @@ function createDefaultConfig(): void {
       "enabled": true,
       // Additional tools to protect from pruning
       "protectedTools": [],
+      // Protect tools from pruning for N turns after they are called (0 = disabled)
+      "protectedTurns": 4,
       // Nudge the LLM to use the prune tool (every <frequency> tool results)
       "nudge": {
         "enabled": true,
@@ -426,6 +434,7 @@ function mergeStrategies(
                     ...(override.pruneTool?.protectedTools ?? [])
                 ])
             ],
+            protectedTurns: override.pruneTool?.protectedTurns ?? base.pruneTool.protectedTurns,
             nudge: {
                 enabled: override.pruneTool?.nudge?.enabled ?? base.pruneTool.nudge.enabled,
                 frequency: override.pruneTool?.nudge?.frequency ?? base.pruneTool.nudge.frequency
@@ -452,6 +461,7 @@ function deepCloneConfig(config: PluginConfig): PluginConfig {
             pruneTool: {
                 ...config.strategies.pruneTool,
                 protectedTools: [...config.strategies.pruneTool.protectedTools],
+                protectedTurns: config.strategies.pruneTool.protectedTurns,
                 nudge: { ...config.strategies.pruneTool.nudge }
             },
             supersedeWrites: {

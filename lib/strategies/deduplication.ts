@@ -41,7 +41,7 @@ export const deduplicate = (
     for (const id of unprunedIds) {
         const metadata = state.toolParameters.get(id)
         if (!metadata) {
-            logger.warn(`Missing metadata for tool call ID: ${id}`)
+            // logger.warn(`Missing metadata for tool call ID: ${id}`)
             continue
         }
 

@@ -28,6 +28,7 @@ Pruning that forces you to re-call the same tool later is a net loss. Only prune
 NOTES
 When in doubt, keep it. Prune often yet remain strategic about it.
 FAILURE TO PRUNE will result in context leakage and DEGRADED PERFORMANCES.
+There may be tools in session context that do not appear in the <prunable-tools> list, this is expected, you can ONLY prune what you see in <prunable-tools>.
 
 </instruction>
 

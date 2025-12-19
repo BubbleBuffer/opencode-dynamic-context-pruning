@@ -1,7 +1,7 @@
 Prunes tool outputs from context to manage conversation size and reduce noise. For `write` and `edit` tools, the input content is pruned instead of the output.
 
 ## IMPORTANT: The Prunable List
-A `<prunable-tools>` list is injected into user messages showing available tool outputs you can prune. Each line has the format `ID: tool, parameter` (e.g., `20: read, /path/to/file.ts`). You MUST only use numeric IDs that appear in this list to select which tools to prune.
+A `<prunable-tools>` list is injected into user messages showing available tool outputs you can prune when there are tools available for pruning. Each line has the format `ID: tool, parameter` (e.g., `20: read, /path/to/file.ts`). You MUST only use numeric IDs that appear in this list to select which tools to prune.
 
 **Note:** For `write` and `edit` tools, pruning removes the input content (the code being written/edited) while preserving the output confirmation. This is useful after completing a file modification when you no longer need the raw content in context.
 

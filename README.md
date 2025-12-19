@@ -77,6 +77,11 @@ DCP uses its own config file:
       "enabled": true,
       // Additional tools to protect from pruning
       "protectedTools": [],
+      // Protect from pruning for <turn protection> message turns
+      "turnProtection": {
+        "enabled": false,
+        "turns": 4
+      },
       // Nudge the LLM to use the prune tool (every <frequency> tool results)
       "nudge": {
         "enabled": true,

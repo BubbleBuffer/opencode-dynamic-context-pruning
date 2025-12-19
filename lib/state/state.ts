@@ -2,7 +2,7 @@ import type { SessionState, ToolParameterEntry, WithParts } from "./types"
 import type { Logger } from "../logger"
 import { loadSessionState } from "./persistence"
 import { isSubAgentSession } from "./utils"
-import { getLastUserMessage } from "../shared-utils"
+import { getLastUserMessage, isMessageCompacted } from "../shared-utils"
 
 export const checkSession = async (
     client: any,
@@ -34,6 +34,8 @@ export const checkSession = async (
         state.prune.toolIds = []
         logger.info("Detected compaction from messages - cleared tool cache", { timestamp: lastCompactionTimestamp })
     }
+
+    state.currentTurn = countTurns(state, messages)
 }
 
 export function createSessionState(): SessionState {
@@ -50,7 +52,8 @@ export function createSessionState(): SessionState {
         toolParameters: new Map<string, ToolParameterEntry>(),
         nudgeCounter: 0,
         lastToolPrune: false,
-        lastCompaction: 0
+        lastCompaction: 0,
+        currentTurn: 0
     }
 }
 
@@ -68,6 +71,7 @@ export function resetSessionState(state: SessionState): void {
     state.nudgeCounter = 0
     state.lastToolPrune = false
     state.lastCompaction = 0
+    state.currentTurn = 0
 }
 
 export async function ensureSessionInitialized(
@@ -92,6 +96,7 @@ export async function ensureSessionInitialized(
     logger.info("isSubAgent = " + isSubAgent)
 
     state.lastCompaction = findLastCompactionTimestamp(messages)
+    state.currentTurn = countTurns(state, messages)
 
     const persisted = await loadSessionState(sessionId, logger)
     if (persisted === null) {
@@ -115,4 +120,19 @@ function findLastCompactionTimestamp(messages: WithParts[]): number {
         }
     }
     return 0
+}
+
+export function countTurns(state: SessionState, messages: WithParts[]): number {
+    let turnCount = 0
+    for (const msg of messages) {
+        if (isMessageCompacted(state, msg)) {
+            continue
+        }
+        for (const part of msg.parts) {
+            if (part.type === "step-start") {
+                turnCount++
+            }
+        }
+    }
+    return turnCount
 }

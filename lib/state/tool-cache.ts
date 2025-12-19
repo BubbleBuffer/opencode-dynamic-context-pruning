@@ -35,8 +35,9 @@ export async function syncToolCache(
                     continue
                 }
 
-                const isProtectedByTurn = config.strategies.pruneTool.protectedTurns > 0 &&
-                    (state.currentTurn - turnCounter) < config.strategies.pruneTool.protectedTurns
+                const isProtectedByTurn = config.strategies.pruneTool.turnProtection.enabled &&
+                    config.strategies.pruneTool.turnProtection.turns > 0 &&
+                    (state.currentTurn - turnCounter) < config.strategies.pruneTool.turnProtection.turns
 
                 state.lastToolPrune = part.tool === "prune"
 

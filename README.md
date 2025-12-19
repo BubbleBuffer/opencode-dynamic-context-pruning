@@ -77,8 +77,11 @@ DCP uses its own config file:
       "enabled": true,
       // Additional tools to protect from pruning
       "protectedTools": [],
-      // Protect tools from pruning for N turns after they are called (0 = disabled)
-      "protectedTurns": 4,
+      // Protect tools from pruning for N turns after they are called
+      "turnProtection": {
+        "enabled": false,
+        "turns": 4
+      },
       // Nudge the LLM to use the prune tool (every <frequency> tool results)
       "nudge": {
         "enabled": true,

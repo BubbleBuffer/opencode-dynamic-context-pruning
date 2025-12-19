@@ -29,7 +29,7 @@ const plugin: Plugin = (async (ctx) => {
 
     return {
         "experimental.chat.system.transform": async (_input: unknown, output: { system: string[] }) => {
-            const syntheticPrompt = loadPrompt("synthetic")
+            const syntheticPrompt = loadPrompt("prune-system-prompt")
             output.system.push(syntheticPrompt)
         },
         "experimental.chat.messages.transform": createChatMessageTransformHandler(

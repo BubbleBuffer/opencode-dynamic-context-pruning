@@ -10,8 +10,8 @@ import type { Logger } from "../logger"
 import { loadPrompt } from "../prompt"
 import { calculateTokensSaved, getCurrentParams } from "./utils"
 
-/** Tool description loaded from prompts/tool.txt */
-const TOOL_DESCRIPTION = loadPrompt("tool")
+/** Tool description loaded from prompts/prune-tool-spec.txt */
+const TOOL_DESCRIPTION = loadPrompt("prune-tool-spec")
 
 export interface PruneToolContext {
     client: any

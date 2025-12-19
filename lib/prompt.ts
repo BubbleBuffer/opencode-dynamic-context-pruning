@@ -127,7 +127,7 @@ export function buildAnalysisPrompt(
     const minimizedMessages = minimizeMessages(messages, alreadyPrunedIds, protectedToolCallIds)
     const messagesJson = JSON.stringify(minimizedMessages, null, 2).replace(/\\n/g, '\n')
 
-    return loadPrompt("pruning", {
+    return loadPrompt("on-idle-analysis", {
         available_tool_call_ids: unprunedToolCallIds.join(", "),
         session_history: messagesJson
     })

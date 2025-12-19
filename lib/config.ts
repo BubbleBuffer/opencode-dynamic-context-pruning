@@ -362,7 +362,7 @@ function createDefaultConfig(): void {
       \"enabled\": true,
       // Additional tools to protect from pruning
       \"protectedTools\": [],
-      // Protect tools from pruning for N turns after they are called
+      // Protect from pruning for <turn protection> message turns
       \"turnProtection\": {
         \"enabled\": false,
         \"turns\": 4

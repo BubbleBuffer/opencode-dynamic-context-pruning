@@ -8,7 +8,7 @@ import { UserMessage } from "@opencode-ai/sdk"
 
 const PRUNED_TOOL_INPUT_REPLACEMENT = '[Input removed to save context]'
 const PRUNED_TOOL_OUTPUT_REPLACEMENT = '[Output removed to save context - information superseded or no longer needed]'
-const NUDGE_STRING = loadPrompt("nudge")
+const NUDGE_STRING = loadPrompt("prune-nudge")
 
 const wrapPrunableTools = (content: string): string => `<prunable-tools>
 The following tools have been invoked and are available for pruning. This list does not mandate immediate action. Consider your current goals and the resources you need before discarding valuable tool inputs or outputs. Consolidate your prunes for efficiency; it is rarely worth pruning a single tiny tool output. Keep the context free of noise.

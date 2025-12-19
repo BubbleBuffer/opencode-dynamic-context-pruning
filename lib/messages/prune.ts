@@ -10,6 +10,17 @@ const PRUNED_TOOL_INPUT_REPLACEMENT = '[Input removed to save context]'
 const PRUNED_TOOL_OUTPUT_REPLACEMENT = '[Output removed to save context - information superseded or no longer needed]'
 const NUDGE_STRING = loadPrompt("nudge")
 
+const wrapPrunableTools = (content: string): string => `<prunable-tools>
+The following tools have been invoked and are available for pruning. This list does not mandate immediate action. Consider your current goals and the resources you need before discarding valuable tool inputs or outputs. Keep the context free of noise.
+${content}
+</prunable-tools>`
+const PRUNABLE_TOOLS_COOLDOWN = `<prunable-tools>
+Pruning was just performed. Do not use the prune tool again. A fresh list will be available after your next tool use.
+</prunable-tools>`
+
+const SYNTHETIC_MESSAGE_ID = "msg_01234567890123456789012345"
+const SYNTHETIC_PART_ID = "prt_01234567890123456789012345"
+
 const buildPrunableToolsList = (
     state: SessionState,
     config: PluginConfig,
@@ -41,7 +52,7 @@ const buildPrunableToolsList = (
         return ""
     }
 
-    return `<prunable-tools>\nThe following tools have been invoked and are available for pruning. This list does not mandate immediate action. Consider your current goals and the resources you need before discarding valuable tool inputs or outputs. Keep the context free of noise.\n${lines.join('\n')}\n</prunable-tools>`
+    return wrapPrunableTools(lines.join('\n'))
 }
 
 export const insertPruneToolContext = (
@@ -59,20 +70,31 @@ export const insertPruneToolContext = (
         return
     }
 
-    const prunableToolsList = buildPrunableToolsList(state, config, logger, messages)
-    if (!prunableToolsList) {
-        return
-    }
+    let prunableToolsContent: string
 
-    let nudgeString = ""
-    if (state.nudgeCounter >= config.strategies.pruneTool.nudge.frequency) {
-        logger.info("Inserting prune nudge message")
-        nudgeString = "\n" + NUDGE_STRING
+    if (state.lastToolPrune) {
+        logger.debug("Last tool was prune - injecting cooldown message")
+        prunableToolsContent = PRUNABLE_TOOLS_COOLDOWN
+    } else {
+        const prunableToolsList = buildPrunableToolsList(state, config, logger, messages)
+        if (!prunableToolsList) {
+            return
+        }
+
+        logger.debug("prunable-tools: \n" + prunableToolsList)
+
+        let nudgeString = ""
+        if (state.nudgeCounter >= config.strategies.pruneTool.nudge.frequency) {
+            logger.info("Inserting prune nudge message")
+            nudgeString = "\n" + NUDGE_STRING
+        }
+
+        prunableToolsContent = prunableToolsList + nudgeString
     }
 
     const userMessage: WithParts = {
         info: {
-            id: "msg_01234567890123456789012345",
+            id: SYNTHETIC_MESSAGE_ID,
             sessionID: lastUserMessage.info.sessionID,
             role: "user",
             time: { created: Date.now() },
@@ -84,11 +106,11 @@ export const insertPruneToolContext = (
         },
         parts: [
             {
-                id: "prt_01234567890123456789012345",
+                id: SYNTHETIC_PART_ID,
                 sessionID: lastUserMessage.info.sessionID,
-                messageID: "msg_01234567890123456789012345",
+                messageID: SYNTHETIC_MESSAGE_ID,
                 type: "text",
-                text: prunableToolsList + nudgeString,
+                text: prunableToolsContent,
             }
         ]
     }

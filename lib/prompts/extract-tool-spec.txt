@@ -7,8 +7,13 @@ A `<prunable-tools>` list is injected into user messages showing available tool 
 
 Use `extract` when you have gathered useful information that you want to **preserve in distilled form** before removing the raw outputs:
 
+### 1. Task Completion
+**When:** You have completed a unit of work and want to preserve key findings.
+**Action:** Extract with distillation scaled to the value of the content. High-value insights require comprehensive capture; routine completions can use lighter distillation.
+
+### 2. Knowledge Preservation
 **When:** You have read files, run commands, or gathered context that contains valuable information you'll need to reference later, but the full raw output is too large to keep.
-**Action:** Convert raw data into distilled knowledge. This allows you to discard large outputs (like full file reads) while keeping only the specific parts you need (like a single function signature or constant).
+**Action:** Convert raw data into distilled knowledge. This allows you to remove large outputs (like full file reads) while keeping only the specific parts you need (like a single function signature or constant).
 
 ## CRITICAL: Distillation Requirements
 

@@ -2,9 +2,9 @@
 **CRITICAL CONTEXT WARNING:** Your context window is filling with tool outputs. Strict adherence to context hygiene is required.
 
 **Immediate Actions Required:**
-1. **Task Completion:** If a sub-task is complete, prune the tools used. No distillation.
-2. **Noise Removal:** If you read files or ran commands that yielded no value, prune them NOW. No distillation.
-3. **Consolidation:** If you are holding valuable raw data, you *must* distill the insights into `metadata.distillation` and prune the raw entry.
+1. **Task Completion:** If a sub-task is complete, discard the tools used.
+2. **Noise Removal:** If you read files or ran commands that yielded no value, discard them NOW.
+3. **Extraction:** If you are holding valuable raw data, you *must* use the `extract` tool to distill the insights and remove the raw entry.
 
-**Protocol:** You should prioritize this cleanup, but do not interrupt a critical atomic operation if one is in progress. Once the immediate step is done, you must prune.
+**Protocol:** You should prioritize this cleanup, but do not interrupt a critical atomic operation if one is in progress. Once the immediate step is done, you must perform context management.
 </instruction>

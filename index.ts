@@ -3,7 +3,7 @@ import { getConfig } from "./lib/config"
 import { Logger } from "./lib/logger"
 import { loadPrompt } from "./lib/prompt"
 import { createSessionState } from "./lib/state"
-import { createPruneTool } from "./lib/strategies"
+import { createDiscardTool, createExtractTool } from "./lib/strategies"
 import { createChatMessageTransformHandler, createEventHandler } from "./lib/hooks"
 
 const plugin: Plugin = (async (ctx) => {
@@ -38,8 +38,15 @@ const plugin: Plugin = (async (ctx) => {
             logger,
             config
         ),
-        tool: config.strategies.pruneTool.enabled ? {
-            prune: createPruneTool({
+        tool: (config.strategies.discardTool.enabled || config.strategies.extractTool.enabled) ? {
+            discard: createDiscardTool({
+                client: ctx.client,
+                state,
+                logger,
+                config,
+                workingDirectory: ctx.directory
+            }),
+            extract: createExtractTool({
                 client: ctx.client,
                 state,
                 logger,
@@ -48,15 +55,15 @@ const plugin: Plugin = (async (ctx) => {
             }),
         } : undefined,
         config: async (opencodeConfig) => {
-            // Add prune to primary_tools by mutating the opencode config
+            // Add discard and extract to primary_tools by mutating the opencode config
             // This works because config is cached and passed by reference
-            if (config.strategies.pruneTool.enabled) {
+            if (config.strategies.discardTool.enabled || config.strategies.extractTool.enabled) {
                 const existingPrimaryTools = opencodeConfig.experimental?.primary_tools ?? []
                 opencodeConfig.experimental = {
                     ...opencodeConfig.experimental,
-                    primary_tools: [...existingPrimaryTools, "prune"],
+                    primary_tools: [...existingPrimaryTools, "discard", "extract"],
                 }
-                logger.info("Added 'prune' to experimental.primary_tools via config mutation")
+                logger.info("Added 'discard' and 'extract' to experimental.primary_tools via config mutation")
             }
         },
         event: createEventHandler(ctx.client, config, state, logger, ctx.directory),

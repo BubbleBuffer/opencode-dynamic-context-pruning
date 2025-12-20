@@ -34,7 +34,11 @@ const buildPrunableToolsList = (
         if (state.prune.toolIds.includes(toolCallId)) {
             return
         }
-        if (config.strategies.pruneTool.protectedTools.includes(toolParameterEntry.tool)) {
+        const allProtectedTools = [
+            ...config.strategies.discardTool.protectedTools,
+            ...config.strategies.extractTool.protectedTools
+        ]
+        if (allProtectedTools.includes(toolParameterEntry.tool)) {
             return
         }
         const numericId = toolIdList.indexOf(toolCallId)
@@ -61,7 +65,7 @@ export const insertPruneToolContext = (
     logger: Logger,
     messages: WithParts[]
 ): void => {
-    if (!config.strategies.pruneTool.enabled) {
+    if (!config.strategies.discardTool.enabled && !config.strategies.extractTool.enabled) {
         return
     }
 
@@ -84,7 +88,11 @@ export const insertPruneToolContext = (
         logger.debug("prunable-tools: \n" + prunableToolsList)
 
         let nudgeString = ""
-        if (state.nudgeCounter >= config.strategies.pruneTool.nudge.frequency) {
+        const nudgeFrequency = Math.min(
+            config.strategies.discardTool.nudge.frequency,
+            config.strategies.extractTool.nudge.frequency
+        )
+        if (state.nudgeCounter >= nudgeFrequency) {
             logger.info("Inserting prune nudge message")
             nudgeString = "\n" + NUDGE_STRING
         }

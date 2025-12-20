@@ -1,0 +1,10 @@
+<instruction name=context_management_required>
+**CRITICAL CONTEXT WARNING:** Your context window is filling with tool outputs. Strict adherence to context hygiene is required.
+
+**Immediate Actions Required:**
+1. **Task Completion:** If a sub-task is complete, extract findings and remove the raw tool outputs.
+2. **Noise Removal:** If you read files or ran commands that yielded no value, extract them with minimal distillation NOW.
+3. **Extraction:** If you are holding valuable raw data, you *must* use the `extract` tool to distill the insights and remove the raw entry.
+
+**Protocol:** You should prioritize this cleanup, but do not interrupt a critical atomic operation if one is in progress. Once the immediate step is done, you must extract and remove unneeded tool outputs.
+</instruction>

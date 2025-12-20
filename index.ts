@@ -29,7 +29,21 @@ const plugin: Plugin = (async (ctx) => {
 
     return {
         "experimental.chat.system.transform": async (_input: unknown, output: { system: string[] }) => {
-            const syntheticPrompt = loadPrompt("prune-system-prompt")
+            const discardEnabled = config.strategies.discardTool.enabled
+            const extractEnabled = config.strategies.extractTool.enabled
+            
+            let promptName: string
+            if (discardEnabled && extractEnabled) {
+                promptName = "system/system-prompt-both"
+            } else if (discardEnabled) {
+                promptName = "system/system-prompt-discard"
+            } else if (extractEnabled) {
+                promptName = "system/system-prompt-extract"
+            } else {
+                return // No context management tools enabled
+            }
+            
+            const syntheticPrompt = loadPrompt(promptName)
             output.system.push(syntheticPrompt)
         },
         "experimental.chat.messages.transform": createChatMessageTransformHandler(

@@ -5,21 +5,18 @@ ENVIRONMENT
 You are operating in a context-constrained environment and thus must proactively manage your context window using the `extract` tool. A <prunable-tools> list is injected by the environment as a user message, and always contains up to date information. Use this information when deciding what to extract.
 
 CONTEXT MANAGEMENT TOOL
-- `extract`: Extract key findings into distilled knowledge before removing raw outputs. Use this to preserve important information while reducing context size.
+- `extract`: Extract key findings from tools into distilled knowledge before removing the raw content from context. Use this to preserve important information while reducing context size.
 
 EXTRACT METHODICALLY - BATCH YOUR ACTIONS
-Every tool call adds to your context debt. You MUST pay this down regularly and be on top of context accumulation by extracting. Batch your extractions for efficiency; it is rarely worth extracting a single tiny tool output unless it is pure noise. Evaluate what SHOULD be extracted before jumping the gun.
+Every tool call adds to your context debt. You MUST pay this down regularly and be on top of context accumulation by extracting. Batch your extractions for efficiency; it is rarely worth extracting a single tiny tool output. Evaluate what SHOULD be extracted before jumping the gun.
 
-WHEN TO EXTRACT? THE SCENARIOS TO CONSIDER
-1. TASK COMPLETION: When work is done, extract any valuable findings and remove the raw outputs.
-2. NOISE REMOVAL: If outputs are irrelevant, unhelpful, or superseded by newer info, extract them with minimal distillation.
-3. CONTEXT PRESERVATION: When you have valuable context you want to preserve but need to reduce size, use `extract` with high-fidelity distillation. Your distillation must be comprehensive, capturing technical details (signatures, logic, constraints) such that the raw output is no longer needed. THINK: high signal, complete technical substitute.
+WHEN TO EXTRACT
+- **Task Completion:** When work is done, extract key findings from the tools used. Scale distillation depth to the value of the content.
+- **Knowledge Preservation:** When you have valuable context you want to preserve but need to reduce size, use high-fidelity distillation. Your distillation must be comprehensive, capturing technical details (signatures, logic, constraints) such that the raw output is no longer needed. THINK: high signal, complete technical substitute.
 
-You WILL use `extract` when ANY of these are true:
+You WILL evaluate extracting when ANY of these are true:
 - Task or sub-task is complete
 - You are about to start a new phase of work
-- You have gathered enough information to extract from related tools and preserve their value via distillation
-- Context contains tool outputs that are unhelpful, noise, or made obsolete by newer outputs
 - Write or edit operations are complete (extracting removes the large input content)
 
 You MUST NOT extract when:

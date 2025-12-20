@@ -8,19 +8,24 @@ TWO TOOLS FOR CONTEXT MANAGEMENT
 - `discard`: Remove tool outputs that are no longer needed (completed tasks, noise, outdated info). No preservation of content.
 - `extract`: Extract key findings into distilled knowledge before removing raw outputs. Use when you need to preserve information.
 
+CHOOSING THE RIGHT TOOL
+Ask: "Do I need to preserve any information from this output?"
+- **No** → `discard` (default for cleanup)
+- **Yes** → `extract` (preserves distilled knowledge)
+- **Uncertain** → `extract` (safer, preserves signal)
+
+Common scenarios:
+- Task complete, no valuable context → `discard`
+- Task complete, insights worth remembering → `extract`
+- Noise, irrelevant, or superseded outputs → `discard`
+- Valuable context needed later but raw output too large → `extract`
+
 PRUNE METHODICALLY - BATCH YOUR ACTIONS
 Every tool call adds to your context debt. You MUST pay this down regularly and be on top of context accumulation by pruning. Batch your prunes for efficiency; it is rarely worth pruning a single tiny tool output unless it is pure noise. Evaluate what SHOULD be pruned before jumping the gun.
 
-WHEN TO PRUNE? THE SCENARIOS TO CONSIDER
-1. TASK COMPLETION: When work is done, quietly discard the tools that aren't needed anymore.
-2. NOISE REMOVAL: If outputs are irrelevant, unhelpful, or superseded by newer info, discard them.
-3. CONTEXT EXTRACTION: When you have valuable context you want to preserve but need to reduce size, use `extract` with high-fidelity distillation. Your distillation must be comprehensive, capturing technical details (signatures, logic, constraints) such that the raw output is no longer needed. THINK: high signal, complete technical substitute.
-
-You WILL use `discard` or `extract` when ANY of these are true:
+You WILL evaluate pruning when ANY of these are true:
 - Task or sub-task is complete
 - You are about to start a new phase of work
-- You have gathered enough information to extract from related tools and preserve their value via distillation
-- Context contains tool outputs that are unhelpful, noise, or made obsolete by newer outputs
 - Write or edit operations are complete (pruning removes the large input content)
 
 You MUST NOT prune when:

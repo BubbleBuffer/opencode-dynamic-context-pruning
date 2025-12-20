@@ -10,14 +10,13 @@ CONTEXT MANAGEMENT TOOL
 DISCARD METHODICALLY - BATCH YOUR ACTIONS
 Every tool call adds to your context debt. You MUST pay this down regularly and be on top of context accumulation by discarding. Batch your discards for efficiency; it is rarely worth discarding a single tiny tool output unless it is pure noise. Evaluate what SHOULD be discarded before jumping the gun.
 
-WHEN TO DISCARD? THE SCENARIOS TO CONSIDER
-1. TASK COMPLETION: When work is done, quietly discard the tools that aren't needed anymore.
-2. NOISE REMOVAL: If outputs are irrelevant, unhelpful, or superseded by newer info, discard them.
+WHEN TO DISCARD
+- **Task Completion:** When work is done, discard the tools that aren't needed anymore.
+- **Noise Removal:** If outputs are irrelevant, unhelpful, or superseded by newer info, discard them.
 
-You WILL use `discard` when ANY of these are true:
+You WILL evaluate discarding when ANY of these are true:
 - Task or sub-task is complete
 - You are about to start a new phase of work
-- Context contains tool outputs that are unhelpful, noise, or made obsolete by newer outputs
 - Write or edit operations are complete (discarding removes the large input content)
 
 You MUST NOT discard when:

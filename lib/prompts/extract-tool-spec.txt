@@ -24,7 +24,6 @@ You MUST provide distilled findings in the `distillation` parameter. This is not
 
 ## When NOT to Use This Tool
 
-- **If you don't need to preserve information:** Use the `discard` tool instead for completed tasks or noise removal.
 - **If you need precise syntax:** If you'll need to edit a file, grep for exact strings, or reference precise syntax, keep the raw output. Distillation works for understanding; implementation often requires the original.
 - **If uncertain:** Prefer keeping over re-fetching. The cost of retaining context is lower than the cost of redundant tool calls.
 

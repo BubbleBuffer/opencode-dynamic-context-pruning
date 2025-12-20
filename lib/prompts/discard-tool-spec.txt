@@ -19,7 +19,7 @@ Use `discard` for removing tool outputs that are no longer needed **without pres
 
 ## When NOT to Use This Tool
 
-- **If you need to preserve information:** Use the `consolidate` tool instead when you want to keep distilled findings from the tool outputs.
+- **If you need to preserve information:** Keep the raw output in context rather than discarding it.
 - **If you'll need the output later:** Don't discard files you plan to edit, or context you'll need for implementation.
 
 ## Best Practices

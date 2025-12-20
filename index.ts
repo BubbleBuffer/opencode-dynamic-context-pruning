@@ -18,11 +18,9 @@ const plugin: Plugin = (async (ctx) => {
         (globalThis as any).AI_SDK_LOG_WARNINGS = false
     }
 
-    // Initialize core components
     const logger = new Logger(config.debug)
     const state = createSessionState()
 
-    // Log initialization
     logger.info("DCP initialized", {
         strategies: config.strategies,
     })
@@ -31,7 +29,7 @@ const plugin: Plugin = (async (ctx) => {
         "experimental.chat.system.transform": async (_input: unknown, output: { system: string[] }) => {
             const discardEnabled = config.strategies.discardTool.enabled
             const extractEnabled = config.strategies.extractTool.enabled
-            
+
             let promptName: string
             if (discardEnabled && extractEnabled) {
                 promptName = "system/system-prompt-both"
@@ -40,9 +38,9 @@ const plugin: Plugin = (async (ctx) => {
             } else if (extractEnabled) {
                 promptName = "system/system-prompt-extract"
             } else {
-                return // No context management tools enabled
+                return
             }
-            
+
             const syntheticPrompt = loadPrompt(promptName)
             output.system.push(syntheticPrompt)
         },

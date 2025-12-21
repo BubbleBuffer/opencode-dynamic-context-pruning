@@ -26,9 +26,24 @@ const wrapPrunableTools = (content: string): string => `<prunable-tools>
 The following tools have been invoked and are available for pruning. This list does not mandate immediate action. Consider your current goals and the resources you need before discarding valuable tool inputs or outputs. Consolidate your prunes for efficiency; it is rarely worth pruning a single tiny tool output. Keep the context free of noise.
 ${content}
 </prunable-tools>`
-const PRUNABLE_TOOLS_COOLDOWN = `<prunable-tools>
-Pruning was just performed. Do not use the prune tool again. A fresh list will be available after your next tool use.
+
+const getCooldownMessage = (config: PluginConfig): string => {
+    const discardEnabled = config.strategies.discardTool.enabled
+    const extractEnabled = config.strategies.extractTool.enabled
+    
+    let toolName: string
+    if (discardEnabled && extractEnabled) {
+        toolName = "discard or extract tools"
+    } else if (discardEnabled) {
+        toolName = "discard tool"
+    } else {
+        toolName = "extract tool"
+    }
+    
+    return `<prunable-tools>
+Context management was just performed. Do not use the ${toolName} again. A fresh list will be available after your next tool use.
 </prunable-tools>`
+}
 
 const SYNTHETIC_MESSAGE_ID = "msg_01234567890123456789012345"
 const SYNTHETIC_PART_ID = "prt_01234567890123456789012345"
@@ -90,7 +105,7 @@ export const insertPruneToolContext = (
 
     if (state.lastToolPrune) {
         logger.debug("Last tool was prune - injecting cooldown message")
-        prunableToolsContent = PRUNABLE_TOOLS_COOLDOWN
+        prunableToolsContent = getCooldownMessage(config)
     } else {
         const prunableToolsList = buildPrunableToolsList(state, config, logger, messages)
         if (!prunableToolsList) {

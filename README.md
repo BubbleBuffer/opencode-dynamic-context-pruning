@@ -74,7 +74,7 @@ DCP uses its own config file:
     "supersedeWrites": {
       "enabled": true
     },
-    // Exposes a discard tool to your LLM for removing unneeded tool outputs
+    // Removes tool content from context without preservation (for completed tasks or noise)
     "discardTool": {
       "enabled": true,
       // Additional tools to protect from pruning
@@ -90,7 +90,7 @@ DCP uses its own config file:
         "frequency": 10
       }
     },
-    // Exposes an extract tool to your LLM for distilling context before removal
+    // Distills key findings into preserved knowledge before removing raw content
     "extractTool": {
       "enabled": true,
       // Additional tools to protect from pruning

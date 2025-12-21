@@ -420,7 +420,7 @@ function createDefaultConfig(): void {
     "supersedeWrites": {
       "enabled": true
     },
-    // Exposes a discard tool to your LLM to call when it determines pruning is necessary
+    // Removes tool content from context without preservation (for completed tasks or noise)
     "discardTool": {
       "enabled": true,
       // Additional tools to protect from pruning
@@ -436,7 +436,7 @@ function createDefaultConfig(): void {
         "frequency": 10
       }
     },
-    // Exposes an extract tool to your LLM to call when it determines pruning is necessary
+    // Distills key findings into preserved knowledge before removing raw content
     "extractTool": {
       "enabled": true,
       // Additional tools to protect from pruning

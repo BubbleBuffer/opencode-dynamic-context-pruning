@@ -50,32 +50,40 @@ const plugin: Plugin = (async (ctx) => {
             logger,
             config
         ),
-        tool: (config.strategies.discardTool.enabled || config.strategies.extractTool.enabled) ? {
-            discard: createDiscardTool({
-                client: ctx.client,
-                state,
-                logger,
-                config,
-                workingDirectory: ctx.directory
+        tool: {
+            ...(config.strategies.discardTool.enabled && {
+                discard: createDiscardTool({
+                    client: ctx.client,
+                    state,
+                    logger,
+                    config,
+                    workingDirectory: ctx.directory
+                }),
             }),
-            extract: createExtractTool({
-                client: ctx.client,
-                state,
-                logger,
-                config,
-                workingDirectory: ctx.directory
+            ...(config.strategies.extractTool.enabled && {
+                extract: createExtractTool({
+                    client: ctx.client,
+                    state,
+                    logger,
+                    config,
+                    workingDirectory: ctx.directory
+                }),
             }),
-        } : undefined,
+        },
         config: async (opencodeConfig) => {
-            // Add discard and extract to primary_tools by mutating the opencode config
+            // Add enabled tools to primary_tools by mutating the opencode config
             // This works because config is cached and passed by reference
-            if (config.strategies.discardTool.enabled || config.strategies.extractTool.enabled) {
+            const toolsToAdd: string[] = []
+            if (config.strategies.discardTool.enabled) toolsToAdd.push("discard")
+            if (config.strategies.extractTool.enabled) toolsToAdd.push("extract")
+
+            if (toolsToAdd.length > 0) {
                 const existingPrimaryTools = opencodeConfig.experimental?.primary_tools ?? []
                 opencodeConfig.experimental = {
                     ...opencodeConfig.experimental,
-                    primary_tools: [...existingPrimaryTools, "discard", "extract"],
+                    primary_tools: [...existingPrimaryTools, ...toolsToAdd],
                 }
-                logger.info("Added 'discard' and 'extract' to experimental.primary_tools via config mutation")
+                logger.info(`Added ${toolsToAdd.map(t => `'${t}'`).join(" and ")} to experimental.primary_tools via config mutation`)
             }
         },
         event: createEventHandler(ctx.client, config, state, logger, ctx.directory),

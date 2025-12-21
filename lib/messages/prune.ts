@@ -11,7 +11,7 @@ const PRUNED_TOOL_OUTPUT_REPLACEMENT = '[Output removed to save context - inform
 const getNudgeString = (config: PluginConfig): string => {
     const discardEnabled = config.strategies.discardTool.enabled
     const extractEnabled = config.strategies.extractTool.enabled
-    
+
     if (discardEnabled && extractEnabled) {
         return loadPrompt("nudge/nudge-both")
     } else if (discardEnabled) {
@@ -30,7 +30,7 @@ ${content}
 const getCooldownMessage = (config: PluginConfig): string => {
     const discardEnabled = config.strategies.discardTool.enabled
     const extractEnabled = config.strategies.extractTool.enabled
-    
+
     let toolName: string
     if (discardEnabled && extractEnabled) {
         toolName = "discard or extract tools"
@@ -39,7 +39,7 @@ const getCooldownMessage = (config: PluginConfig): string => {
     } else {
         toolName = "extract tool"
     }
-    
+
     return `<prunable-tools>
 Context management was just performed. Do not use the ${toolName} again. A fresh list will be available after your next tool use.
 </prunable-tools>`
@@ -115,6 +115,8 @@ export const insertPruneToolContext = (
         logger.debug("prunable-tools: \n" + prunableToolsList)
 
         let nudgeString = ""
+        // TODO: Using Math.min() means the lower frequency dominates when both tools are enabled.
+        // Consider using separate counters for each tool's nudge, or documenting this behavior.
         const nudgeFrequency = Math.min(
             config.strategies.discardTool.nudge.frequency,
             config.strategies.extractTool.nudge.frequency

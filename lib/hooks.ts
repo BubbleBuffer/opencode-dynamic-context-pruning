@@ -28,6 +28,10 @@ export function createChatMessageTransformHandler(
         prune(state, logger, config, output.messages)
 
         insertPruneToolContext(state, config, logger, output.messages)
+
+        if (state.sessionId) {
+            await logger.saveContext(state.sessionId, output.messages)
+        }
     }
 }
 

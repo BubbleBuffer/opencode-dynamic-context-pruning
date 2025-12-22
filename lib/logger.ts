@@ -107,4 +107,99 @@ export class Logger {
         const component = this.getCallerFile(2)
         return this.write("ERROR", component, message, data)
     }
+
+    /**
+     * Strips unnecessary metadata from messages for cleaner debug logs.
+     *
+     * Removed:
+     * - All IDs (id, sessionID, messageID, parentID, callID on parts)
+     * - summary, path, cost, model, agent, mode, finish, providerID, modelID
+     * - step-start and step-finish parts entirely
+     * - snapshot fields
+     * - ignored text parts
+     *
+     * Kept:
+     * - role, time (created only), tokens (input, output, reasoning, cache)
+     * - text, reasoning, tool parts with content
+     * - tool calls with: tool, callID, input, output
+     */
+    private minimizeForDebug(messages: any[]): any[] {
+        return messages.map((msg) => {
+            const minimized: any = {
+                role: msg.info?.role,
+            }
+
+            if (msg.info?.time?.created) {
+                minimized.time = msg.info.time.created
+            }
+
+            if (msg.info?.tokens) {
+                minimized.tokens = {
+                    input: msg.info.tokens.input,
+                    output: msg.info.tokens.output,
+                    reasoning: msg.info.tokens.reasoning,
+                    cache: msg.info.tokens.cache,
+                }
+            }
+
+            if (msg.parts) {
+                minimized.parts = msg.parts
+                    .map((part: any) => {
+                        if (part.type === "step-start" || part.type === "step-finish") {
+                            return null
+                        }
+
+                        if (part.type === "text") {
+                            if (part.ignored) return null
+                            return { type: "text", text: part.text }
+                        }
+
+                        if (part.type === "reasoning") {
+                            return {
+                                type: "reasoning",
+                                text: part.text,
+                            }
+                        }
+
+                        if (part.type === "tool") {
+                            const toolPart: any = {
+                                type: "tool",
+                                tool: part.tool,
+                                callID: part.callID,
+                            }
+
+                            if (part.state?.input) {
+                                toolPart.input = part.state.input
+                            }
+                            if (part.state?.output) {
+                                toolPart.output = part.state.output
+                            }
+
+                            return toolPart
+                        }
+
+                        return null
+                    })
+                    .filter(Boolean)
+            }
+
+            return minimized
+        })
+    }
+
+    async saveContext(sessionId: string, messages: any[]) {
+        if (!this.enabled) return
+
+        try {
+            const contextDir = join(this.logDir, "context", sessionId)
+            if (!existsSync(contextDir)) {
+                await mkdir(contextDir, { recursive: true })
+            }
+
+            const minimized = this.minimizeForDebug(messages)
+            const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
+            const contextFile = join(contextDir, `${timestamp}.json`)
+            await writeFile(contextFile, JSON.stringify(minimized, null, 2))
+        } catch (error) {}
+    }
 }

@@ -3,8 +3,8 @@ import type { Logger } from "../logger"
 import type { PluginConfig } from "../config"
 import { loadPrompt } from "../prompt"
 import { extractParameterKey, buildToolIdList } from "./utils"
-import { getLastUserMessage, isMessageCompacted } from "../shared-utils"
-import { UserMessage } from "@opencode-ai/sdk"
+import { getLastAssistantMessage, getLastUserMessage, isMessageCompacted } from "../shared-utils"
+import { AssistantMessage, UserMessage } from "@opencode-ai/sdk"
 
 const PRUNED_TOOL_INPUT_REPLACEMENT = "[Input removed to save context]"
 const PRUNED_TOOL_OUTPUT_REPLACEMENT =
@@ -24,7 +24,7 @@ const getNudgeString = (config: PluginConfig): string => {
 }
 
 const wrapPrunableTools = (content: string): string => `<prunable-tools>
-The following tools have been invoked and are available for pruning. This list does not mandate immediate action. Consider your current goals and the resources you need before discarding valuable tool inputs or outputs. Consolidate your prunes for efficiency; it is rarely worth pruning a single tiny tool output. Keep the context free of noise.
+I have the following tool outputs available for pruning. I should consider my current goals and the resources I need before discarding valuable inputs or outputs. I should consolidate prunes for efficiency; it is rarely worth pruning a single tiny tool output.
 ${content}
 </prunable-tools>`
 
@@ -42,12 +42,15 @@ const getCooldownMessage = (config: PluginConfig): string => {
     }
 
     return `<prunable-tools>
-Context management was just performed. Do not use the ${toolName} again. A fresh list will be available after your next tool use.
+I just performed context management. I will not use the ${toolName} again until after my next tool use, when a fresh list will be available.
 </prunable-tools>`
 }
 
 const SYNTHETIC_MESSAGE_ID = "msg_01234567890123456789012345"
 const SYNTHETIC_PART_ID = "prt_01234567890123456789012345"
+const SYNTHETIC_USER_MESSAGE_ID = "msg_01234567890123456789012346"
+const SYNTHETIC_USER_PART_ID = "prt_01234567890123456789012346"
+const REASONING_MODEL_USER_MESSAGE_CONTENT = "<system-context-injection/>"
 
 const buildPrunableToolsList = (
     state: SessionState,
@@ -101,8 +104,8 @@ export const insertPruneToolContext = (
         return
     }
 
-    const lastUserMessage = getLastUserMessage(messages)
-    if (!lastUserMessage) {
+    const lastAssistantMessage = getLastAssistantMessage(messages)
+    if (!lastAssistantMessage) {
         return
     }
 
@@ -131,22 +134,25 @@ export const insertPruneToolContext = (
         prunableToolsContent = prunableToolsList + nudgeString
     }
 
-    const userMessage: WithParts = {
+    const assistantInfo = lastAssistantMessage.info as AssistantMessage
+    const assistantMessage: WithParts = {
         info: {
             id: SYNTHETIC_MESSAGE_ID,
-            sessionID: lastUserMessage.info.sessionID,
-            role: "user",
+            sessionID: assistantInfo.sessionID,
+            role: "assistant",
+            parentID: assistantInfo.parentID,
+            modelID: assistantInfo.modelID,
+            providerID: assistantInfo.providerID,
             time: { created: Date.now() },
-            agent: (lastUserMessage.info as UserMessage).agent || "build",
-            model: {
-                providerID: (lastUserMessage.info as UserMessage).model.providerID,
-                modelID: (lastUserMessage.info as UserMessage).model.modelID,
-            },
+            tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+            cost: 0,
+            path: assistantInfo.path,
+            mode: assistantInfo.mode,
         },
         parts: [
             {
                 id: SYNTHETIC_PART_ID,
-                sessionID: lastUserMessage.info.sessionID,
+                sessionID: assistantInfo.sessionID,
                 messageID: SYNTHETIC_MESSAGE_ID,
                 type: "text",
                 text: prunableToolsContent,
@@ -154,7 +160,38 @@ export const insertPruneToolContext = (
         ],
     }
 
-    messages.push(userMessage)
+    messages.push(assistantMessage)
+
+    // For reasoning models, append a synthetic user message to close the assistant turn.
+    if (state.isReasoningModel) {
+        const lastRealUserMessage = getLastUserMessage(messages)
+        const userMessageInfo = lastRealUserMessage?.info as UserMessage | undefined
+
+        const userMessage: WithParts = {
+            info: {
+                id: SYNTHETIC_USER_MESSAGE_ID,
+                sessionID: assistantInfo.sessionID,
+                role: "user",
+                time: { created: Date.now() + 1 },
+                agent: userMessageInfo?.agent ?? "code",
+                model: userMessageInfo?.model ?? {
+                    providerID: assistantInfo.providerID,
+                    modelID: assistantInfo.modelID,
+                },
+            } as UserMessage,
+            parts: [
+                {
+                    id: SYNTHETIC_USER_PART_ID,
+                    sessionID: assistantInfo.sessionID,
+                    messageID: SYNTHETIC_USER_MESSAGE_ID,
+                    type: "text",
+                    text: REASONING_MODEL_USER_MESSAGE_CONTENT,
+                },
+            ],
+        }
+        messages.push(userMessage)
+        logger.debug("Appended synthetic user message for reasoning model")
+    }
 }
 
 export const prune = (

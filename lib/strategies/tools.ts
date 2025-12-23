@@ -32,13 +32,13 @@ async function executePruneOperation(
     ids: string[],
     reason: PruneReason,
     toolName: string,
-    distillation?: Record<string, any>,
+    distillation?: string[],
 ): Promise<string> {
     const { client, state, logger, config, workingDirectory } = ctx
     const sessionId = toolCtx.sessionID
 
     logger.info(`${toolName} tool invoked`)
-    logger.info(JSON.stringify({ ids, reason }))
+    logger.info(JSON.stringify(reason ? { ids, reason } : { ids }))
 
     if (!ids || ids.length === 0) {
         logger.debug(`${toolName} tool called but ids is empty or undefined`)
@@ -171,17 +171,17 @@ export function createExtractTool(ctx: PruneToolContext): ReturnType<typeof tool
                 .array(tool.schema.string())
                 .describe("Numeric IDs as strings to extract from the <prunable-tools> list"),
             distillation: tool.schema
-                .record(tool.schema.string(), tool.schema.any())
+                .array(tool.schema.string())
                 .describe(
-                    "REQUIRED. An object mapping each ID to its distilled findings. Must contain an entry for every ID being pruned.",
+                    "REQUIRED. Array of strings, one per ID (positional: distillation[0] is for ids[0], etc.)",
                 ),
         },
         async execute(args, toolCtx) {
-            if (!args.distillation || Object.keys(args.distillation).length === 0) {
+            if (!args.distillation || args.distillation.length === 0) {
                 ctx.logger.debug(
                     "Extract tool called without distillation: " + JSON.stringify(args),
                 )
-                return 'Missing distillation. You must provide distillation data when using extract. Format: distillation: { "id": { ...findings... } }'
+                return "Missing distillation. You must provide a distillation string for each ID."
             }
 
             // Log the distillation for debugging/analysis

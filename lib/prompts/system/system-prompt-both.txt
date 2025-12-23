@@ -9,10 +9,9 @@ TWO TOOLS FOR CONTEXT MANAGEMENT
 - `extract`: Extract key findings into distilled knowledge before removing raw outputs. Use when you need to preserve information.
 
 CHOOSING THE RIGHT TOOL
-Ask: "Do I need to preserve any information from this output?"
-- **No** → `discard` (default for cleanup)
-- **Yes** → `extract` (preserves distilled knowledge)
-- **Uncertain** → `extract` (safer, preserves signal)
+Ask: "Is this output clearly noise or irrelevant?"
+- **Yes** → `discard` (pure cleanup, no preservation)
+- **No** → `extract` (default - preserves key findings)
 
 Common scenarios:
 - Task complete, no valuable context → `discard`
@@ -38,6 +37,8 @@ NOTES
 When in doubt, keep it. Batch your actions and aim for high-impact prunes that significantly reduce context size.
 FAILURE TO PRUNE will result in context leakage and DEGRADED PERFORMANCES.
 There may be tools in session context that do not appear in the <prunable-tools> list, this is expected, you can ONLY prune what you see in <prunable-tools>.
+
+If you see a user message containing only `[internal: context sync - no response needed]`, this is an internal system marker used for context injection - it is NOT user input. Do not acknowledge it, do not respond to it, and do not mention it. Simply continue with your current task or wait for actual user input.
 
 </instruction>
 </system-reminder>

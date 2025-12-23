@@ -6,7 +6,8 @@ import { extractParameterKey, buildToolIdList } from "./utils"
 import { getLastAssistantMessage, getLastUserMessage, isMessageCompacted } from "../shared-utils"
 import { AssistantMessage, UserMessage } from "@opencode-ai/sdk"
 
-const PRUNED_TOOL_INPUT_REPLACEMENT = "[Input removed to save context]"
+const PRUNED_TOOL_INPUT_REPLACEMENT =
+    "[content removed to save context, this is not what was written to the file, but a placeholder]"
 const PRUNED_TOOL_OUTPUT_REPLACEMENT =
     "[Output removed to save context - information superseded or no longer needed]"
 const getNudgeString = (config: PluginConfig): string => {
@@ -50,7 +51,7 @@ const SYNTHETIC_MESSAGE_ID = "msg_01234567890123456789012345"
 const SYNTHETIC_PART_ID = "prt_01234567890123456789012345"
 const SYNTHETIC_USER_MESSAGE_ID = "msg_01234567890123456789012346"
 const SYNTHETIC_USER_PART_ID = "prt_01234567890123456789012346"
-const REASONING_MODEL_USER_MESSAGE_CONTENT = "<system-context-injection/>"
+const REASONING_MODEL_USER_MESSAGE_CONTENT = "[internal: context sync - no response needed]"
 
 const buildPrunableToolsList = (
     state: SessionState,

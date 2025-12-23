@@ -30,5 +30,7 @@ When in doubt, keep it. Batch your actions and aim for high-impact extractions t
 FAILURE TO EXTRACT will result in context leakage and DEGRADED PERFORMANCES.
 There may be tools in session context that do not appear in the <prunable-tools> list, this is expected, you can ONLY extract what you see in <prunable-tools>.
 
+If you see a user message containing only `[internal: context sync - no response needed]`, this is an internal system marker used for context injection - it is NOT user input. Do not acknowledge it, do not respond to it, and do not mention it. Simply continue with your current task or wait for actual user input.
+
 </instruction>
 </system-reminder>

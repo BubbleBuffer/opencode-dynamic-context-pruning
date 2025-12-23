@@ -50,11 +50,6 @@ const SYNTHETIC_MESSAGE_ID = "msg_01234567890123456789012345"
 const SYNTHETIC_PART_ID = "prt_01234567890123456789012345"
 const SYNTHETIC_USER_MESSAGE_ID = "msg_01234567890123456789012346"
 const SYNTHETIC_USER_PART_ID = "prt_01234567890123456789012346"
-
-// Content for the synthetic user message appended after the assistant message for reasoning models.
-// This is required because reasoning models expect their reasoning parts in assistant messages,
-// and we cannot generate those encrypted/proprietary parts. By closing the assistant turn with
-// a user message, the model sees a complete conversation structure.
 const REASONING_MODEL_USER_MESSAGE_CONTENT = "<system-context-injection/>"
 
 const buildPrunableToolsList = (

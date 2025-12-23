@@ -1,4 +1,5 @@
 import type { Plugin } from "@opencode-ai/plugin"
+import type { Model } from "@opencode-ai/sdk"
 import { getConfig } from "./lib/config"
 import { Logger } from "./lib/logger"
 import { loadPrompt } from "./lib/prompt"
@@ -26,6 +27,22 @@ const plugin: Plugin = (async (ctx) => {
     })
 
     return {
+        "chat.params": async (
+            input: { sessionID: string; agent: string; model: Model; provider: any; message: any },
+            _output: { temperature: number; topP: number; options: Record<string, any> },
+        ) => {
+            const isReasoning = input.model.capabilities?.reasoning ?? false
+            if (state.isReasoningModel !== isReasoning) {
+                logger.info(
+                    `Reasoning model status changed: ${state.isReasoningModel} -> ${isReasoning}`,
+                    {
+                        modelId: input.model.id,
+                        providerId: input.model.providerID,
+                    },
+                )
+            }
+            state.isReasoningModel = isReasoning
+        },
         "experimental.chat.system.transform": async (
             _input: unknown,
             output: { system: string[] },

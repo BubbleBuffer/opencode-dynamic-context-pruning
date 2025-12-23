@@ -34,4 +34,5 @@ export interface SessionState {
     lastToolPrune: boolean
     lastCompaction: number
     currentTurn: number // Current turn count derived from step-start parts
+    isReasoningModel: boolean // Whether the current model has reasoning capabilities
 }

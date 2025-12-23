@@ -48,6 +48,14 @@ Context management was just performed. Do not use the ${toolName} again. A fresh
 
 const SYNTHETIC_MESSAGE_ID = "msg_01234567890123456789012345"
 const SYNTHETIC_PART_ID = "prt_01234567890123456789012345"
+const SYNTHETIC_USER_MESSAGE_ID = "msg_01234567890123456789012346"
+const SYNTHETIC_USER_PART_ID = "prt_01234567890123456789012346"
+
+// Content for the synthetic user message appended after the assistant message for reasoning models.
+// This is required because reasoning models expect their reasoning parts in assistant messages,
+// and we cannot generate those encrypted/proprietary parts. By closing the assistant turn with
+// a user message, the model sees a complete conversation structure.
+const REASONING_MODEL_USER_MESSAGE_CONTENT = "<system-context-injection/>"
 
 const buildPrunableToolsList = (
     state: SessionState,
@@ -158,6 +166,31 @@ export const insertPruneToolContext = (
     }
 
     messages.push(assistantMessage)
+
+    // For reasoning models, append a synthetic user message to close the assistant turn.
+    // This is required because reasoning models expect their reasoning parts in the last
+    // assistant message, which we cannot generate. The user message signals a complete turn.
+    if (state.isReasoningModel) {
+        const userMessage: WithParts = {
+            info: {
+                id: SYNTHETIC_USER_MESSAGE_ID,
+                sessionID: assistantInfo.sessionID,
+                role: "user",
+                time: { created: Date.now() + 1 },
+            } as any, // Using 'as any' because we're creating a minimal synthetic message
+            parts: [
+                {
+                    id: SYNTHETIC_USER_PART_ID,
+                    sessionID: assistantInfo.sessionID,
+                    messageID: SYNTHETIC_USER_MESSAGE_ID,
+                    type: "text",
+                    text: REASONING_MODEL_USER_MESSAGE_CONTENT,
+                },
+            ],
+        }
+        messages.push(userMessage)
+        logger.debug("Appended synthetic user message for reasoning model")
+    }
 }
 
 export const prune = (

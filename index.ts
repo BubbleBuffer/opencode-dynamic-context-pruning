@@ -1,9 +1,10 @@
 import type { Plugin } from "@opencode-ai/plugin"
+import type { Model } from "@opencode-ai/sdk"
 import { getConfig } from "./lib/config"
 import { Logger } from "./lib/logger"
 import { loadPrompt } from "./lib/prompt"
 import { createSessionState } from "./lib/state"
-import { createPruneTool } from "./lib/strategies"
+import { createDiscardTool, createExtractTool } from "./lib/strategies"
 import { createChatMessageTransformHandler, createEventHandler } from "./lib/hooks"
 
 const plugin: Plugin = (async (ctx) => {
@@ -14,49 +15,97 @@ const plugin: Plugin = (async (ctx) => {
     }
 
     // Suppress AI SDK warnings
-    if (typeof globalThis !== 'undefined') {
-        (globalThis as any).AI_SDK_LOG_WARNINGS = false
+    if (typeof globalThis !== "undefined") {
+        ;(globalThis as any).AI_SDK_LOG_WARNINGS = false
     }
 
-    // Initialize core components
     const logger = new Logger(config.debug)
     const state = createSessionState()
 
-    // Log initialization
     logger.info("DCP initialized", {
         strategies: config.strategies,
     })
 
     return {
-        "experimental.chat.system.transform": async (_input: unknown, output: { system: string[] }) => {
-            const syntheticPrompt = loadPrompt("synthetic")
+        "chat.params": async (
+            input: { sessionID: string; agent: string; model: Model; provider: any; message: any },
+            _output: { temperature: number; topP: number; options: Record<string, any> },
+        ) => {
+            const isReasoning = input.model.capabilities?.reasoning ?? false
+            if (state.isReasoningModel !== isReasoning) {
+                logger.info(
+                    `Reasoning model status changed: ${state.isReasoningModel} -> ${isReasoning}`,
+                    {
+                        modelId: input.model.id,
+                        providerId: input.model.providerID,
+                    },
+                )
+            }
+            state.isReasoningModel = isReasoning
+        },
+        "experimental.chat.system.transform": async (
+            _input: unknown,
+            output: { system: string[] },
+        ) => {
+            const discardEnabled = config.tools.discard.enabled
+            const extractEnabled = config.tools.extract.enabled
+
+            let promptName: string
+            if (discardEnabled && extractEnabled) {
+                promptName = "system/system-prompt-both"
+            } else if (discardEnabled) {
+                promptName = "system/system-prompt-discard"
+            } else if (extractEnabled) {
+                promptName = "system/system-prompt-extract"
+            } else {
+                return
+            }
+
+            const syntheticPrompt = loadPrompt(promptName)
             output.system.push(syntheticPrompt)
         },
         "experimental.chat.messages.transform": createChatMessageTransformHandler(
             ctx.client,
             state,
             logger,
-            config
+            config,
         ),
-        tool: config.strategies.pruneTool.enabled ? {
-            prune: createPruneTool({
-                client: ctx.client,
-                state,
-                logger,
-                config,
-                workingDirectory: ctx.directory
+        tool: {
+            ...(config.tools.discard.enabled && {
+                discard: createDiscardTool({
+                    client: ctx.client,
+                    state,
+                    logger,
+                    config,
+                    workingDirectory: ctx.directory,
+                }),
             }),
-        } : undefined,
+            ...(config.tools.extract.enabled && {
+                extract: createExtractTool({
+                    client: ctx.client,
+                    state,
+                    logger,
+                    config,
+                    workingDirectory: ctx.directory,
+                }),
+            }),
+        },
         config: async (opencodeConfig) => {
-            // Add prune to primary_tools by mutating the opencode config
+            // Add enabled tools to primary_tools by mutating the opencode config
             // This works because config is cached and passed by reference
-            if (config.strategies.pruneTool.enabled) {
+            const toolsToAdd: string[] = []
+            if (config.tools.discard.enabled) toolsToAdd.push("discard")
+            if (config.tools.extract.enabled) toolsToAdd.push("extract")
+
+            if (toolsToAdd.length > 0) {
                 const existingPrimaryTools = opencodeConfig.experimental?.primary_tools ?? []
                 opencodeConfig.experimental = {
                     ...opencodeConfig.experimental,
-                    primary_tools: [...existingPrimaryTools, "prune"],
+                    primary_tools: [...existingPrimaryTools, ...toolsToAdd],
                 }
-                logger.info("Added 'prune' to experimental.primary_tools via config mutation")
+                logger.info(
+                    `Added ${toolsToAdd.map((t) => `'${t}'`).join(" and ")} to experimental.primary_tools via config mutation`,
+                )
             }
         },
         event: createEventHandler(ctx.client, config, state, logger, ctx.directory),

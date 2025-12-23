@@ -18,6 +18,7 @@ export async function syncToolCache(
         logger.info("Syncing tool parameters from OpenCode messages")
 
         state.nudgeCounter = 0
+        let turnCounter = 0
 
         for (const msg of messages) {
             if (isMessageCompacted(state, msg)) {
@@ -25,37 +26,58 @@ export async function syncToolCache(
             }
 
             for (const part of msg.parts) {
+                if (part.type === "step-start") {
+                    turnCounter++
+                    continue
+                }
+
                 if (part.type !== "tool" || !part.callID) {
                     continue
                 }
+
+                const turnProtectionEnabled = config.turnProtection.enabled
+                const turnProtectionTurns = config.turnProtection.turns
+                const isProtectedByTurn =
+                    turnProtectionEnabled &&
+                    turnProtectionTurns > 0 &&
+                    state.currentTurn - turnCounter < turnProtectionTurns
+
+                state.lastToolPrune = part.tool === "discard" || part.tool === "extract"
+
+                const allProtectedTools = config.tools.settings.protectedTools
+
+                if (part.tool === "discard" || part.tool === "extract") {
+                    state.nudgeCounter = 0
+                } else if (!allProtectedTools.includes(part.tool) && !isProtectedByTurn) {
+                    state.nudgeCounter++
+                }
+
                 if (state.toolParameters.has(part.callID)) {
                     continue
                 }
 
-                if (part.tool === "prune") {
-                    state.nudgeCounter = 0
-                } else if (!config.strategies.pruneTool.protectedTools.includes(part.tool)) {
-                    state.nudgeCounter++
+                if (isProtectedByTurn) {
+                    continue
                 }
-                state.lastToolPrune = part.tool === "prune"
 
-                state.toolParameters.set(
-                    part.callID,
-                    {
-                        tool: part.tool,
-                        parameters: part.state?.input ?? {},
-                        status: part.state.status as ToolStatus | undefined,
-                        error: part.state.status === "error" ? part.state.error : undefined,
-                    }
-                )
-                logger.info("Cached tool id: " + part.callID)
+                state.toolParameters.set(part.callID, {
+                    tool: part.tool,
+                    parameters: part.state?.input ?? {},
+                    status: part.state.status as ToolStatus | undefined,
+                    error: part.state.status === "error" ? part.state.error : undefined,
+                    turn: turnCounter,
+                })
+                logger.info(`Cached tool id: ${part.callID} (created on turn ${turnCounter})`)
             }
         }
-        logger.info("Synced cache - size: " + state.toolParameters.size)
+
+        logger.info(
+            `Synced cache - size: ${state.toolParameters.size}, currentTurn: ${state.currentTurn}, nudgeCounter: ${state.nudgeCounter}`,
+        )
         trimToolParametersCache(state)
     } catch (error) {
         logger.warn("Failed to sync tool parameters from OpenCode", {
-            error: error instanceof Error ? error.message : String(error)
+            error: error instanceof Error ? error.message : String(error),
         })
     }
 }
@@ -69,8 +91,10 @@ export function trimToolParametersCache(state: SessionState): void {
         return
     }
 
-    const keysToRemove = Array.from(state.toolParameters.keys())
-        .slice(0, state.toolParameters.size - MAX_TOOL_CACHE_SIZE)
+    const keysToRemove = Array.from(state.toolParameters.keys()).slice(
+        0,
+        state.toolParameters.size - MAX_TOOL_CACHE_SIZE,
+    )
 
     for (const key of keysToRemove) {
         state.toolParameters.delete(key)

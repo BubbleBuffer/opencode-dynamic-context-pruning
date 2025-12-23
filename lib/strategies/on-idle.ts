@@ -21,7 +21,7 @@ export interface OnIdleResult {
 function parseMessages(
     state: SessionState,
     messages: WithParts[],
-    toolParametersCache: Map<string, ToolParameterEntry>
+    toolParametersCache: Map<string, ToolParameterEntry>,
 ): {
     toolCallIds: string[]
     toolMetadata: Map<string, ToolParameterEntry>
@@ -45,7 +45,8 @@ function parseMessages(
                         tool: part.tool,
                         parameters: parameters,
                         status: part.state?.status,
-                        error: part.state?.status === "error" ? part.state.error : undefined
+                        error: part.state?.status === "error" ? part.state.error : undefined,
+                        turn: cachedData?.turn ?? 0,
                     })
                 }
             }
@@ -63,26 +64,28 @@ function replacePrunedToolOutputs(messages: WithParts[], prunedIds: string[]): W
 
     const prunedIdsSet = new Set(prunedIds)
 
-    return messages.map(msg => {
+    return messages.map((msg) => {
         if (!msg.parts) return msg
 
         return {
             ...msg,
             parts: msg.parts.map((part: any) => {
-                if (part.type === 'tool' &&
+                if (
+                    part.type === "tool" &&
                     part.callID &&
                     prunedIdsSet.has(part.callID) &&
-                    part.state?.output) {
+                    part.state?.output
+                ) {
                     return {
                         ...part,
                         state: {
                             ...part.state,
-                            output: '[Output removed to save context - information superseded or no longer needed]'
-                        }
+                            output: "[Output removed to save context - information superseded or no longer needed]",
+                        },
                     }
                 }
                 return part
-            })
+            }),
         }
     }) as WithParts[]
 }
@@ -99,10 +102,10 @@ async function runLlmAnalysis(
     unprunedToolCallIds: string[],
     alreadyPrunedIds: string[],
     toolMetadata: Map<string, ToolParameterEntry>,
-    workingDirectory?: string
+    workingDirectory?: string,
 ): Promise<string[]> {
     const protectedToolCallIds: string[] = []
-    const prunableToolCallIds = unprunedToolCallIds.filter(id => {
+    const prunableToolCallIds = unprunedToolCallIds.filter((id) => {
         const metadata = toolMetadata.get(id)
         if (metadata && config.strategies.onIdle.protectedTools.includes(metadata.tool)) {
             protectedToolCallIds.push(id)
@@ -123,7 +126,7 @@ async function runLlmAnalysis(
         if (model?.providerID && model?.modelID) {
             validModelInfo = {
                 providerID: model.providerID,
-                modelID: model.modelID
+                modelID: model.modelID,
             }
         }
     }
@@ -132,15 +135,19 @@ async function runLlmAnalysis(
         validModelInfo,
         logger,
         config.strategies.onIdle.model,
-        workingDirectory
+        workingDirectory,
     )
 
-    logger.info(`OnIdle Model: ${modelSelection.modelInfo.providerID}/${modelSelection.modelInfo.modelID}`, {
-        source: modelSelection.source
-    })
+    logger.info(
+        `OnIdle Model: ${modelSelection.modelInfo.providerID}/${modelSelection.modelInfo.modelID}`,
+        {
+            source: modelSelection.source,
+        },
+    )
 
     if (modelSelection.failedModel && config.strategies.onIdle.showModelErrorToasts) {
-        const skipAi = modelSelection.source === 'fallback' && config.strategies.onIdle.strictModelSelection
+        const skipAi =
+            modelSelection.source === "fallback" && config.strategies.onIdle.strictModelSelection
         try {
             await client.tui.showToast({
                 body: {
@@ -149,20 +156,20 @@ async function runLlmAnalysis(
                         ? `${modelSelection.failedModel.providerID}/${modelSelection.failedModel.modelID} failed\nAI analysis skipped (strictModelSelection enabled)`
                         : `${modelSelection.failedModel.providerID}/${modelSelection.failedModel.modelID} failed\nUsing ${modelSelection.modelInfo.providerID}/${modelSelection.modelInfo.modelID}`,
                     variant: "info",
-                    duration: 5000
-                }
+                    duration: 5000,
+                },
             })
         } catch {
             // Ignore toast errors
         }
     }
 
-    if (modelSelection.source === 'fallback' && config.strategies.onIdle.strictModelSelection) {
+    if (modelSelection.source === "fallback" && config.strategies.onIdle.strictModelSelection) {
         logger.info("Skipping AI analysis (fallback model, strictModelSelection enabled)")
         return []
     }
 
-    const { generateObject } = await import('ai')
+    const { generateObject } = await import("ai")
 
     const sanitizedMessages = replacePrunedToolOutputs(messages, alreadyPrunedIds)
 
@@ -170,7 +177,7 @@ async function runLlmAnalysis(
         prunableToolCallIds,
         sanitizedMessages,
         alreadyPrunedIds,
-        protectedToolCallIds
+        protectedToolCallIds,
     )
 
     const result = await generateObject({
@@ -179,19 +186,17 @@ async function runLlmAnalysis(
             pruned_tool_call_ids: z.array(z.string()),
             reasoning: z.string(),
         }),
-        prompt: analysisPrompt
+        prompt: analysisPrompt,
     })
 
     const rawLlmPrunedIds = result.object.pruned_tool_call_ids
-    const llmPrunedIds = rawLlmPrunedIds.filter(id =>
-        prunableToolCallIds.includes(id)
-    )
+    const llmPrunedIds = rawLlmPrunedIds.filter((id) => prunableToolCallIds.includes(id))
 
     // Always log LLM output as debug
-    const reasoning = result.object.reasoning.replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim()
+    const reasoning = result.object.reasoning.replace(/\n+/g, " ").replace(/\s+/g, " ").trim()
     logger.debug(`OnIdle LLM output`, {
         pruned_tool_call_ids: rawLlmPrunedIds,
-        reasoning: reasoning
+        reasoning: reasoning,
     })
 
     return llmPrunedIds
@@ -206,7 +211,7 @@ export async function runOnIdle(
     state: SessionState,
     logger: Logger,
     config: PluginConfig,
-    workingDirectory?: string
+    workingDirectory?: string,
 ): Promise<void | null> {
     try {
         if (!state.sessionId) {
@@ -218,7 +223,7 @@ export async function runOnIdle(
         // Fetch session info and messages
         const [sessionInfoResponse, messagesResponse] = await Promise.all([
             client.session.get({ path: { id: sessionId } }),
-            client.session.messages({ path: { id: sessionId }})
+            client.session.messages({ path: { id: sessionId } }),
         ])
 
         const sessionInfo = sessionInfoResponse.data
@@ -232,14 +237,14 @@ export async function runOnIdle(
         const { toolCallIds, toolMetadata } = parseMessages(state, messages, state.toolParameters)
 
         const alreadyPrunedIds = state.prune.toolIds
-        const unprunedToolCallIds = toolCallIds.filter(id => !alreadyPrunedIds.includes(id))
+        const unprunedToolCallIds = toolCallIds.filter((id) => !alreadyPrunedIds.includes(id))
 
         if (unprunedToolCallIds.length === 0) {
             return null
         }
 
         // Count prunable tools (excluding protected)
-        const candidateCount = unprunedToolCallIds.filter(id => {
+        const candidateCount = unprunedToolCallIds.filter((id) => {
             const metadata = toolMetadata.get(id)
             return !metadata || !config.strategies.onIdle.protectedTools.includes(metadata.tool)
         }).length
@@ -258,10 +263,10 @@ export async function runOnIdle(
             unprunedToolCallIds,
             alreadyPrunedIds,
             toolMetadata,
-            workingDirectory
+            workingDirectory,
         )
 
-        const newlyPrunedIds = llmPrunedIds.filter(id => !alreadyPrunedIds.includes(id))
+        const newlyPrunedIds = llmPrunedIds.filter((id) => !alreadyPrunedIds.includes(id))
 
         if (newlyPrunedIds.length === 0) {
             return null
@@ -270,7 +275,7 @@ export async function runOnIdle(
         // Log the tool IDs being pruned with their tool names
         for (const id of newlyPrunedIds) {
             const metadata = toolMetadata.get(id)
-            const toolName = metadata?.tool || 'unknown'
+            const toolName = metadata?.tool || "unknown"
             logger.info(`OnIdle pruning tool: ${toolName}`, { callID: id })
         }
 
@@ -300,7 +305,7 @@ export async function runOnIdle(
             prunedToolMetadata,
             undefined, // reason
             currentParams,
-            workingDirectory || ""
+            workingDirectory || "",
         )
 
         state.stats.totalPruneTokens += state.stats.pruneTokenCounter
@@ -310,7 +315,7 @@ export async function runOnIdle(
 
         // Persist state
         const sessionName = sessionInfo?.title
-        saveSessionState(state, logger, sessionName).catch(err => {
+        saveSessionState(state, logger, sessionName).catch((err) => {
             logger.error("Failed to persist state", { error: err.message })
         })
 

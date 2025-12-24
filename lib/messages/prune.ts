@@ -142,14 +142,12 @@ export const insertPruneToolContext = (
     }
 
     if (isReasoningModel) {
-        // Reasoning models: inject as user message
         const lastUserMessage = getLastUserMessage(messages)
         if (!lastUserMessage) {
             return
         }
         messages.push(createSyntheticUserMessage(lastUserMessage, prunableToolsContent))
     } else {
-        // Non-reasoning models: inject as assistant message
         const lastAssistantMessage = getLastAssistantMessage(messages)
         if (!lastAssistantMessage) {
             return
@@ -181,7 +179,6 @@ const pruneToolOutputs = (state: SessionState, logger: Logger, messages: WithPar
             if (!state.prune.toolIds.includes(part.callID)) {
                 continue
             }
-            // Skip write and edit tools - their inputs are pruned instead
             if (part.tool === "write" || part.tool === "edit") {
                 continue
             }
@@ -201,16 +198,13 @@ const pruneToolInputs = (state: SessionState, logger: Logger, messages: WithPart
             if (!state.prune.toolIds.includes(part.callID)) {
                 continue
             }
-            // Only prune inputs for write and edit tools
             if (part.tool !== "write" && part.tool !== "edit") {
                 continue
             }
-            // Don't prune yet if tool is still pending or running
             if (part.state.status === "pending" || part.state.status === "running") {
                 continue
             }
 
-            // Write tool has content field, edit tool has oldString/newString fields
             if (part.tool === "write" && part.state.input?.content !== undefined) {
                 part.state.input.content = PRUNED_TOOL_INPUT_REPLACEMENT
             }

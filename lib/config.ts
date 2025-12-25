@@ -42,6 +42,12 @@ export interface SupersedeWrites {
     enabled: boolean
 }
 
+export interface PurgeErrors {
+    enabled: boolean
+    turns: number
+    protectedTools: string[]
+}
+
 export interface TurnProtection {
     enabled: boolean
     turns: number
@@ -55,8 +61,9 @@ export interface PluginConfig {
     tools: Tools
     strategies: {
         deduplication: Deduplication
-        onIdle: OnIdle
         supersedeWrites: SupersedeWrites
+        purgeErrors: PurgeErrors
+        onIdle: OnIdle
     }
 }
 
@@ -90,6 +97,11 @@ export const VALID_CONFIG_KEYS = new Set([
     // strategies.supersedeWrites
     "strategies.supersedeWrites",
     "strategies.supersedeWrites.enabled",
+    // strategies.purgeErrors
+    "strategies.purgeErrors",
+    "strategies.purgeErrors.enabled",
+    "strategies.purgeErrors.turns",
+    "strategies.purgeErrors.protectedTools",
     // strategies.onIdle
     "strategies.onIdle",
     "strategies.onIdle.enabled",
@@ -327,6 +339,40 @@ function validateConfigTypes(config: Record<string, any>): ValidationError[] {
                 })
             }
         }
+
+        // purgeErrors
+        if (strategies.purgeErrors) {
+            if (
+                strategies.purgeErrors.enabled !== undefined &&
+                typeof strategies.purgeErrors.enabled !== "boolean"
+            ) {
+                errors.push({
+                    key: "strategies.purgeErrors.enabled",
+                    expected: "boolean",
+                    actual: typeof strategies.purgeErrors.enabled,
+                })
+            }
+            if (
+                strategies.purgeErrors.turns !== undefined &&
+                typeof strategies.purgeErrors.turns !== "number"
+            ) {
+                errors.push({
+                    key: "strategies.purgeErrors.turns",
+                    expected: "number",
+                    actual: typeof strategies.purgeErrors.turns,
+                })
+            }
+            if (
+                strategies.purgeErrors.protectedTools !== undefined &&
+                !Array.isArray(strategies.purgeErrors.protectedTools)
+            ) {
+                errors.push({
+                    key: "strategies.purgeErrors.protectedTools",
+                    expected: "string[]",
+                    actual: typeof strategies.purgeErrors.protectedTools,
+                })
+            }
+        }
     }
 
     return errors
@@ -407,6 +453,11 @@ const defaultConfig: PluginConfig = {
         },
         supersedeWrites: {
             enabled: true,
+        },
+        purgeErrors: {
+            enabled: true,
+            turns: 4,
+            protectedTools: [...DEFAULT_PROTECTED_TOOLS],
         },
         onIdle: {
             enabled: false,
@@ -529,6 +580,14 @@ function createDefaultConfig(): void {
     "supersedeWrites": {
       "enabled": true
     },
+    // Prune tool inputs for errored tools after X turns
+    "purgeErrors": {
+      "enabled": true,
+      // Number of turns before errored tool inputs are pruned
+      "turns": 4,
+      // Additional tools to protect from pruning
+      "protectedTools": []
+    },
     // (Legacy) Run an LLM to analyze what tool calls are no longer relevant on idle
     "onIdle": {
       "enabled": false,
@@ -588,6 +647,19 @@ function mergeStrategies(
                 ]),
             ],
         },
+        supersedeWrites: {
+            enabled: override.supersedeWrites?.enabled ?? base.supersedeWrites.enabled,
+        },
+        purgeErrors: {
+            enabled: override.purgeErrors?.enabled ?? base.purgeErrors.enabled,
+            turns: override.purgeErrors?.turns ?? base.purgeErrors.turns,
+            protectedTools: [
+                ...new Set([
+                    ...base.purgeErrors.protectedTools,
+                    ...(override.purgeErrors?.protectedTools ?? []),
+                ]),
+            ],
+        },
         onIdle: {
             enabled: override.onIdle?.enabled ?? base.onIdle.enabled,
             model: override.onIdle?.model ?? base.onIdle.model,
@@ -601,9 +673,6 @@ function mergeStrategies(
                     ...(override.onIdle?.protectedTools ?? []),
                 ]),
             ],
-        },
-        supersedeWrites: {
-            enabled: override.supersedeWrites?.enabled ?? base.supersedeWrites.enabled,
         },
     }
 }
@@ -652,12 +721,16 @@ function deepCloneConfig(config: PluginConfig): PluginConfig {
                 ...config.strategies.deduplication,
                 protectedTools: [...config.strategies.deduplication.protectedTools],
             },
+            supersedeWrites: {
+                ...config.strategies.supersedeWrites,
+            },
+            purgeErrors: {
+                ...config.strategies.purgeErrors,
+                protectedTools: [...config.strategies.purgeErrors.protectedTools],
+            },
             onIdle: {
                 ...config.strategies.onIdle,
                 protectedTools: [...config.strategies.onIdle.protectedTools],
-            },
-            supersedeWrites: {
-                ...config.strategies.supersedeWrites,
             },
         },
     }

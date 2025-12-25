@@ -19,7 +19,7 @@ Add to your OpenCode config:
 
 Using `@latest` ensures you always get the newest version automatically when OpenCode starts.
 
-> **Note:** If you use OAuth plugins (e.g., for GitHub or other services), place this plugin last in your `plugin` array to avoid interfering with their authentication flows.
+> **Note:** If you use OAuth plugins (e.g., for Google or other services), place this plugin last in your `plugin` array to avoid interfering with their authentication flows.
 
 Restart OpenCode. The plugin will automatically start optimizing your sessions.
 

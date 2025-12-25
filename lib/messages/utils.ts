@@ -137,6 +137,9 @@ export const extractParameterKey = (tool: string, parameters: any): string => {
     if (tool === "task" && parameters.description) {
         return parameters.description
     }
+    if (tool === "skill" && parameters.name) {
+        return parameters.name
+    }
 
     const paramStr = JSON.stringify(parameters)
     if (paramStr === "{}" || paramStr === "[]" || paramStr === "null") {

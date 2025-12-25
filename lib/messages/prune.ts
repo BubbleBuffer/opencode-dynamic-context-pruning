@@ -14,7 +14,7 @@ const PRUNED_TOOL_INPUT_REPLACEMENT =
     "[content removed to save context, this is not what was written to the file, but a placeholder]"
 const PRUNED_TOOL_OUTPUT_REPLACEMENT =
     "[Output removed to save context - information superseded or no longer needed]"
-const PRUNED_TOOL_ERROR_INPUT_REPLACEMENT = "[input removed - see error message for details]"
+const PRUNED_TOOL_ERROR_INPUT_REPLACEMENT = "[input removed due to failed tool call]"
 
 const getNudgeString = (config: PluginConfig, isReasoningModel: boolean): string => {
     const discardEnabled = config.tools.discard.enabled

@@ -43,6 +43,10 @@ const pruneToolOutputs = (state: SessionState, logger: Logger, messages: WithPar
     }
 }
 
+// NOTE: This function is currently unused because "write" and "edit" are protected by default.
+// Some models incorrectly use PRUNED_TOOL_INPUT_REPLACEMENT in their output when they see it in context.
+// See: https://github.com/Opencode-DCP/opencode-dynamic-context-pruning/issues/215
+// Keeping this function in case the bug is resolved in the future.
 const pruneToolInputs = (state: SessionState, logger: Logger, messages: WithParts[]): void => {
     for (const msg of messages) {
         if (isMessageCompacted(state, msg)) {

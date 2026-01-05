@@ -58,7 +58,16 @@ export interface PluginConfig {
     }
 }
 
-const DEFAULT_PROTECTED_TOOLS = ["task", "todowrite", "todoread", "discard", "extract", "batch"]
+const DEFAULT_PROTECTED_TOOLS = [
+    "task",
+    "todowrite",
+    "todoread",
+    "discard",
+    "extract",
+    "batch",
+    "write",
+    "edit",
+]
 
 // Valid config keys for validation against user config
 export const VALID_CONFIG_KEYS = new Set([
@@ -382,7 +391,7 @@ const defaultConfig: PluginConfig = {
             protectedTools: [...DEFAULT_PROTECTED_TOOLS],
         },
         supersedeWrites: {
-            enabled: true,
+            enabled: false,
         },
         purgeErrors: {
             enabled: true,
@@ -502,7 +511,7 @@ function createDefaultConfig(): void {
     },
     // Prune write tool inputs when the file has been subsequently read
     "supersedeWrites": {
-      "enabled": true
+      "enabled": false
     },
     // Prune tool inputs for errored tools after X turns
     "purgeErrors": {

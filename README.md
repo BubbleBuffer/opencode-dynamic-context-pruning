@@ -106,7 +106,7 @@ DCP uses its own config file:
         },
         // Prune write tool inputs when the file has been subsequently read
         "supersedeWrites": {
-            "enabled": true,
+            "enabled": false,
         },
         // Prune tool inputs for errored tools after X turns
         "purgeErrors": {
@@ -129,7 +129,7 @@ When enabled, turn protection prevents tool outputs from being pruned for a conf
 ### Protected Tools
 
 By default, these tools are always protected from pruning across all strategies:
-`task`, `todowrite`, `todoread`, `discard`, `extract`, `batch`
+`task`, `todowrite`, `todoread`, `discard`, `extract`, `batch`, `write`, `edit`
 
 The `protectedTools` arrays in each section add to this default list.
 

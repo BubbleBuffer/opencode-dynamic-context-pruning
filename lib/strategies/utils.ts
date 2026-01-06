@@ -17,7 +17,12 @@ export function getCurrentParams(
     const userMsg = getLastUserMessage(messages)
     if (!userMsg) {
         logger.debug("No user message found when determining current params")
-        return { providerId: undefined, modelId: undefined, agent: undefined, variant: state.variant }
+        return {
+            providerId: undefined,
+            modelId: undefined,
+            agent: undefined,
+            variant: state.variant,
+        }
     }
     const userInfo = userMsg.info as UserMessage
     const agent: string = userInfo.agent

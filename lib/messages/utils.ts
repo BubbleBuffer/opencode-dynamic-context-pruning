@@ -6,7 +6,7 @@ import type { UserMessage } from "@opencode-ai/sdk"
 const SYNTHETIC_MESSAGE_ID = "msg_01234567890123456789012345"
 const SYNTHETIC_PART_ID = "prt_01234567890123456789012345"
 
-export const createSyntheticUserMessage = (baseMessage: WithParts, content: string): WithParts => {
+export const createSyntheticUserMessage = (baseMessage: WithParts, content: string, variant?: string): WithParts => {
     const userInfo = baseMessage.info as UserMessage
     return {
         info: {
@@ -19,6 +19,8 @@ export const createSyntheticUserMessage = (baseMessage: WithParts, content: stri
                 providerID: userInfo.model.providerID,
                 modelID: userInfo.model.modelID,
             },
+            // @opencode-ai/sdk doesn't yet ship a variant type
+            ...(variant !== undefined && { variant }),
         },
         parts: [
             {

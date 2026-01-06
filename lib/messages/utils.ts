@@ -12,7 +12,6 @@ export const createSyntheticUserMessage = (
     variant?: string,
 ): WithParts => {
     const userInfo = baseMessage.info as UserMessage
-    const variant = (userInfo as any).variant
     return {
         info: {
             id: SYNTHETIC_MESSAGE_ID,

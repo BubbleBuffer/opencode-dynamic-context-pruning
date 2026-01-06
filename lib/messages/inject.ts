@@ -3,7 +3,7 @@ import type { Logger } from "../logger"
 import type { PluginConfig } from "../config"
 import { loadPrompt } from "../prompts"
 import { extractParameterKey, buildToolIdList, createSyntheticUserMessage } from "./utils"
-import { getLastUserMessage, findUserVariant } from "../shared-utils"
+import { getLastUserMessage } from "../shared-utils"
 
 const getNudgeString = (config: PluginConfig): string => {
     const discardEnabled = config.tools.discard.enabled
@@ -125,6 +125,6 @@ export const insertPruneToolContext = (
     if (!lastUserMessage) {
         return
     }
-    const variant = findUserVariant(messages)
-    messages.push(createSyntheticUserMessage(lastUserMessage, prunableToolsContent, variant))
+    // Use cached variant from state (set by chat.message hook)
+    messages.push(createSyntheticUserMessage(lastUserMessage, prunableToolsContent, state.variant))
 }

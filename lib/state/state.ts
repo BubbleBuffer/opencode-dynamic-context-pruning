@@ -43,7 +43,6 @@ export function createSessionState(): SessionState {
     return {
         sessionId: null,
         isSubAgent: false,
-        isInternalAgent: false,
         prune: {
             toolIds: [],
         },
@@ -63,7 +62,6 @@ export function createSessionState(): SessionState {
 export function resetSessionState(state: SessionState): void {
     state.sessionId = null
     state.isSubAgent = false
-    state.isInternalAgent = false
     state.prune = {
         toolIds: [],
     }

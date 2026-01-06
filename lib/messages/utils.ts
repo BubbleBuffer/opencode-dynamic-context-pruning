@@ -12,6 +12,7 @@ export const createSyntheticUserMessage = (
     variant?: string,
 ): WithParts => {
     const userInfo = baseMessage.info as UserMessage
+    const variant = (userInfo as any).variant
     return {
         info: {
             id: SYNTHETIC_MESSAGE_ID,
@@ -23,7 +24,6 @@ export const createSyntheticUserMessage = (
                 providerID: userInfo.model.providerID,
                 modelID: userInfo.model.modelID,
             },
-            // variant is passed from state.variant (cached by chat.message hook)
             ...(variant !== undefined && { variant }),
         },
         parts: [

@@ -19,11 +19,11 @@ export function getCurrentParams(
         logger.debug("No user message found when determining current params")
         return { providerId: undefined, modelId: undefined, agent: undefined, variant: state.variant }
     }
-    const agent: string = (userMsg.info as UserMessage).agent
-    const providerId: string | undefined = (userMsg.info as UserMessage).model.providerID
-    const modelId: string | undefined = (userMsg.info as UserMessage).model.modelID
-    // Use cached variant from state (set by chat.message hook)
-    const variant: string | undefined = state.variant
+    const userInfo = userMsg.info as UserMessage
+    const agent: string = userInfo.agent
+    const providerId: string | undefined = userInfo.model.providerID
+    const modelId: string | undefined = userInfo.model.modelID
+    const variant: string | undefined = state.variant ?? userInfo.variant
 
     return { providerId, modelId, agent, variant }
 }

@@ -75,6 +75,9 @@ DCP uses its own config file:
         "enabled": false,
         "turns": 4,
     },
+    // Protect file operations from pruning via glob patterns
+    // Patterns match tool parameters.filePath (e.g. read/write/edit)
+    "protectedFilePatterns": [],
     // LLM-driven context pruning tools
     "tools": {
         // Shared settings for all prune tools

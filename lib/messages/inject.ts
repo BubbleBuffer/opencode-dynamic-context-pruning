@@ -4,6 +4,7 @@ import type { PluginConfig } from "../config"
 import type { UserMessage } from "@opencode-ai/sdk/v2"
 import { loadPrompt } from "../prompts"
 import { extractParameterKey, buildToolIdList, createSyntheticUserMessage } from "./utils"
+import { getFilePathFromParameters, isProtectedFilePath } from "../protected-file-patterns"
 import { getLastUserMessage } from "../shared-utils"
 
 const getNudgeString = (config: PluginConfig): string => {
@@ -59,6 +60,11 @@ const buildPrunableToolsList = (
 
         const allProtectedTools = config.tools.settings.protectedTools
         if (allProtectedTools.includes(toolParameterEntry.tool)) {
+            return
+        }
+
+        const filePath = getFilePathFromParameters(toolParameterEntry.parameters)
+        if (isProtectedFilePath(filePath, config.protectedFilePatterns)) {
             return
         }
 

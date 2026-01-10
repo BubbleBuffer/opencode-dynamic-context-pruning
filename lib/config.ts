@@ -488,6 +488,7 @@ function createDefaultConfig(): void {
     }
 
     const configContent = `{
+  "$schema": "https://raw.githubusercontent.com/Opencode-DCP/opencode-dynamic-context-pruning/main/dcp.schema.json",
   // Enable or disable the plugin
   "enabled": true,
   // Enable debug logging to ~/.config/opencode/logs/dcp/

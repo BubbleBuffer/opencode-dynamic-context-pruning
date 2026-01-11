@@ -73,6 +73,7 @@ const DEFAULT_PROTECTED_TOOLS = [
 // Valid config keys for validation against user config
 export const VALID_CONFIG_KEYS = new Set([
     // Top-level keys
+    "$schema",
     "enabled",
     "debug",
     "showUpdateToasts", // Deprecated but kept for backwards compatibility
@@ -488,7 +489,7 @@ function createDefaultConfig(): void {
     }
 
     const configContent = `{
-  "$schema": "https://raw.githubusercontent.com/Opencode-DCP/opencode-dynamic-context-pruning/main/dcp.schema.json",
+  "$schema": "https://raw.githubusercontent.com/Opencode-DCP/opencode-dynamic-context-pruning/master/dcp.schema.json",
   // Enable or disable the plugin
   "enabled": true,
   // Enable debug logging to ~/.config/opencode/logs/dcp/

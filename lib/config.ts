@@ -73,6 +73,7 @@ const DEFAULT_PROTECTED_TOOLS = [
 // Valid config keys for validation against user config
 export const VALID_CONFIG_KEYS = new Set([
     // Top-level keys
+    "$schema",
     "enabled",
     "debug",
     "showUpdateToasts", // Deprecated but kept for backwards compatibility

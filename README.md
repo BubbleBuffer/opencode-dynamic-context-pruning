@@ -144,6 +144,10 @@ Each level overrides the previous, so project settings take priority over config
 
 Restart OpenCode after making config changes.
 
+## Limitations
+
+**Subagents** — DCP is disabled for subagents. Subagents are not designed to be token efficient; what matters is that the final message returned to the main agent is a concise summary of findings. DCP's pruning could interfere with this summarization behavior.
+
 ## License
 
 MIT

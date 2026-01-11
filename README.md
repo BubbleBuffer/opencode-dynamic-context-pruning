@@ -64,6 +64,7 @@ DCP uses its own config file:
 
 ```jsonc
 {
+    "$schema": "https://raw.githubusercontent.com/Opencode-DCP/opencode-dynamic-context-pruning/master/dcp.schema.json",
     // Enable or disable the plugin
     "enabled": true,
     // Enable debug logging to ~/.config/opencode/logs/dcp/

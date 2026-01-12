@@ -3,7 +3,11 @@ import type { Logger } from "../logger"
 import type { PluginConfig } from "../config"
 import type { UserMessage } from "@opencode-ai/sdk/v2"
 import { loadPrompt } from "../prompts"
-import { extractParameterKey, buildToolIdList, createSyntheticUserMessage } from "./utils"
+import {
+    extractParameterKey,
+    buildToolIdList,
+    createSyntheticAssistantMessageWithToolPart,
+} from "./utils"
 import { getFilePathFromParameters, isProtectedFilePath } from "../protected-file-patterns"
 import { getLastUserMessage } from "../shared-utils"
 
@@ -132,6 +136,7 @@ export const insertPruneToolContext = (
     if (!lastUserMessage) {
         return
     }
-    const variant = state.variant ?? (lastUserMessage.info as UserMessage).variant
-    messages.push(createSyntheticUserMessage(lastUserMessage, prunableToolsContent, variant))
+    messages.push(
+        createSyntheticAssistantMessageWithToolPart(lastUserMessage, prunableToolsContent),
+    )
 }

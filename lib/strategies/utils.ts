@@ -28,7 +28,7 @@ export function getCurrentParams(
     const agent: string = userInfo.agent
     const providerId: string | undefined = userInfo.model.providerID
     const modelId: string | undefined = userInfo.model.modelID
-    const variant: string | undefined = state.variant
+    const variant: string | undefined = state.variant ?? userInfo.variant
 
     return { providerId, modelId, agent, variant }
 }

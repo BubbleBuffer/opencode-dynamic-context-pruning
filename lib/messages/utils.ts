@@ -41,6 +41,7 @@ export const createSyntheticUserMessage = (
 export const createSyntheticAssistantMessageWithToolPart = (
     baseMessage: WithParts,
     content: string,
+    variant?: string,
 ): WithParts => {
     const userInfo = baseMessage.info as UserMessage
     const now = Date.now()
@@ -61,6 +62,7 @@ export const createSyntheticAssistantMessageWithToolPart = (
             time: { created: now, completed: now },
             cost: 0,
             tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+            ...(variant !== undefined && { variant }),
         },
         parts: [
             {

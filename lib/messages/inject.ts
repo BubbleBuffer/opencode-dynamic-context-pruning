@@ -149,11 +149,16 @@ export const insertPruneToolContext = (
         injectionType: isGitHubCopilot ? "assistant-with-tool-part" : "user-message",
     })
 
+    const variant = state.variant ?? (lastUserMessage.info as UserMessage).variant
     if (isGitHubCopilot) {
         messages.push(
-            createSyntheticAssistantMessageWithToolPart(lastUserMessage, prunableToolsContent),
+            createSyntheticAssistantMessageWithToolPart(
+                lastUserMessage,
+                prunableToolsContent,
+                variant,
+            ),
         )
     } else {
-        messages.push(createSyntheticUserMessage(lastUserMessage, prunableToolsContent))
+        messages.push(createSyntheticUserMessage(lastUserMessage, prunableToolsContent, variant))
     }
 }

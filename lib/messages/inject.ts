@@ -143,6 +143,13 @@ export const insertPruneToolContext = (
     const isGitHubCopilot =
         providerID === "github-copilot" || providerID === "github-copilot-enterprise"
 
+    if (isGitHubCopilot) {
+        const lastMessage = messages[messages.length - 1]
+        if (lastMessage?.info?.role === "user") {
+            return
+        }
+    }
+
     logger.info("Injecting prunable-tools list", {
         providerID,
         isGitHubCopilot,

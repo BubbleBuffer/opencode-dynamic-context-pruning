@@ -139,10 +139,12 @@ export const insertPruneToolContext = (
 
     const userInfo = lastUserMessage.info as UserMessage
     const providerID = userInfo.model.providerID
+    const modelID = userInfo.model.modelID
     const isGitHubCopilot =
         providerID === "github-copilot" || providerID === "github-copilot-enterprise"
+    const isAnthropic = modelID.includes("claude")
 
-    if (isGitHubCopilot) {
+    if (isGitHubCopilot || isAnthropic) {
         const lastMessage = messages[messages.length - 1]
         if (lastMessage?.info?.role === "user") {
             return

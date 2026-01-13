@@ -15,7 +15,7 @@ const plugin: Plugin = (async (ctx) => {
 
     // Suppress AI SDK warnings
     if (typeof globalThis !== "undefined") {
-        ;(globalThis as any).AI_SDK_LOG_WARNINGS = false
+        ; (globalThis as any).AI_SDK_LOG_WARNINGS = false
     }
 
     const logger = new Logger(config.debug)
@@ -30,6 +30,10 @@ const plugin: Plugin = (async (ctx) => {
             _input: unknown,
             output: { system: string[] },
         ) => {
+            if (state.isSubAgent) {
+                return
+            }
+
             const systemText = output.system.join("\n")
             const internalAgentSignatures = [
                 "You are a title generator",

@@ -144,6 +144,10 @@ export const insertPruneToolContext = (
     const modelID = userInfo.model.modelID
     const isGitHubCopilot =
         providerID === "github-copilot" || providerID === "github-copilot-enterprise"
+
+    // TODO: This can probably be improved further to only trigger for the appropriate thinking settings
+    // This setting is also potentially only necessary for claude subscription, API seems to not need this
+    // validation. See more here: https://platform.claude.com/docs/en/build-with-claude/extended-thinking
     const isAnthropic = modelID.includes("claude")
 
     if (isGitHubCopilot) {
@@ -154,7 +158,6 @@ export const insertPruneToolContext = (
     }
 
     // Anthropic extended thinking models require a thinking block at the start of its turn
-    // This can probably be improved further to only trigger for the appropriate thinking settings
     if (isAnthropic) {
         if (!hasReasoningInCurrentAssistantTurn(messages)) {
             return

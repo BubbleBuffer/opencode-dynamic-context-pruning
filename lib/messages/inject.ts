@@ -7,7 +7,6 @@ import {
     extractParameterKey,
     buildToolIdList,
     createSyntheticAssistantMessageWithToolPart,
-    createSyntheticUserMessage,
 } from "./utils"
 import { getFilePathFromParameters, isProtectedFilePath } from "../protected-file-patterns"
 import { getLastUserMessage } from "../shared-utils"
@@ -140,32 +139,20 @@ export const insertPruneToolContext = (
 
     const userInfo = lastUserMessage.info as UserMessage
     const providerID = userInfo.model.providerID
+    const modelID = userInfo.model.modelID
     const isGitHubCopilot =
         providerID === "github-copilot" || providerID === "github-copilot-enterprise"
+    const isAnthropic = modelID.includes("claude")
 
-    if (isGitHubCopilot) {
+    if (isGitHubCopilot || isAnthropic) {
         const lastMessage = messages[messages.length - 1]
         if (lastMessage?.info?.role === "user") {
             return
         }
     }
 
-    logger.info("Injecting prunable-tools list", {
-        providerID,
-        isGitHubCopilot,
-        injectionType: isGitHubCopilot ? "assistant-with-tool-part" : "user-message",
-    })
-
-    const variant = state.variant ?? (lastUserMessage.info as UserMessage).variant
-    if (isGitHubCopilot) {
-        messages.push(
-            createSyntheticAssistantMessageWithToolPart(
-                lastUserMessage,
-                prunableToolsContent,
-                variant,
-            ),
-        )
-    } else {
-        messages.push(createSyntheticUserMessage(lastUserMessage, prunableToolsContent, variant))
-    }
+    const variant = state.variant ?? userInfo.variant
+    messages.push(
+        createSyntheticAssistantMessageWithToolPart(lastUserMessage, prunableToolsContent, variant),
+    )
 }

@@ -7,37 +7,6 @@ const SYNTHETIC_MESSAGE_ID = "msg_01234567890123456789012345"
 const SYNTHETIC_PART_ID = "prt_01234567890123456789012345"
 const SYNTHETIC_CALL_ID = "call_01234567890123456789012345"
 
-export const createSyntheticUserMessage = (
-    baseMessage: WithParts,
-    content: string,
-    variant?: string,
-): WithParts => {
-    const userInfo = baseMessage.info as UserMessage
-    return {
-        info: {
-            id: SYNTHETIC_MESSAGE_ID,
-            sessionID: userInfo.sessionID,
-            role: "user",
-            time: { created: Date.now() },
-            agent: userInfo.agent || "code",
-            model: {
-                providerID: userInfo.model.providerID,
-                modelID: userInfo.model.modelID,
-            },
-            ...(variant !== undefined && { variant }),
-        },
-        parts: [
-            {
-                id: SYNTHETIC_PART_ID,
-                sessionID: userInfo.sessionID,
-                messageID: SYNTHETIC_MESSAGE_ID,
-                type: "text",
-                text: content,
-            },
-        ],
-    }
-}
-
 export const createSyntheticAssistantMessageWithToolPart = (
     baseMessage: WithParts,
     content: string,

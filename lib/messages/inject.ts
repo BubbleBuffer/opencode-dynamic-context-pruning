@@ -149,7 +149,5 @@ export const insertPruneToolContext = (
 
     const userInfo = lastUserMessage.info as UserMessage
     const variant = state.variant ?? userInfo.variant
-    messages.push(
-        createSyntheticAssistantMessage(lastUserMessage, prunableToolsContent, variant),
-    )
+    messages.push(createSyntheticAssistantMessage(lastUserMessage, prunableToolsContent, variant))
 }

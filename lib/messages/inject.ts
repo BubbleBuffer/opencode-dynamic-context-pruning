@@ -6,7 +6,7 @@ import { loadPrompt } from "../prompts"
 import {
     extractParameterKey,
     buildToolIdList,
-    createSyntheticAssistantMessageWithToolPart,
+    createSyntheticAssistantMessage,
     isIgnoredUserMessage,
 } from "./utils"
 import { getFilePathFromParameters, isProtectedFilePath } from "../protected-file-patterns"
@@ -150,6 +150,6 @@ export const insertPruneToolContext = (
     const userInfo = lastUserMessage.info as UserMessage
     const variant = state.variant ?? userInfo.variant
     messages.push(
-        createSyntheticAssistantMessageWithToolPart(lastUserMessage, prunableToolsContent, variant),
+        createSyntheticAssistantMessage(lastUserMessage, prunableToolsContent, variant),
     )
 }

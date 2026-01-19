@@ -164,7 +164,6 @@ function formatContextMessage(breakdown: TokenBreakdown): string {
     const lines: string[] = []
     const barWidth = 30
 
-    // Find max for scaling (include pruned for bar scaling)
     const values = [
         breakdown.system,
         breakdown.user,
@@ -175,7 +174,6 @@ function formatContextMessage(breakdown: TokenBreakdown): string {
     ]
     const maxValue = Math.max(...values)
 
-    // Category definitions - shading decreases top to bottom
     const categories = [
         { label: "System", value: breakdown.system, char: "█" },
         { label: "User", value: breakdown.user, char: "▓" },
@@ -193,7 +191,6 @@ function formatContextMessage(breakdown: TokenBreakdown): string {
     lines.push("─".repeat(60))
     lines.push("")
 
-    // Create bars with aligned labels and values
     for (const cat of categories) {
         const bar = createBar(cat.value, maxValue, barWidth, cat.char)
 

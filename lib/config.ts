@@ -45,10 +45,20 @@ export interface TurnProtection {
     turns: number
 }
 
+export interface CommandConfig {
+    enabled: boolean
+}
+
+export interface Commands {
+    context: CommandConfig
+    stats: CommandConfig
+}
+
 export interface PluginConfig {
     enabled: boolean
     debug: boolean
     pruneNotification: "off" | "minimal" | "detailed"
+    commands: Commands
     turnProtection: TurnProtection
     protectedFilePatterns: string[]
     tools: Tools
@@ -84,6 +94,11 @@ export const VALID_CONFIG_KEYS = new Set([
     "turnProtection.enabled",
     "turnProtection.turns",
     "protectedFilePatterns",
+    "commands",
+    "commands.context",
+    "commands.context.enabled",
+    "commands.stats",
+    "commands.stats.enabled",
     "tools",
     "tools.settings",
     "tools.settings.nudgeEnabled",
@@ -192,6 +207,28 @@ function validateConfigTypes(config: Record<string, any>): ValidationError[] {
                 key: "turnProtection.turns",
                 expected: "number",
                 actual: typeof config.turnProtection.turns,
+            })
+        }
+    }
+
+    // Commands validators
+    const commands = config.commands
+    if (commands) {
+        if (
+            commands.context?.enabled !== undefined &&
+            typeof commands.context.enabled !== "boolean"
+        ) {
+            errors.push({
+                key: "commands.context.enabled",
+                expected: "boolean",
+                actual: typeof commands.context.enabled,
+            })
+        }
+        if (commands.stats?.enabled !== undefined && typeof commands.stats.enabled !== "boolean") {
+            errors.push({
+                key: "commands.stats.enabled",
+                expected: "boolean",
+                actual: typeof commands.stats.enabled,
             })
         }
     }
@@ -388,6 +425,14 @@ const defaultConfig: PluginConfig = {
     enabled: true,
     debug: false,
     pruneNotification: "detailed",
+    commands: {
+        context: {
+            enabled: true,
+        },
+        stats: {
+            enabled: true,
+        },
+    },
     turnProtection: {
         enabled: false,
         turns: 4,
@@ -498,6 +543,15 @@ function createDefaultConfig(): void {
   "debug": false,
   // Notification display: "off", "minimal", or "detailed"
   "pruneNotification": "detailed",
+  // Enable or disable slash commands
+  "commands": {
+    "context": {
+      "enabled": true
+    },
+    "stats": {
+      "enabled": true
+    }
+  },
   // Protect from pruning for <turns> message turns
   "turnProtection": {
     "enabled": false,
@@ -637,9 +691,29 @@ function mergeTools(
     }
 }
 
+function mergeCommands(
+    base: PluginConfig["commands"],
+    override?: Partial<PluginConfig["commands"]>,
+): PluginConfig["commands"] {
+    if (!override) return base
+
+    return {
+        context: {
+            enabled: override.context?.enabled ?? base.context.enabled,
+        },
+        stats: {
+            enabled: override.stats?.enabled ?? base.stats.enabled,
+        },
+    }
+}
+
 function deepCloneConfig(config: PluginConfig): PluginConfig {
     return {
         ...config,
+        commands: {
+            context: { ...config.commands.context },
+            stats: { ...config.commands.stats },
+        },
         turnProtection: { ...config.turnProtection },
         protectedFilePatterns: [...config.protectedFilePatterns],
         tools: {
@@ -693,6 +767,7 @@ export function getConfig(ctx: PluginInput): PluginConfig {
                 enabled: result.data.enabled ?? config.enabled,
                 debug: result.data.debug ?? config.debug,
                 pruneNotification: result.data.pruneNotification ?? config.pruneNotification,
+                commands: mergeCommands(config.commands, result.data.commands as any),
                 turnProtection: {
                     enabled: result.data.turnProtection?.enabled ?? config.turnProtection.enabled,
                     turns: result.data.turnProtection?.turns ?? config.turnProtection.turns,
@@ -735,6 +810,7 @@ export function getConfig(ctx: PluginInput): PluginConfig {
                 enabled: result.data.enabled ?? config.enabled,
                 debug: result.data.debug ?? config.debug,
                 pruneNotification: result.data.pruneNotification ?? config.pruneNotification,
+                commands: mergeCommands(config.commands, result.data.commands as any),
                 turnProtection: {
                     enabled: result.data.turnProtection?.enabled ?? config.turnProtection.enabled,
                     turns: result.data.turnProtection?.turns ?? config.turnProtection.turns,
@@ -774,6 +850,7 @@ export function getConfig(ctx: PluginInput): PluginConfig {
                 enabled: result.data.enabled ?? config.enabled,
                 debug: result.data.debug ?? config.debug,
                 pruneNotification: result.data.pruneNotification ?? config.pruneNotification,
+                commands: mergeCommands(config.commands, result.data.commands as any),
                 turnProtection: {
                     enabled: result.data.turnProtection?.enabled ?? config.turnProtection.enabled,
                     turns: result.data.turnProtection?.turns ?? config.turnProtection.turns,

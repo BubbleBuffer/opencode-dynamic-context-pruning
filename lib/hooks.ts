@@ -79,12 +79,20 @@ export function createChatMessageTransformHandler(
     }
 }
 
-export function createCommandExecuteHandler(client: any, state: SessionState, logger: Logger) {
+export function createCommandExecuteHandler(
+    client: any,
+    state: SessionState,
+    logger: Logger,
+    config: PluginConfig,
+) {
     return async (
         input: { command: string; sessionID: string; arguments: string },
         _output: { parts: any[] },
     ) => {
         if (input.command === "dcp-stats") {
+            if (!config.commands.stats.enabled) {
+                return
+            }
             const messagesResponse = await client.session.messages({
                 path: { id: input.sessionID },
             })
@@ -99,6 +107,9 @@ export function createCommandExecuteHandler(client: any, state: SessionState, lo
             throw new Error("__DCP_STATS_HANDLED__")
         }
         if (input.command === "dcp-context") {
+            if (!config.commands.context.enabled) {
+                return
+            }
             const messagesResponse = await client.session.messages({
                 path: { id: input.sessionID },
             })

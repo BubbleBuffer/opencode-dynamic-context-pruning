@@ -197,12 +197,12 @@ function formatContextMessage(breakdown: TokenBreakdown): string {
         let labelWithPct: string
         let valueStr: string
         if ("isSaved" in cat && cat.isSaved) {
-            labelWithPct = cat.label.padEnd(16)
+            labelWithPct = cat.label.padEnd(17)
             valueStr = `${formatTokenCount(cat.value).replace(" tokens", "").padStart(6)} saved`
         } else {
             const percentage =
                 breakdown.total > 0 ? ((cat.value / breakdown.total) * 100).toFixed(1) : "0.0"
-            labelWithPct = `${cat.label.padEnd(9)} ${percentage.padStart(5)}%`
+            labelWithPct = `${cat.label.padEnd(9)} ${percentage.padStart(5)}% `
             valueStr = formatTokenCount(cat.value).padStart(13)
         }
 

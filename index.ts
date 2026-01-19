@@ -94,7 +94,7 @@ const plugin: Plugin = (async (ctx) => {
                 )
             }
         },
-        "command.execute.before": createCommandExecuteHandler(ctx.client, state, logger),
+        "command.execute.before": createCommandExecuteHandler(ctx.client, state, logger, config),
     }
 }) satisfies Plugin
 

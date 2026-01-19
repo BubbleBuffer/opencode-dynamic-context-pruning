@@ -99,3 +99,48 @@ export async function loadSessionState(
         return null
     }
 }
+
+export interface AggregatedStats {
+    totalTokens: number
+    totalTools: number
+    sessionCount: number
+}
+
+export async function loadAllSessionStats(logger: Logger): Promise<AggregatedStats> {
+    const result: AggregatedStats = {
+        totalTokens: 0,
+        totalTools: 0,
+        sessionCount: 0,
+    }
+
+    try {
+        if (!existsSync(STORAGE_DIR)) {
+            return result
+        }
+
+        const files = await fs.readdir(STORAGE_DIR)
+        const jsonFiles = files.filter((f) => f.endsWith(".json"))
+
+        for (const file of jsonFiles) {
+            try {
+                const filePath = join(STORAGE_DIR, file)
+                const content = await fs.readFile(filePath, "utf-8")
+                const state = JSON.parse(content) as PersistedSessionState
+
+                if (state?.stats?.totalPruneTokens && state?.prune?.toolIds) {
+                    result.totalTokens += state.stats.totalPruneTokens
+                    result.totalTools += state.prune.toolIds.length
+                    result.sessionCount++
+                }
+            } catch {
+                // Skip invalid files
+            }
+        }
+
+        logger.debug("Loaded all-time stats", result)
+    } catch (error: any) {
+        logger.warn("Failed to load all-time stats", { error: error?.message })
+    }
+
+    return result
+}

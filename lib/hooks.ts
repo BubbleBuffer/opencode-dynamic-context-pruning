@@ -6,6 +6,8 @@ import { deduplicate, supersedeWrites, purgeErrors } from "./strategies"
 import { prune, insertPruneToolContext } from "./messages"
 import { checkSession } from "./state"
 import { loadPrompt } from "./prompts"
+import { handleStatsCommand } from "./commands/stats"
+import { handleContextCommand } from "./commands/context"
 
 const INTERNAL_AGENT_SIGNATURES = [
     "You are a title generator",
@@ -73,6 +75,42 @@ export function createChatMessageTransformHandler(
 
         if (state.sessionId) {
             await logger.saveContext(state.sessionId, output.messages)
+        }
+    }
+}
+
+export function createCommandExecuteHandler(client: any, state: SessionState, logger: Logger) {
+    return async (
+        input: { command: string; sessionID: string; arguments: string },
+        _output: { parts: any[] },
+    ) => {
+        if (input.command === "dcp-stats") {
+            const messagesResponse = await client.session.messages({
+                path: { id: input.sessionID },
+            })
+            const messages = (messagesResponse.data || messagesResponse) as WithParts[]
+            await handleStatsCommand({
+                client,
+                state,
+                logger,
+                sessionId: input.sessionID,
+                messages,
+            })
+            throw new Error("__DCP_STATS_HANDLED__")
+        }
+        if (input.command === "dcp-context") {
+            const messagesResponse = await client.session.messages({
+                path: { id: input.sessionID },
+            })
+            const messages = (messagesResponse.data || messagesResponse) as WithParts[]
+            await handleContextCommand({
+                client,
+                state,
+                logger,
+                sessionId: input.sessionID,
+                messages,
+            })
+            throw new Error("__DCP_CONTEXT_HANDLED__")
         }
     }
 }

@@ -3,7 +3,11 @@ import { getConfig } from "./lib/config"
 import { Logger } from "./lib/logger"
 import { createSessionState } from "./lib/state"
 import { createDiscardTool, createExtractTool } from "./lib/strategies"
-import { createChatMessageTransformHandler, createSystemPromptHandler } from "./lib/hooks"
+import {
+    createChatMessageTransformHandler,
+    createCommandExecuteHandler,
+    createSystemPromptHandler,
+} from "./lib/hooks"
 
 const plugin: Plugin = (async (ctx) => {
     const config = getConfig(ctx)
@@ -64,8 +68,17 @@ const plugin: Plugin = (async (ctx) => {
             }),
         },
         config: async (opencodeConfig) => {
-            // Add enabled tools to primary_tools by mutating the opencode config
-            // This works because config is cached and passed by reference
+            opencodeConfig.command ??= {}
+            opencodeConfig.command["dcp-stats"] = {
+                template: "",
+                description: "Show DCP pruning statistics",
+            }
+            opencodeConfig.command["dcp-context"] = {
+                template: "",
+                description: "Show token usage breakdown for current session",
+            }
+            logger.info("Registered /dcp-stats and /dcp-context commands")
+
             const toolsToAdd: string[] = []
             if (config.tools.discard.enabled) toolsToAdd.push("discard")
             if (config.tools.extract.enabled) toolsToAdd.push("extract")
@@ -81,6 +94,7 @@ const plugin: Plugin = (async (ctx) => {
                 )
             }
         },
+        "command.execute.before": createCommandExecuteHandler(ctx.client, state, logger),
     }
 }) satisfies Plugin
 

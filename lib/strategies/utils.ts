@@ -1,7 +1,7 @@
 import { SessionState, WithParts } from "../state"
 import { UserMessage } from "@opencode-ai/sdk/v2"
 import { Logger } from "../logger"
-import { encode } from "gpt-tokenizer"
+import { countTokens as anthropicCountTokens } from "@anthropic-ai/tokenizer"
 import { getLastUserMessage, isMessageCompacted } from "../shared-utils"
 
 export function getCurrentParams(
@@ -33,20 +33,19 @@ export function getCurrentParams(
     return { providerId, modelId, agent, variant }
 }
 
-/**
- * Estimates token counts for a batch of texts using gpt-tokenizer.
- */
-function estimateTokensBatch(texts: string[]): number[] {
+export function countTokens(text: string): number {
+    if (!text) return 0
     try {
-        return texts.map((text) => encode(text).length)
+        return anthropicCountTokens(text)
     } catch {
-        return texts.map((text) => Math.round(text.length / 4))
+        return Math.round(text.length / 4)
     }
 }
 
-/**
- * Calculates approximate tokens saved by pruning the given tool call IDs.
- */
+function estimateTokensBatch(texts: string[]): number[] {
+    return texts.map(countTokens)
+}
+
 export const calculateTokensSaved = (
     state: SessionState,
     messages: WithParts[],

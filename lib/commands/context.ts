@@ -1,6 +1,40 @@
 /**
- * DCP Context command handler.
+ * DCP Context Command
  * Shows a visual breakdown of token usage in the current session.
+ *
+ * TOKEN CALCULATION STRATEGY
+ * ==========================
+ * We minimize tokenizer estimation by leveraging API-reported values wherever possible.
+ *
+ * WHAT WE GET FROM THE API (exact):
+ *   - tokens.input    : Input tokens for each assistant response
+ *   - tokens.output   : Output tokens generated (includes text + tool calls)
+ *   - tokens.reasoning: Reasoning tokens used
+ *   - tokens.cache    : Cache read/write tokens
+ *
+ * HOW WE CALCULATE EACH CATEGORY:
+ *
+ *   SYSTEM = firstAssistant.input + cache.read - tokenizer(firstUserMessage)
+ *            The first response's input contains system + first user message.
+ *
+ *   TOOLS  = tokenizer(toolInputs + toolOutputs) - prunedTokens
+ *            We must tokenize tools anyway for pruning decisions.
+ *
+ *   USER   = tokenizer(all user messages)
+ *            User messages are typically small, so estimation is acceptable.
+ *
+ *   ASSISTANT = total - system - user - tools
+ *               Calculated as residual. This absorbs:
+ *               - Assistant text output tokens
+ *               - Reasoning tokens (if persisted by the model)
+ *               - Any estimation errors
+ *
+ *   TOTAL  = input + output + reasoning + cache.read + cache.write
+ *            Matches opencode's UI display.
+ *
+ * WHY ASSISTANT IS THE RESIDUAL:
+ *   If reasoning tokens persist in context (model-dependent), they semantically
+ *   belong with "Assistant" since reasoning IS assistant-generated content.
  */
 
 import type { Logger } from "../logger"
@@ -24,7 +58,6 @@ interface TokenBreakdown {
     system: number
     user: number
     assistant: number
-    reasoning: number
     tools: number
     prunedTokens: number
     prunedCount: number
@@ -36,7 +69,6 @@ function analyzeTokens(state: SessionState, messages: WithParts[]): TokenBreakdo
         system: 0,
         user: 0,
         assistant: 0,
-        reasoning: 0,
         tools: 0,
         prunedTokens: state.stats.totalPruneTokens,
         prunedCount: state.prune.toolIds.length,
@@ -54,26 +86,6 @@ function analyzeTokens(state: SessionState, messages: WithParts[]): TokenBreakdo
         }
     }
 
-    let firstUserTokens = 0
-    for (const msg of messages) {
-        if (msg.info.role === "user" && !isIgnoredUserMessage(msg)) {
-            for (const part of msg.parts) {
-                if (part.type === "text") {
-                    const textPart = part as TextPart
-                    firstUserTokens += countTokens(textPart.text || "")
-                }
-            }
-            break
-        }
-    }
-
-    // Calculate system tokens: first response's total input minus first user message
-    if (firstAssistant) {
-        const firstInput =
-            (firstAssistant.tokens?.input || 0) + (firstAssistant.tokens?.cache?.read || 0)
-        breakdown.system = Math.max(0, firstInput - firstUserTokens)
-    }
-
     let lastAssistant: AssistantMessage | undefined
     for (let i = messages.length - 1; i >= 0; i--) {
         const msg = messages[i]
@@ -86,71 +98,73 @@ function analyzeTokens(state: SessionState, messages: WithParts[]): TokenBreakdo
         }
     }
 
-    // Get total from API
-    // Total = input + output + reasoning + cache.read + cache.write
     const apiInput = lastAssistant?.tokens?.input || 0
     const apiOutput = lastAssistant?.tokens?.output || 0
     const apiReasoning = lastAssistant?.tokens?.reasoning || 0
     const apiCacheRead = lastAssistant?.tokens?.cache?.read || 0
     const apiCacheWrite = lastAssistant?.tokens?.cache?.write || 0
-    const apiTotal = apiInput + apiOutput + apiReasoning + apiCacheRead + apiCacheWrite
+    breakdown.total = apiInput + apiOutput + apiReasoning + apiCacheRead + apiCacheWrite
+
+    const userTextParts: string[] = []
+    const toolInputParts: string[] = []
+    const toolOutputParts: string[] = []
+    let firstUserText = ""
+    let foundFirstUser = false
 
     for (const msg of messages) {
-        if (isMessageCompacted(state, msg)) {
-            continue
-        }
-
-        if (msg.info.role === "user" && isIgnoredUserMessage(msg)) {
-            continue
-        }
-
-        const info = msg.info
-        const role = info.role
+        if (isMessageCompacted(state, msg)) continue
+        if (msg.info.role === "user" && isIgnoredUserMessage(msg)) continue
 
         for (const part of msg.parts) {
-            switch (part.type) {
-                case "text": {
-                    const textPart = part as TextPart
-                    const tokens = countTokens(textPart.text || "")
-                    if (role === "user") {
-                        breakdown.user += tokens
-                    } else {
-                        breakdown.assistant += tokens
-                    }
-                    break
+            if (part.type === "text" && msg.info.role === "user") {
+                const textPart = part as TextPart
+                const text = textPart.text || ""
+                userTextParts.push(text)
+                if (!foundFirstUser) {
+                    firstUserText += text
                 }
-                case "tool": {
-                    const toolPart = part as ToolPart
+            } else if (part.type === "tool") {
+                const toolPart = part as ToolPart
 
-                    if (toolPart.state?.input) {
-                        const inputStr =
-                            typeof toolPart.state.input === "string"
-                                ? toolPart.state.input
-                                : JSON.stringify(toolPart.state.input)
-                        breakdown.tools += countTokens(inputStr)
-                    }
+                if (toolPart.state?.input) {
+                    const inputStr =
+                        typeof toolPart.state.input === "string"
+                            ? toolPart.state.input
+                            : JSON.stringify(toolPart.state.input)
+                    toolInputParts.push(inputStr)
+                }
 
-                    if (toolPart.state?.status === "completed" && toolPart.state?.output) {
-                        const outputStr =
-                            typeof toolPart.state.output === "string"
-                                ? toolPart.state.output
-                                : JSON.stringify(toolPart.state.output)
-                        breakdown.tools += countTokens(outputStr)
-                    }
-                    break
+                if (toolPart.state?.status === "completed" && toolPart.state?.output) {
+                    const outputStr =
+                        typeof toolPart.state.output === "string"
+                            ? toolPart.state.output
+                            : JSON.stringify(toolPart.state.output)
+                    toolOutputParts.push(outputStr)
                 }
             }
         }
+
+        if (msg.info.role === "user" && !isIgnoredUserMessage(msg) && !foundFirstUser) {
+            foundFirstUser = true
+        }
     }
 
-    breakdown.tools = Math.max(0, breakdown.tools - breakdown.prunedTokens)
+    const firstUserTokens = countTokens(firstUserText)
+    breakdown.user = countTokens(userTextParts.join("\n"))
+    const toolInputTokens = countTokens(toolInputParts.join("\n"))
+    const toolOutputTokens = countTokens(toolOutputParts.join("\n"))
 
-    // Calculate reasoning as the difference between API total and our counted parts
-    // This handles both interleaved thinking and non-interleaved models correctly
-    const countedParts = breakdown.system + breakdown.user + breakdown.assistant + breakdown.tools
-    breakdown.reasoning = Math.max(0, apiTotal - countedParts)
+    if (firstAssistant) {
+        const firstInput =
+            (firstAssistant.tokens?.input || 0) + (firstAssistant.tokens?.cache?.read || 0)
+        breakdown.system = Math.max(0, firstInput - firstUserTokens)
+    }
 
-    breakdown.total = apiTotal
+    breakdown.tools = Math.max(0, toolInputTokens + toolOutputTokens - breakdown.prunedTokens)
+    breakdown.assistant = Math.max(
+        0,
+        breakdown.total - breakdown.system - breakdown.user - breakdown.tools,
+    )
 
     return breakdown
 }
@@ -170,8 +184,7 @@ function formatContextMessage(breakdown: TokenBreakdown): string {
         { label: "System", value: breakdown.system, char: "█" },
         { label: "User", value: breakdown.user, char: "▓" },
         { label: "Assistant", value: breakdown.assistant, char: "▒" },
-        { label: "Reasoning", value: breakdown.reasoning, char: "░" },
-        { label: "Tools", value: breakdown.tools, char: "⣿" },
+        { label: "Tools", value: breakdown.tools, char: "░" },
     ] as const
 
     lines.push("╭───────────────────────────────────────────────────────────╮")

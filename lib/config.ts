@@ -49,6 +49,7 @@ export interface PluginConfig {
     enabled: boolean
     debug: boolean
     pruneNotification: "off" | "minimal" | "detailed"
+    commands: boolean
     turnProtection: TurnProtection
     protectedFilePatterns: string[]
     tools: Tools
@@ -84,6 +85,7 @@ export const VALID_CONFIG_KEYS = new Set([
     "turnProtection.enabled",
     "turnProtection.turns",
     "protectedFilePatterns",
+    "commands",
     "tools",
     "tools.settings",
     "tools.settings.nudgeEnabled",
@@ -194,6 +196,16 @@ function validateConfigTypes(config: Record<string, any>): ValidationError[] {
                 actual: typeof config.turnProtection.turns,
             })
         }
+    }
+
+    // Commands validator
+    const commands = config.commands
+    if (commands !== undefined && typeof commands !== "boolean") {
+        errors.push({
+            key: "commands",
+            expected: "boolean",
+            actual: typeof commands,
+        })
     }
 
     // Tools validators
@@ -388,6 +400,7 @@ const defaultConfig: PluginConfig = {
     enabled: true,
     debug: false,
     pruneNotification: "detailed",
+    commands: true,
     turnProtection: {
         enabled: false,
         turns: 4,
@@ -498,6 +511,8 @@ function createDefaultConfig(): void {
   "debug": false,
   // Notification display: "off", "minimal", or "detailed"
   "pruneNotification": "detailed",
+  // Enable or disable slash commands (/dcp)
+  "commands": true,
   // Protect from pruning for <turns> message turns
   "turnProtection": {
     "enabled": false,
@@ -637,9 +652,18 @@ function mergeTools(
     }
 }
 
+function mergeCommands(
+    base: PluginConfig["commands"],
+    override?: Partial<PluginConfig["commands"]>,
+): PluginConfig["commands"] {
+    if (override === undefined) return base
+    return override as boolean
+}
+
 function deepCloneConfig(config: PluginConfig): PluginConfig {
     return {
         ...config,
+        commands: config.commands,
         turnProtection: { ...config.turnProtection },
         protectedFilePatterns: [...config.protectedFilePatterns],
         tools: {
@@ -693,6 +717,7 @@ export function getConfig(ctx: PluginInput): PluginConfig {
                 enabled: result.data.enabled ?? config.enabled,
                 debug: result.data.debug ?? config.debug,
                 pruneNotification: result.data.pruneNotification ?? config.pruneNotification,
+                commands: mergeCommands(config.commands, result.data.commands as any),
                 turnProtection: {
                     enabled: result.data.turnProtection?.enabled ?? config.turnProtection.enabled,
                     turns: result.data.turnProtection?.turns ?? config.turnProtection.turns,
@@ -735,6 +760,7 @@ export function getConfig(ctx: PluginInput): PluginConfig {
                 enabled: result.data.enabled ?? config.enabled,
                 debug: result.data.debug ?? config.debug,
                 pruneNotification: result.data.pruneNotification ?? config.pruneNotification,
+                commands: mergeCommands(config.commands, result.data.commands as any),
                 turnProtection: {
                     enabled: result.data.turnProtection?.enabled ?? config.turnProtection.enabled,
                     turns: result.data.turnProtection?.turns ?? config.turnProtection.turns,
@@ -774,6 +800,7 @@ export function getConfig(ctx: PluginInput): PluginConfig {
                 enabled: result.data.enabled ?? config.enabled,
                 debug: result.data.debug ?? config.debug,
                 pruneNotification: result.data.pruneNotification ?? config.pruneNotification,
+                commands: mergeCommands(config.commands, result.data.commands as any),
                 turnProtection: {
                     enabled: result.data.turnProtection?.enabled ?? config.turnProtection.enabled,
                     turns: result.data.turnProtection?.turns ?? config.turnProtection.turns,

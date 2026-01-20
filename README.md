@@ -4,7 +4,7 @@
 
 Automatically reduces token usage in OpenCode by removing obsolete tool outputs from conversation history.
 
-![DCP in action](dcp-demo3.png)
+![DCP in action](dcp-demo5.png)
 
 ## Installation
 
@@ -18,8 +18,6 @@ Add to your OpenCode config:
 ```
 
 Using `@latest` ensures you always get the newest version automatically when OpenCode starts.
-
-> **Note:** If you use OAuth plugins (e.g., for Google or other services), place this plugin last in your `plugin` array to avoid interfering with their authentication flows.
 
 Restart OpenCode. The plugin will automatically start optimizing your sessions.
 
@@ -49,6 +47,8 @@ LLM providers like Anthropic and OpenAI cache prompts based on exact prefix matc
 
 **Trade-off:** You lose some cache read benefits but gain larger token savings from reduced context size and performance improvements through reduced context poisoning. In most cases, the token savings outweigh the cache miss cost—especially in long sessions where context bloat becomes significant.
 
+> **Note:** In testing, cache hit rates were approximately 65% with DCP enabled vs 85% without.
+
 **Best use case:** Providers that count usage in requests, such as Github Copilot and Google Antigravity have no negative price impact.
 
 ## Configuration
@@ -71,6 +71,8 @@ DCP uses its own config file:
     "debug": false,
     // Notification display: "off", "minimal", or "detailed"
     "pruneNotification": "detailed",
+    // Enable or disable slash commands (/dcp)
+    "commands": true,
     // Protect from pruning for <turns> message turns
     "turnProtection": {
         "enabled": false,
@@ -125,6 +127,14 @@ DCP uses its own config file:
 ```
 
 </details>
+
+### Commands
+
+DCP provides a `/dcp` slash command:
+
+- `/dcp` — Shows available DCP commands
+- `/dcp context` — Shows a breakdown of your current session's token usage by category (system, user, assistant, tools, etc.) and how much has been saved through pruning.
+- `/dcp stats` — Shows cumulative pruning statistics across all sessions.
 
 ### Turn Protection
 

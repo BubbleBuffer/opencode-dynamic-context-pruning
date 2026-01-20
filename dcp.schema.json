@@ -26,6 +26,11 @@
             "default": "detailed",
             "description": "Level of notification shown when pruning occurs"
         },
+        "commands": {
+            "type": "boolean",
+            "default": true,
+            "description": "Enable DCP slash commands (/dcp)"
+        },
         "turnProtection": {
             "type": "object",
             "description": "Protect recent tool outputs from being pruned",

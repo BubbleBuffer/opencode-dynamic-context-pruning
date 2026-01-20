@@ -6,6 +6,9 @@ import { deduplicate, supersedeWrites, purgeErrors } from "./strategies"
 import { prune, insertPruneToolContext } from "./messages"
 import { checkSession } from "./state"
 import { loadPrompt } from "./prompts"
+import { handleStatsCommand } from "./commands/stats"
+import { handleContextCommand } from "./commands/context"
+import { handleHelpCommand } from "./commands/help"
 
 const INTERNAL_AGENT_SIGNATURES = [
     "You are a title generator",
@@ -73,6 +76,64 @@ export function createChatMessageTransformHandler(
 
         if (state.sessionId) {
             await logger.saveContext(state.sessionId, output.messages)
+        }
+    }
+}
+
+export function createCommandExecuteHandler(
+    client: any,
+    state: SessionState,
+    logger: Logger,
+    config: PluginConfig,
+) {
+    return async (
+        input: { command: string; sessionID: string; arguments: string },
+        _output: { parts: any[] },
+    ) => {
+        if (!config.commands) {
+            return
+        }
+
+        if (input.command === "dcp") {
+            const args = (input.arguments || "").trim().split(/\s+/).filter(Boolean)
+            const subcommand = args[0]?.toLowerCase() || ""
+            const _subArgs = args.slice(1)
+
+            const messagesResponse = await client.session.messages({
+                path: { id: input.sessionID },
+            })
+            const messages = (messagesResponse.data || messagesResponse) as WithParts[]
+
+            if (subcommand === "context") {
+                await handleContextCommand({
+                    client,
+                    state,
+                    logger,
+                    sessionId: input.sessionID,
+                    messages,
+                })
+                throw new Error("__DCP_CONTEXT_HANDLED__")
+            }
+
+            if (subcommand === "stats") {
+                await handleStatsCommand({
+                    client,
+                    state,
+                    logger,
+                    sessionId: input.sessionID,
+                    messages,
+                })
+                throw new Error("__DCP_STATS_HANDLED__")
+            }
+
+            await handleHelpCommand({
+                client,
+                state,
+                logger,
+                sessionId: input.sessionID,
+                messages,
+            })
+            throw new Error("__DCP_HELP_HANDLED__")
         }
     }
 }

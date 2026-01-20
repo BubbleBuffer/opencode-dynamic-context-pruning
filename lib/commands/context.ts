@@ -26,7 +26,8 @@ interface TokenBreakdown {
     assistant: number
     reasoning: number
     tools: number
-    pruned: number
+    prunedTokens: number
+    prunedCount: number
     total: number
 }
 
@@ -37,7 +38,8 @@ function analyzeTokens(state: SessionState, messages: WithParts[]): TokenBreakdo
         assistant: 0,
         reasoning: 0,
         tools: 0,
-        pruned: state.stats.totalPruneTokens,
+        prunedTokens: state.stats.totalPruneTokens,
+        prunedCount: state.prune.toolIds.length,
         total: 0,
     }
 
@@ -141,7 +143,7 @@ function analyzeTokens(state: SessionState, messages: WithParts[]): TokenBreakdo
         }
     }
 
-    breakdown.tools = Math.max(0, breakdown.tools - breakdown.pruned)
+    breakdown.tools = Math.max(0, breakdown.tools - breakdown.prunedTokens)
 
     // Calculate reasoning as the difference between API total and our counted parts
     // This handles both interleaved thinking and non-interleaved models correctly
@@ -164,15 +166,6 @@ function formatContextMessage(breakdown: TokenBreakdown): string {
     const lines: string[] = []
     const barWidth = 30
 
-    const values = [
-        breakdown.system,
-        breakdown.user,
-        breakdown.assistant,
-        breakdown.reasoning,
-        breakdown.tools,
-    ]
-    const maxValue = Math.max(...values)
-
     const categories = [
         { label: "System", value: breakdown.system, char: "█" },
         { label: "User", value: breakdown.user, char: "▓" },
@@ -190,7 +183,7 @@ function formatContextMessage(breakdown: TokenBreakdown): string {
     lines.push("")
 
     for (const cat of categories) {
-        const bar = createBar(cat.value, maxValue, barWidth, cat.char)
+        const bar = createBar(cat.value, breakdown.total, barWidth, cat.char)
         const percentage =
             breakdown.total > 0 ? ((cat.value / breakdown.total) * 100).toFixed(1) : "0.0"
         const labelWithPct = `${cat.label.padEnd(9)} ${percentage.padStart(5)}% `
@@ -204,12 +197,12 @@ function formatContextMessage(breakdown: TokenBreakdown): string {
 
     lines.push("Summary:")
 
-    if (breakdown.pruned > 0) {
-        const withoutPruning = breakdown.total + breakdown.pruned
-        const savingsPercent = ((breakdown.pruned / withoutPruning) * 100).toFixed(1)
+    if (breakdown.prunedTokens > 0) {
+        const withoutPruning = breakdown.total + breakdown.prunedTokens
         lines.push(
-            `  Current context: ~${formatTokenCount(breakdown.total)} (${savingsPercent}% saved)`,
+            `  Pruned:          ${breakdown.prunedCount} tools (~${formatTokenCount(breakdown.prunedTokens)})`,
         )
+        lines.push(`  Current context: ~${formatTokenCount(breakdown.total)}`)
         lines.push(`  Without DCP:     ~${formatTokenCount(withoutPruning)}`)
     } else {
         lines.push(`  Current context: ~${formatTokenCount(breakdown.total)}`)

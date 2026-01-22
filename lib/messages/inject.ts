@@ -147,7 +147,6 @@ export const insertPruneToolContext = (
         lastMessage?.info?.role === "user" && !isIgnoredUserMessage(lastMessage)
 
     if (isLastMessageUser) {
-        logger.debug("Injecting prunable tools list as user message")
         messages.push(createSyntheticUserMessage(lastUserMessage, prunableToolsContent, variant))
     } else {
         messages.push(

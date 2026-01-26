@@ -1,25 +1,16 @@
+import { ulid } from "ulid"
 import { Logger } from "../logger"
 import { isMessageCompacted } from "../shared-utils"
 import type { SessionState, WithParts } from "../state"
 import type { UserMessage } from "@opencode-ai/sdk/v2"
 
 export const SQUASH_SUMMARY_PREFIX = "[Squashed conversation block]\n\n"
-const SYNTHETIC_MESSAGE_ID = "msg_01234567890123456789012345"
-const SYNTHETIC_PART_ID = "prt_01234567890123456789012345"
-const SYNTHETIC_CALL_ID = "call_01234567890123456789012345"
 
-// Counter for generating unique IDs within the same millisecond
-let idCounter = 0
-let lastTimestamp = 0
+const generateUniqueId = (prefix: string): string => `${prefix}_${ulid()}`
 
-const generateUniqueId = (prefix: string): string => {
-    const now = Date.now()
-    if (now !== lastTimestamp) {
-        lastTimestamp = now
-        idCounter = 0
-    }
-    idCounter++
-    return `${prefix}_${now}_${idCounter}`
+const isGeminiModel = (modelID: string): boolean => {
+    const lowerModelID = modelID.toLowerCase()
+    return lowerModelID.includes("gemini")
 }
 
 export const isDeepSeekOrKimi = (providerID: string, modelID: string): boolean => {
@@ -74,32 +65,53 @@ export const createSyntheticAssistantMessage = (
     const userInfo = baseMessage.info as UserMessage
     const now = Date.now()
 
-    return {
-        info: {
-            id: SYNTHETIC_MESSAGE_ID,
-            sessionID: userInfo.sessionID,
-            role: "assistant" as const,
-            agent: userInfo.agent || "code",
-            parentID: userInfo.id,
-            modelID: userInfo.model.modelID,
-            providerID: userInfo.model.providerID,
-            mode: "default",
-            path: {
-                cwd: "/",
-                root: "/",
-            },
-            time: { created: now, completed: now },
-            cost: 0,
-            tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
-            ...(variant !== undefined && { variant }),
+    const messageId = generateUniqueId("msg")
+    const partId = generateUniqueId("prt")
+    const callId = generateUniqueId("call")
+
+    const baseInfo = {
+        id: messageId,
+        sessionID: userInfo.sessionID,
+        role: "assistant" as const,
+        agent: userInfo.agent || "code",
+        parentID: userInfo.id,
+        modelID: userInfo.model.modelID,
+        providerID: userInfo.model.providerID,
+        mode: "default",
+        path: {
+            cwd: "/",
+            root: "/",
         },
+        time: { created: now, completed: now },
+        cost: 0,
+        tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+        ...(variant !== undefined && { variant }),
+    }
+
+    // For Gemini models, add thoughtSignature bypass to avoid validation errors
+    const toolPartMetadata = isGeminiModel(userInfo.model.modelID)
+        ? { google: { thoughtSignature: "skip_thought_signature_validator" } }
+        : undefined
+
+    return {
+        info: baseInfo,
         parts: [
             {
-                id: SYNTHETIC_PART_ID,
+                id: partId,
                 sessionID: userInfo.sessionID,
-                messageID: SYNTHETIC_MESSAGE_ID,
-                type: "text",
-                text: content,
+                messageID: messageId,
+                type: "tool",
+                callID: callId,
+                tool: "context_info",
+                state: {
+                    status: "completed",
+                    input: {},
+                    output: content,
+                    title: "Context Info",
+                    metadata: {},
+                    time: { start: now, end: now },
+                },
+                ...(toolPartMetadata && { metadata: toolPartMetadata }),
             },
         ],
     }
@@ -109,12 +121,15 @@ export const createSyntheticToolPart = (baseMessage: WithParts, content: string)
     const userInfo = baseMessage.info as UserMessage
     const now = Date.now()
 
+    const partId = generateUniqueId("prt")
+    const callId = generateUniqueId("call")
+
     return {
-        id: SYNTHETIC_PART_ID,
+        id: partId,
         sessionID: userInfo.sessionID,
         messageID: baseMessage.info.id,
         type: "tool" as const,
-        callID: SYNTHETIC_CALL_ID,
+        callID: callId,
         tool: "context_info",
         state: {
             status: "completed" as const,

@@ -8,6 +8,7 @@ import {
     createCommandExecuteHandler,
     createSystemPromptHandler,
 } from "./lib/hooks"
+import { configureClientAuth, isSecureMode } from "./lib/auth"
 
 const plugin: Plugin = (async (ctx) => {
     const config = getConfig(ctx)
@@ -18,6 +19,11 @@ const plugin: Plugin = (async (ctx) => {
 
     const logger = new Logger(config.debug)
     const state = createSessionState()
+
+    if (isSecureMode()) {
+        configureClientAuth(ctx.client)
+        // logger.info("Secure mode detected, configured client authentication")
+    }
 
     logger.info("DCP initialized", {
         strategies: config.strategies,

@@ -156,7 +156,7 @@ When enabled, turn protection prevents tool outputs from being pruned for a conf
 ### Protected Tools
 
 By default, these tools are always protected from pruning across all strategies:
-`task`, `todowrite`, `todoread`, `discard`, `extract`, `squash`, `batch`, `write`, `edit`
+`task`, `todowrite`, `todoread`, `discard`, `extract`, `squash`, `batch`, `write`, `edit`, `plan_enter`, `plan_exit`
 
 The `protectedTools` arrays in each section add to this default list.
 

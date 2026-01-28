@@ -14,8 +14,9 @@ export const SQUASH_TOOL_SPEC = `**Purpose:** Collapse a contiguous range of con
 3. \`topic\` — short label (3-5 words)
 4. \`summary\` — replacement text
 5. Everything between (inclusive) removed, summary inserted
+- The squash will FAIL if \`startString\` or \`endString\` is not found in the conversation with an error "startString/endString not found in conversation".
+- The squash will FAIL if \`startString\` or \`endString\` is found multiple times with an error "Found multiple matches for startString/endString". Provide a larger string with more surrounding context to uniquely identify the intended match.
 **Best Practices:**
-- Choose unique strings appearing only once
 - Write concise topics: "Auth System Exploration", "Token Logic Refactor"
 - Write comprehensive summaries with key information
 - Best after finishing work phase, not during active exploration

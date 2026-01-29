@@ -193,9 +193,14 @@ export const insertPruneToolContext = (
         (msg) => !(msg.info.role === "user" && isIgnoredUserMessage(msg)),
     )
 
+    // It's not safe to inject assistant role messages following a user message, as models such
+    // as Claude expect the assistant "turn" to start with reasoning parts. Reasoning parts in many
+    // cases also cannot be faked as they may be encrypted by the model.
     if (!lastNonIgnoredMessage || lastNonIgnoredMessage.info.role === "user") {
         messages.push(createSyntheticUserMessage(lastUserMessage, combinedContent, variant))
     } else {
+        // For DeepSeek and Kimi, append tool part to existing message, it seems they only allow assistant
+        // messages to not have reasoning parts if they only have tool parts.
         const providerID = userInfo.model?.providerID || ""
         const modelID = userInfo.model?.modelID || ""
 

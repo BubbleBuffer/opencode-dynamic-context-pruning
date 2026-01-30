@@ -8,8 +8,9 @@
     "types": "./dist/index.d.ts",
     "scripts": {
         "clean": "rm -rf dist",
+        "generate:prompts": "tsx scripts/generate-prompts.ts",
+        "prebuild": "npm run generate:prompts",
         "build": "npm run clean && tsc",
-        "postbuild": "rm -rf dist/logs && cp lib/prompts/*.md dist/lib/prompts/",
         "prepublishOnly": "npm run build",
         "dev": "opencode plugin dev",
         "typecheck": "tsc --noEmit",

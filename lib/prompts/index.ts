@@ -1,17 +1,11 @@
-import { readFileSync } from "node:fs"
-import { dirname, join } from "node:path"
-import { fileURLToPath } from "node:url"
-
 // Tool specs
 import { PRUNE_TOOL_SPEC } from "./prune-tool-spec"
 import { DISTILL_TOOL_SPEC } from "./distill-tool-spec"
 import { COMPRESS_TOOL_SPEC } from "./compress-tool-spec"
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-
-// Load markdown prompts at module init
-const SYSTEM_PROMPT = readFileSync(join(__dirname, "system.md"), "utf-8")
-const NUDGE = readFileSync(join(__dirname, "nudge.md"), "utf-8")
+// Generated prompts (from .md files via scripts/generate-prompts.ts)
+import { SYSTEM as SYSTEM_PROMPT } from "./system.generated"
+import { NUDGE } from "./nudge.generated"
 
 export interface ToolFlags {
     prune: boolean

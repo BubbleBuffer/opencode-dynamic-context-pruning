@@ -62,7 +62,7 @@ When in doubt, KEEP IT.
 // **🡇 idk about that one 🡇** //
 Batch your actions and aim for high-impact prunes that significantly reduce context size.
 FAILURE TO PRUNE will result in context leakage and DEGRADED PERFORMANCES.
-If no <prunable-tools> list is present in context, do NOT TRY TO PRUNE ANYTHING as it will fail and waste ressources.
+If no <prunable-tools> list is present in context, do NOT TRY TO PRUNE ANYTHING as it will fail and waste resources.
 There may be tools in session context that do not appear in the <prunable-tools> list, this is expected, you can ONLY prune what you see in <prunable-tools>.
 
 </instruction>

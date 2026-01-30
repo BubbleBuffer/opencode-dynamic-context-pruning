@@ -13,11 +13,11 @@
         "build": "npm run clean && tsc",
         "prepublishOnly": "npm run build",
         "dev": "opencode plugin dev",
-        "typecheck": "tsc --noEmit",
+        "typecheck": "npm run generate:prompts && tsc --noEmit",
         "test": "node --import tsx --test tests/*.test.ts",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
-        "dcp": "tsx cli/print.ts"
+        "dcp": "tsx scripts/print.ts"
     },
     "keywords": [
         "opencode",

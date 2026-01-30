@@ -164,7 +164,7 @@ export const insertPruneToolContext = (
             lastNonIgnoredMessage.parts.push(toolPart)
         } else {
             messages.push(
-                createSyntheticAssistantMessage(lastUserMessage, prunableToolsContent, variant)
+                createSyntheticAssistantMessage(lastUserMessage, prunableToolsContent, variant),
             )
         }
     }

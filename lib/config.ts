@@ -20,7 +20,7 @@ export interface DistillTool {
 
 export interface CompressTool {
     enabled: boolean
-    showSummary: boolean
+    showCompression: boolean
 }
 
 export interface ToolSettings {
@@ -112,7 +112,7 @@ export const VALID_CONFIG_KEYS = new Set([
     "tools.distill.showDistillation",
     "tools.compress",
     "tools.compress.enabled",
-    "tools.compress.showSummary",
+    "tools.compress.showCompression",
     "strategies",
     // strategies.deduplication
     "strategies.deduplication",
@@ -317,13 +317,13 @@ function validateConfigTypes(config: Record<string, any>): ValidationError[] {
                 })
             }
             if (
-                tools.compress.showSummary !== undefined &&
-                typeof tools.compress.showSummary !== "boolean"
+                tools.compress.showCompression !== undefined &&
+                typeof tools.compress.showCompression !== "boolean"
             ) {
                 errors.push({
-                    key: "tools.compress.showSummary",
+                    key: "tools.compress.showCompression",
                     expected: "boolean",
-                    actual: typeof tools.compress.showSummary,
+                    actual: typeof tools.compress.showCompression,
                 })
             }
         }
@@ -480,7 +480,7 @@ const defaultConfig: PluginConfig = {
         },
         compress: {
             enabled: true,
-            showSummary: true,
+            showCompression: true,
         },
     },
     strategies: {
@@ -656,7 +656,7 @@ function mergeTools(
         },
         compress: {
             enabled: override.compress?.enabled ?? base.compress.enabled,
-            showSummary: override.compress?.showSummary ?? base.compress.showSummary,
+            showCompression: override.compress?.showCompression ?? base.compress.showCompression,
         },
     }
 }

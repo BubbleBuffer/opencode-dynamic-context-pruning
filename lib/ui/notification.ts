@@ -145,8 +145,8 @@ export async function sendCompressNotification(
         } else {
             message += ` condensed`
         }
-        if (config.tools.compress.showSummary) {
-            message += `\n→ Summary: ${summary}`
+        if (config.tools.compress.showCompression) {
+            message += `\n→ Compression: ${summary}`
         }
     }
 

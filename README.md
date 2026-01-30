@@ -112,7 +112,7 @@ DCP uses its own config file:
         "compress": {
             "enabled": true,
             // Show summary content as an ignored message notification
-            "showSummary": true,
+            "showCompression": true,
         },
     },
     // Automatic pruning strategies

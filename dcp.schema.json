@@ -132,7 +132,7 @@
                             "default": true,
                             "description": "Enable the compress tool"
                         },
-                        "showSummary": {
+                        "showCompression": {
                             "type": "boolean",
                             "default": true,
                             "description": "Show summary output in the UI"

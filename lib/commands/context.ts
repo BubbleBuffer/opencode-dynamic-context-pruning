@@ -234,10 +234,12 @@ function formatContextMessage(breakdown: TokenBreakdown): string {
 
     if (breakdown.prunedTokens > 0) {
         const withoutPruning = breakdown.total + breakdown.prunedTokens
-        const messagePrunePart =
-            breakdown.prunedMessageCount > 0 ? `, ${breakdown.prunedMessageCount} messages` : ""
+        const pruned = []
+        if (breakdown.prunedCount > 0) pruned.push(`${breakdown.prunedCount} tools`)
+        if (breakdown.prunedMessageCount > 0)
+            pruned.push(`${breakdown.prunedMessageCount} messages`)
         lines.push(
-            `  Pruned:          ${breakdown.prunedCount} tools${messagePrunePart} (~${formatTokenCount(breakdown.prunedTokens)})`,
+            `  Pruned:          ${pruned.join(", ")} (~${formatTokenCount(breakdown.prunedTokens)})`,
         )
         lines.push(`  Current context: ~${formatTokenCount(breakdown.total)}`)
         lines.push(`  Without DCP:     ~${formatTokenCount(withoutPruning)}`)

@@ -5,7 +5,7 @@ import { syncToolCache } from "./state/tool-cache"
 import { deduplicate, supersedeWrites, purgeErrors } from "./strategies"
 import { prune, insertPruneToolContext } from "./messages"
 import { checkSession } from "./state"
-import { loadPrompt } from "./prompts"
+import { renderSystemPrompt } from "./prompts"
 import { handleStatsCommand } from "./commands/stats"
 import { handleContextCommand } from "./commands/context"
 import { handleHelpCommand } from "./commands/help"
@@ -33,22 +33,17 @@ export function createSystemPromptHandler(
             return
         }
 
-        const discardEnabled = config.tools.discard.enabled
-        const extractEnabled = config.tools.extract.enabled
+        const flags = {
+            prune: config.tools.prune.enabled,
+            distill: config.tools.distill.enabled,
+            compress: config.tools.compress.enabled,
+        }
 
-        let promptName: string
-        if (discardEnabled && extractEnabled) {
-            promptName = "system/system-prompt-both"
-        } else if (discardEnabled) {
-            promptName = "system/system-prompt-discard"
-        } else if (extractEnabled) {
-            promptName = "system/system-prompt-extract"
-        } else {
+        if (!flags.prune && !flags.distill && !flags.compress) {
             return
         }
 
-        const syntheticPrompt = loadPrompt(promptName)
-        output.system.push(syntheticPrompt)
+        output.system.push(renderSystemPrompt(flags))
     }
 }
 

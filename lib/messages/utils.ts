@@ -1,11 +1,12 @@
+import { ulid } from "ulid"
 import { Logger } from "../logger"
 import { isMessageCompacted } from "../shared-utils"
 import type { SessionState, WithParts } from "../state"
 import type { UserMessage } from "@opencode-ai/sdk/v2"
 
-const SYNTHETIC_MESSAGE_ID = "msg_01234567890123456789012345"
-const SYNTHETIC_PART_ID = "prt_01234567890123456789012345"
-const SYNTHETIC_CALL_ID = "call_01234567890123456789012345"
+export const COMPRESS_SUMMARY_PREFIX = "[Compressed conversation block]\n\n"
+
+const generateUniqueId = (prefix: string): string => `${prefix}_${ulid()}`
 
 export const isDeepSeekOrKimi = (providerID: string, modelID: string): boolean => {
     const lowerProviderID = providerID.toLowerCase()
@@ -26,21 +27,24 @@ export const createSyntheticUserMessage = (
     const userInfo = baseMessage.info as UserMessage
     const now = Date.now()
 
+    const messageId = generateUniqueId("msg")
+    const partId = generateUniqueId("prt")
+
     return {
         info: {
-            id: SYNTHETIC_MESSAGE_ID,
+            id: messageId,
             sessionID: userInfo.sessionID,
             role: "user" as const,
-            agent: userInfo.agent || "code",
+            agent: userInfo.agent,
             model: userInfo.model,
             time: { created: now },
             ...(variant !== undefined && { variant }),
         },
         parts: [
             {
-                id: SYNTHETIC_PART_ID,
+                id: partId,
                 sessionID: userInfo.sessionID,
-                messageID: SYNTHETIC_MESSAGE_ID,
+                messageID: messageId,
                 type: "text",
                 text: content,
             },
@@ -56,9 +60,12 @@ export const createSyntheticAssistantMessage = (
     const userInfo = baseMessage.info as UserMessage
     const now = Date.now()
 
+    const messageId = generateUniqueId("msg")
+    const partId = generateUniqueId("prt")
+
     return {
         info: {
-            id: SYNTHETIC_MESSAGE_ID,
+            id: messageId,
             sessionID: userInfo.sessionID,
             role: "assistant" as const,
             agent: userInfo.agent || "code",
@@ -77,9 +84,9 @@ export const createSyntheticAssistantMessage = (
         },
         parts: [
             {
-                id: SYNTHETIC_PART_ID,
+                id: partId,
                 sessionID: userInfo.sessionID,
-                messageID: SYNTHETIC_MESSAGE_ID,
+                messageID: messageId,
                 type: "text",
                 text: content,
             },
@@ -91,12 +98,15 @@ export const createSyntheticToolPart = (baseMessage: WithParts, content: string)
     const userInfo = baseMessage.info as UserMessage
     const now = Date.now()
 
+    const partId = generateUniqueId("prt")
+    const callId = generateUniqueId("call")
+
     return {
-        id: SYNTHETIC_PART_ID,
+        id: partId,
         sessionID: userInfo.sessionID,
         messageID: baseMessage.info.id,
         type: "tool" as const,
-        callID: SYNTHETIC_CALL_ID,
+        callID: callId,
         tool: "context_info",
         state: {
             status: "completed" as const,
@@ -263,4 +273,8 @@ export const isIgnoredUserMessage = (message: WithParts): boolean => {
     }
 
     return true
+}
+
+export const findMessageIndex = (messages: WithParts[], messageId: string): number => {
+    return messages.findIndex((msg) => msg.info.id === messageId)
 }

@@ -1,10 +1,11 @@
 # Dynamic Context Pruning Plugin
 
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/dansmolsky)
 [![npm version](https://img.shields.io/npm/v/@tarquinen/opencode-dcp.svg)](https://www.npmjs.com/package/@tarquinen/opencode-dcp)
 
 Automatically reduces token usage in OpenCode by removing obsolete tools from conversation history.
 
-![DCP in action](dcp-demo5.png)
+![DCP in action](assets/images/dcp-demo5.png)
 
 ## Installation
 
@@ -27,9 +28,11 @@ DCP uses multiple tools and strategies to reduce context size:
 
 ### Tools
 
-**Discard** — Exposes a `discard` tool that the AI can call to remove completed or noisy tool content from context.
+**Distill** — Exposes a `distill` tool that the AI can call to distill valuable context into concise summaries before removing the tool content.
 
-**Extract** — Exposes an `extract` tool that the AI can call to distill valuable context into concise summaries before removing the tool content.
+**Compress** — Exposes a `compress` tool that the AI can call to collapse a large section of conversation (messages and tools) into a single summary.
+
+**Prune** — Exposes a `prune` tool that the AI can call to remove completed or noisy tool content from context.
 
 ### Strategies
 
@@ -57,7 +60,7 @@ DCP uses its own config file:
 
 - Global: `~/.config/opencode/dcp.jsonc` (or `dcp.json`), created automatically on first run
 - Custom config directory: `$OPENCODE_CONFIG_DIR/dcp.jsonc` (or `dcp.json`), if `OPENCODE_CONFIG_DIR` is set
-- Project: `.opencode/dcp.jsonc` (or `dcp.json`) in your project’s `.opencode` directory
+- Project: `.opencode/dcp.jsonc` (or `dcp.json`) in your project's `.opencode` directory
 
 <details>
 <summary><strong>Default Configuration</strong> (click to expand)</summary>
@@ -96,14 +99,20 @@ DCP uses its own config file:
             "protectedTools": [],
         },
         // Removes tool content from context without preservation (for completed tasks or noise)
-        "discard": {
+        "prune": {
             "enabled": true,
         },
         // Distills key findings into preserved knowledge before removing raw content
-        "extract": {
+        "distill": {
             "enabled": true,
             // Show distillation content as an ignored message notification
             "showDistillation": false,
+        },
+        // Collapses a range of conversation content into a single summary
+        "compress": {
+            "enabled": true,
+            // Show summary content as an ignored message notification
+            "showCompression": true,
         },
     },
     // Automatic pruning strategies
@@ -143,12 +152,12 @@ DCP provides a `/dcp` slash command:
 
 ### Turn Protection
 
-When enabled, turn protection prevents tool outputs from being pruned for a configurable number of message turns. This gives the AI time to reference recent tool outputs before they become prunable. Applies to both `discard` and `extract` tools, as well as automatic strategies.
+When enabled, turn protection prevents tool outputs from being pruned for a configurable number of message turns. This gives the AI time to reference recent tool outputs before they become prunable. Applies to both `prune` and `distill` tools, as well as automatic strategies.
 
 ### Protected Tools
 
 By default, these tools are always protected from pruning across all strategies:
-`task`, `todowrite`, `todoread`, `discard`, `extract`, `batch`, `write`, `edit`
+`task`, `todowrite`, `todoread`, `distill`, `compress`, `prune`, `batch`, `write`, `edit`, `plan_enter`, `plan_exit`
 
 The `protectedTools` arrays in each section add to this default list.
 

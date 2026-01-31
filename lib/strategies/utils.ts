@@ -72,6 +72,15 @@ export const calculateTokensSaved = (
                     }
                     continue
                 }
+                if (part.tool === "edit" || part.tool === "write") {
+                    if (part.state.input) {
+                        const inputContent =
+                            typeof part.state.input === "string"
+                                ? part.state.input
+                                : JSON.stringify(part.state.input)
+                        contents.push(inputContent)
+                    }
+                }
                 if (part.state.status === "completed") {
                     const content =
                         typeof part.state.output === "string"

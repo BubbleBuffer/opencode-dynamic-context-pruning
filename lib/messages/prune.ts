@@ -17,9 +17,55 @@ export const prune = (
     messages: WithParts[],
 ): void => {
     filterCompressedRanges(state, logger, messages)
+    pruneFullTool(state, logger, messages)
     pruneToolOutputs(state, logger, messages)
     pruneToolInputs(state, logger, messages)
     pruneToolErrors(state, logger, messages)
+}
+
+const pruneFullTool = (state: SessionState, logger: Logger, messages: WithParts[]): void => {
+    const messagesToRemove: string[] = []
+
+    for (const msg of messages) {
+        if (isMessageCompacted(state, msg)) {
+            continue
+        }
+
+        const parts = Array.isArray(msg.parts) ? msg.parts : []
+        const partsToRemove: string[] = []
+
+        for (const part of parts) {
+            if (part.type !== "tool") {
+                continue
+            }
+            if (!state.prune.toolIds.includes(part.callID)) {
+                continue
+            }
+            if (part.tool !== "edit" && part.tool !== "write") {
+                continue
+            }
+
+            partsToRemove.push(part.callID)
+        }
+
+        if (partsToRemove.length === 0) {
+            continue
+        }
+
+        msg.parts = parts.filter(
+            (part) => part.type !== "tool" || !partsToRemove.includes(part.callID),
+        )
+
+        if (msg.parts.length === 0) {
+            messagesToRemove.push(msg.info.id)
+        }
+    }
+
+    if (messagesToRemove.length > 0) {
+        const result = messages.filter((msg) => !messagesToRemove.includes(msg.info.id))
+        messages.length = 0
+        messages.push(...result)
+    }
 }
 
 const pruneToolOutputs = (state: SessionState, logger: Logger, messages: WithParts[]): void => {
@@ -39,7 +85,7 @@ const pruneToolOutputs = (state: SessionState, logger: Logger, messages: WithPar
             if (part.state.status !== "completed") {
                 continue
             }
-            if (part.tool === "question") {
+            if (part.tool === "question" || part.tool === "edit" || part.tool === "write") {
                 continue
             }
 

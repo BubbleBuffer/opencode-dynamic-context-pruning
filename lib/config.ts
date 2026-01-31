@@ -79,8 +79,6 @@ const DEFAULT_PROTECTED_TOOLS = [
     "distill",
     "compress",
     "batch",
-    "write",
-    "edit",
     "plan_enter",
     "plan_exit",
 ]
@@ -489,7 +487,7 @@ const defaultConfig: PluginConfig = {
             protectedTools: [],
         },
         supersedeWrites: {
-            enabled: false,
+            enabled: true,
         },
         purgeErrors: {
             enabled: true,

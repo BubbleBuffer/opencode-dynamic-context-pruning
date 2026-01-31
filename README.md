@@ -38,7 +38,7 @@ DCP uses multiple tools and strategies to reduce context size:
 
 **Deduplication** — Identifies repeated tool calls (e.g., reading the same file multiple times) and keeps only the most recent output. Runs automatically on every request with zero LLM cost.
 
-**Supersede Writes** — Prunes write tool inputs for files that have subsequently been read. When a file is written and later read, the original write content becomes redundant since the current file state is captured in the read result. Runs automatically on every request with zero LLM cost.
+**Supersede Writes** — Removes write tool calls for files that have subsequently been read. When a file is written and later read, the original write content becomes redundant since the current file state is captured in the read result. Runs automatically on every request with zero LLM cost.
 
 **Purge Errors** — Prunes tool inputs for tools that returned errors after a configurable number of turns (default: 4). Error messages are preserved for context, but the potentially large input content is removed. Runs automatically on every request with zero LLM cost.
 
@@ -127,7 +127,7 @@ DCP uses its own config file:
 >         },
 >         // Prune write tool inputs when the file has been subsequently read
 >         "supersedeWrites": {
->             "enabled": false,
+>             "enabled": true,
 >         },
 >         // Prune tool inputs for errored tools after X turns
 >         "purgeErrors": {
@@ -155,7 +155,7 @@ DCP provides a `/dcp` slash command:
 ### Protected Tools
 
 By default, these tools are always protected from pruning:
-`task`, `todowrite`, `todoread`, `distill`, `compress`, `prune`, `batch`, `write`, `edit`, `plan_enter`, `plan_exit`
+`task`, `todowrite`, `todoread`, `distill`, `compress`, `prune`, `batch`, `plan_enter`, `plan_exit`
 
 The `protectedTools` arrays in each section add to this default list.
 

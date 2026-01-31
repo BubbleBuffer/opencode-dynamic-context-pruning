@@ -37,7 +37,7 @@ const plugin: Plugin = (async (ctx) => {
             state,
             logger,
             config,
-        ),
+        ) as any,
         "chat.message": async (
             input: {
                 sessionID: string

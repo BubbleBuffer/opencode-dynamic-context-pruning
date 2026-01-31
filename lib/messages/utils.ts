@@ -1,6 +1,6 @@
 import { ulid } from "ulid"
-import { Logger } from "../logger"
 import { isMessageCompacted } from "../shared-utils"
+import { Logger } from "../logger"
 import type { SessionState, WithParts } from "../state"
 import type { UserMessage } from "@opencode-ai/sdk/v2"
 
@@ -26,7 +26,6 @@ export const createSyntheticUserMessage = (
 ): WithParts => {
     const userInfo = baseMessage.info as UserMessage
     const now = Date.now()
-
     const messageId = generateUniqueId("msg")
     const partId = generateUniqueId("prt")
 
@@ -45,7 +44,7 @@ export const createSyntheticUserMessage = (
                 id: partId,
                 sessionID: userInfo.sessionID,
                 messageID: messageId,
-                type: "text",
+                type: "text" as const,
                 text: content,
             },
         ],
@@ -59,7 +58,6 @@ export const createSyntheticAssistantMessage = (
 ): WithParts => {
     const userInfo = baseMessage.info as UserMessage
     const now = Date.now()
-
     const messageId = generateUniqueId("msg")
     const partId = generateUniqueId("prt")
 
@@ -87,7 +85,7 @@ export const createSyntheticAssistantMessage = (
                 id: partId,
                 sessionID: userInfo.sessionID,
                 messageID: messageId,
-                type: "text",
+                type: "text" as const,
                 text: content,
             },
         ],

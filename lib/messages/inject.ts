@@ -148,7 +148,6 @@ export const insertPruneToolContext = (
         logger.debug("Last tool was prune - injecting cooldown message")
         contentParts.push(getCooldownMessage(config))
     } else {
-        // Inject <prunable-tools> only when prune or distill is enabled
         if (pruneOrDistillEnabled) {
             const prunableToolsList = buildPrunableToolsList(state, config, logger, messages)
             if (prunableToolsList) {
@@ -157,7 +156,6 @@ export const insertPruneToolContext = (
             }
         }
 
-        // Inject <compress-context> always when compress is enabled (every turn)
         if (compressEnabled) {
             const compressContext = buildCompressContext(state, messages)
             // logger.debug("compress-context: \n" + compressContext)
@@ -188,7 +186,6 @@ export const insertPruneToolContext = (
     const userInfo = lastUserMessage.info as UserMessage
     const variant = state.variant ?? userInfo.variant
 
-    // Find the last message that isn't an ignored user message
     const lastNonIgnoredMessage = messages.findLast(
         (msg) => !(msg.info.role === "user" && isIgnoredUserMessage(msg)),
     )
@@ -212,7 +209,6 @@ export const insertPruneToolContext = (
             const toolPart = createSyntheticToolPart(lastNonIgnoredMessage, combinedContent)
             lastNonIgnoredMessage.parts.push(toolPart)
         } else {
-            // Create a new assistant message with just a text part
             messages.push(
                 createSyntheticAssistantMessage(lastUserMessage, combinedContent, variant),
             )

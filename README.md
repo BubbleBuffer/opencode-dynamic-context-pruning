@@ -62,8 +62,6 @@ DCP uses its own config file:
 - Custom config directory: `$OPENCODE_CONFIG_DIR/dcp.jsonc` (or `dcp.json`), if `OPENCODE_CONFIG_DIR` is set
 - Project: `.opencode/dcp.jsonc` (or `dcp.json`) in your project's `.opencode` directory
 
-> [!NOTE]
->
 > <details>
 > <summary><strong>Default Configuration</strong> (click to expand)</summary>
 >

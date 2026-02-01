@@ -76,6 +76,8 @@ DCP uses its own config file:
 >     "debug": false,
 >     // Notification display: "off", "minimal", or "detailed"
 >     "pruneNotification": "detailed",
+>     // Notification type: "chat" (in-conversation) or "toast" (system toast)
+>     "pruneNotificationType": "chat",
 >     // Slash commands configuration
 >     "commands": {
 >         "enabled": true,

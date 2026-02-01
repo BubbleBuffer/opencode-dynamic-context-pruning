@@ -105,8 +105,12 @@ export function createCompressTool(ctx: PruneToolContext): ReturnType<typeof too
                 endResult.messageIndex,
             )
 
-            state.prune.toolIds.push(...containedToolIds)
-            state.prune.messageIds.push(...containedMessageIds)
+            for (const id of containedToolIds) {
+                state.prune.toolIds.add(id)
+            }
+            for (const id of containedMessageIds) {
+                state.prune.messageIds.add(id)
+            }
 
             // Remove any existing summaries whose anchors are now inside this range
             // This prevents duplicate injections when a larger compress subsumes a smaller one

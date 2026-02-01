@@ -38,8 +38,8 @@ export function countTurns(state: SessionState, messages: WithParts[]): number {
 
 export function resetOnCompaction(state: SessionState): void {
     state.toolParameters.clear()
-    state.prune.toolIds = []
-    state.prune.messageIds = []
+    state.prune.toolIds = new Set<string>()
+    state.prune.messageIds = new Set<string>()
     state.compressSummaries = []
     state.nudgeCounter = 0
     state.lastToolPrune = false

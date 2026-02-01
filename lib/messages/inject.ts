@@ -88,7 +88,7 @@ const buildPrunableToolsList = (
     const toolIdList: string[] = buildToolIdList(state, messages, logger)
 
     state.toolParameters.forEach((toolParameterEntry, toolCallId) => {
-        if (state.prune.toolIds.includes(toolCallId)) {
+        if (state.prune.toolIds.has(toolCallId)) {
             return
         }
 

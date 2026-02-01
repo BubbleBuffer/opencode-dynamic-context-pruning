@@ -115,7 +115,9 @@ export async function executePruneOperation(
     }
 
     const pruneToolIds: string[] = validNumericIds.map((index) => toolIdList[index])
-    state.prune.toolIds.push(...pruneToolIds)
+    for (const id of pruneToolIds) {
+        state.prune.toolIds.add(id)
+    }
 
     const toolMetadata = new Map<string, ToolParameterEntry>()
     for (const id of pruneToolIds) {

@@ -48,8 +48,8 @@ export function createSessionState(): SessionState {
         sessionId: null,
         isSubAgent: false,
         prune: {
-            toolIds: [],
-            messageIds: [],
+            toolIds: new Set<string>(),
+            messageIds: new Set<string>(),
         },
         compressSummaries: [],
         stats: {
@@ -69,8 +69,8 @@ export function resetSessionState(state: SessionState): void {
     state.sessionId = null
     state.isSubAgent = false
     state.prune = {
-        toolIds: [],
-        messageIds: [],
+        toolIds: new Set<string>(),
+        messageIds: new Set<string>(),
     }
     state.compressSummaries = []
     state.stats = {
@@ -115,8 +115,8 @@ export async function ensureSessionInitialized(
     }
 
     state.prune = {
-        toolIds: persisted.prune.toolIds || [],
-        messageIds: persisted.prune.messageIds || [],
+        toolIds: new Set(persisted.prune.toolIds || []),
+        messageIds: new Set(persisted.prune.messageIds || []),
     }
     state.compressSummaries = persisted.compressSummaries || []
     state.stats = {

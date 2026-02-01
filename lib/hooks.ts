@@ -10,6 +10,7 @@ import { handleStatsCommand } from "./commands/stats"
 import { handleContextCommand } from "./commands/context"
 import { handleHelpCommand } from "./commands/help"
 import { handleSweepCommand } from "./commands/sweep"
+import { ensureSessionInitialized } from "./state/state"
 
 const INTERNAL_AGENT_SIGNATURES = [
     "You are a title generator",
@@ -92,14 +93,16 @@ export function createCommandExecuteHandler(
         }
 
         if (input.command === "dcp") {
-            const args = (input.arguments || "").trim().split(/\s+/).filter(Boolean)
-            const subcommand = args[0]?.toLowerCase() || ""
-            const _subArgs = args.slice(1)
-
             const messagesResponse = await client.session.messages({
                 path: { id: input.sessionID },
             })
             const messages = (messagesResponse.data || messagesResponse) as WithParts[]
+
+            await ensureSessionInitialized(client, state, input.sessionID, logger, messages)
+
+            const args = (input.arguments || "").trim().split(/\s+/).filter(Boolean)
+            const subcommand = args[0]?.toLowerCase() || ""
+            const _subArgs = args.slice(1)
 
             if (subcommand === "context") {
                 await handleContextCommand({

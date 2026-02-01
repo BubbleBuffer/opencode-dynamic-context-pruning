@@ -38,7 +38,7 @@ const pruneFullTool = (state: SessionState, logger: Logger, messages: WithParts[
             if (part.type !== "tool") {
                 continue
             }
-            if (!state.prune.toolIds.includes(part.callID)) {
+            if (!state.prune.toolIds.has(part.callID)) {
                 continue
             }
             if (part.tool !== "edit" && part.tool !== "write") {
@@ -79,7 +79,7 @@ const pruneToolOutputs = (state: SessionState, logger: Logger, messages: WithPar
             if (part.type !== "tool") {
                 continue
             }
-            if (!state.prune.toolIds.includes(part.callID)) {
+            if (!state.prune.toolIds.has(part.callID)) {
                 continue
             }
             if (part.state.status !== "completed") {
@@ -105,7 +105,7 @@ const pruneToolInputs = (state: SessionState, logger: Logger, messages: WithPart
             if (part.type !== "tool") {
                 continue
             }
-            if (!state.prune.toolIds.includes(part.callID)) {
+            if (!state.prune.toolIds.has(part.callID)) {
                 continue
             }
             if (part.state.status !== "completed") {
@@ -133,7 +133,7 @@ const pruneToolErrors = (state: SessionState, logger: Logger, messages: WithPart
             if (part.type !== "tool") {
                 continue
             }
-            if (!state.prune.toolIds.includes(part.callID)) {
+            if (!state.prune.toolIds.has(part.callID)) {
                 continue
             }
             if (part.state.status !== "error") {
@@ -158,7 +158,7 @@ const filterCompressedRanges = (
     logger: Logger,
     messages: WithParts[],
 ): void => {
-    if (!state.prune.messageIds?.length) {
+    if (!state.prune.messageIds?.size) {
         return
     }
 
@@ -193,7 +193,7 @@ const filterCompressedRanges = (
         }
 
         // Skip messages that are in the prune list
-        if (state.prune.messageIds.includes(msgId)) {
+        if (state.prune.messageIds.has(msgId)) {
             continue
         }
 

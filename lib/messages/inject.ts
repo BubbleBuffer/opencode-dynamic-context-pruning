@@ -199,7 +199,8 @@ export const insertPruneToolContext = (
         // models including DeepSeek and Kimi which don't output reasoning parts following an
         // assistant injection containing text parts. Tool parts appended to the last assistant
         // message are the safest way to inject context without disrupting model behavior.
-        const toolPart = createSyntheticToolPart(lastNonIgnoredMessage, combinedContent)
+        const modelID = userInfo.model?.modelID || ""
+        const toolPart = createSyntheticToolPart(lastNonIgnoredMessage, combinedContent, modelID)
         lastNonIgnoredMessage.parts.push(toolPart)
     }
 }

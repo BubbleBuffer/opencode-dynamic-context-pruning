@@ -8,6 +8,11 @@ export const COMPRESS_SUMMARY_PREFIX = "[Compressed conversation block]\n\n"
 
 const generateUniqueId = (prefix: string): string => `${prefix}_${ulid()}`
 
+const isGeminiModel = (modelID: string): boolean => {
+    const lowerModelID = modelID.toLowerCase()
+    return lowerModelID.includes("gemini")
+}
+
 export const createSyntheticUserMessage = (
     baseMessage: WithParts,
     content: string,
@@ -40,12 +45,21 @@ export const createSyntheticUserMessage = (
     }
 }
 
-export const createSyntheticToolPart = (baseMessage: WithParts, content: string) => {
+export const createSyntheticToolPart = (
+    baseMessage: WithParts,
+    content: string,
+    modelID: string,
+) => {
     const userInfo = baseMessage.info as UserMessage
     const now = Date.now()
 
     const partId = generateUniqueId("prt")
     const callId = generateUniqueId("call")
+
+    // Gemini requires thoughtSignature bypass to accept synthetic tool parts
+    const toolPartMetadata = isGeminiModel(modelID)
+        ? { google: { thoughtSignature: "skip_thought_signature_validator" } }
+        : {}
 
     return {
         id: partId,
@@ -59,7 +73,7 @@ export const createSyntheticToolPart = (baseMessage: WithParts, content: string)
             input: {},
             output: content,
             title: "Context Info",
-            metadata: {},
+            metadata: toolPartMetadata,
             time: { start: now, end: now },
         },
     }

@@ -48,7 +48,7 @@ export async function handleStatsCommand(ctx: StatsCommandContext): Promise<void
 
     // Session stats from in-memory state
     const sessionTokens = state.stats.totalPruneTokens
-    const sessionTools = state.prune.toolIds.length
+    const sessionTools = state.prune.toolIds.size
 
     // All-time stats from storage files
     const allTime = await loadAllSessionStats(logger)

@@ -74,8 +74,8 @@ function analyzeTokens(state: SessionState, messages: WithParts[]): TokenBreakdo
         tools: 0,
         toolCount: 0,
         prunedTokens: state.stats.totalPruneTokens,
-        prunedCount: state.prune.toolIds.length,
-        prunedMessageCount: state.prune.messageIds.length,
+        prunedCount: state.prune.toolIds.size,
+        prunedMessageCount: state.prune.messageIds.size,
         total: 0,
     }
 
@@ -129,7 +129,8 @@ function analyzeTokens(state: SessionState, messages: WithParts[]): TokenBreakdo
                     foundToolIds.add(toolPart.callID)
                 }
 
-                if (!isCompacted) {
+                const isPruned = toolPart.callID && state.prune.toolIds.has(toolPart.callID)
+                if (!isCompacted && !isPruned) {
                     if (toolPart.state?.input) {
                         const inputStr =
                             typeof toolPart.state.input === "string"
@@ -177,7 +178,7 @@ function analyzeTokens(state: SessionState, messages: WithParts[]): TokenBreakdo
         breakdown.system = Math.max(0, firstInput - firstUserTokens)
     }
 
-    breakdown.tools = Math.max(0, toolInputTokens + toolOutputTokens - breakdown.prunedTokens)
+    breakdown.tools = toolInputTokens + toolOutputTokens
     breakdown.assistant = Math.max(
         0,
         breakdown.total - breakdown.system - breakdown.user - breakdown.tools,

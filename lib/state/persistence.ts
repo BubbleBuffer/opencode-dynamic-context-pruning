@@ -134,6 +134,7 @@ export async function loadSessionState(
 export interface AggregatedStats {
     totalTokens: number
     totalTools: number
+    totalMessages: number
     sessionCount: number
 }
 
@@ -141,6 +142,7 @@ export async function loadAllSessionStats(logger: Logger): Promise<AggregatedSta
     const result: AggregatedStats = {
         totalTokens: 0,
         totalTools: 0,
+        totalMessages: 0,
         sessionCount: 0,
     }
 
@@ -161,6 +163,7 @@ export async function loadAllSessionStats(logger: Logger): Promise<AggregatedSta
                 if (state?.stats?.totalPruneTokens && state?.prune?.toolIds) {
                     result.totalTokens += state.stats.totalPruneTokens
                     result.totalTools += state.prune.toolIds.length
+                    result.totalMessages += state.prune.messageIds?.length || 0
                     result.sessionCount++
                 }
             } catch {

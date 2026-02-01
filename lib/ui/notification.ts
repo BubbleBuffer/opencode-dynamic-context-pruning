@@ -63,6 +63,39 @@ function buildDetailedMessage(
     return (message + formatExtracted(showDistillation ? distillation : undefined)).trim()
 }
 
+const TOAST_BODY_MAX_LINES = 12
+const TOAST_SUMMARY_MAX_CHARS = 600
+
+function truncateToastBody(body: string, maxLines: number = TOAST_BODY_MAX_LINES): string {
+    const lines = body.split("\n")
+    if (lines.length <= maxLines) {
+        return body
+    }
+    const kept = lines.slice(0, maxLines - 1)
+    const remaining = lines.length - maxLines + 1
+    return kept.join("\n") + `\n... and ${remaining} more`
+}
+
+function truncateToastSummary(summary: string, maxChars: number = TOAST_SUMMARY_MAX_CHARS): string {
+    if (summary.length <= maxChars) {
+        return summary
+    }
+    return summary.slice(0, maxChars - 3) + "..."
+}
+
+function truncateExtractedSection(message: string, maxChars: number = TOAST_SUMMARY_MAX_CHARS): string {
+    const marker = "\n\n▣ Extracted"
+    const index = message.indexOf(marker)
+    if (index === -1) {
+        return message
+    }
+    const extracted = message.slice(index)
+    if (extracted.length <= maxChars) {
+        return message
+    }
+    return message.slice(0, index) + truncateToastSummary(extracted, maxChars)
+}
+
 export async function sendUnifiedNotification(
     client: any,
     logger: Logger,
@@ -99,6 +132,22 @@ export async function sendUnifiedNotification(
                   distillation,
                   showDistillation,
               )
+
+    if (config.pruneNotificationType === "toast") {
+        let toastMessage = truncateExtractedSection(message)
+        toastMessage =
+            config.pruneNotification === "minimal" ? toastMessage : truncateToastBody(toastMessage)
+
+        await client.tui.showToast({
+            body: {
+                title: "DCP: Prune Notification",
+                message: toastMessage,
+                variant: "info",
+                duration: 5000,
+            },
+        })
+        return true
+    }
 
     await sendIgnoredMessage(client, sessionId, message, params, logger)
     return true
@@ -148,6 +197,31 @@ export async function sendCompressNotification(
         if (config.tools.compress.showCompression) {
             message += `\n→ Compression: ${summary}`
         }
+    }
+
+    if (config.pruneNotificationType === "toast") {
+        let toastMessage = message
+        if (config.tools.compress.showCompression) {
+            const truncatedSummary = truncateToastSummary(summary)
+            if (truncatedSummary !== summary) {
+                toastMessage = toastMessage.replace(
+                    `\n→ Compression: ${summary}`,
+                    `\n→ Compression: ${truncatedSummary}`,
+                )
+            }
+        }
+        toastMessage =
+            config.pruneNotification === "minimal" ? toastMessage : truncateToastBody(toastMessage)
+
+        await client.tui.showToast({
+            body: {
+                title: "DCP: Compress Notification",
+                message: toastMessage,
+                variant: "info",
+                duration: 5000,
+            },
+        })
+        return true
     }
 
     await sendIgnoredMessage(client, sessionId, message, params, logger)

@@ -61,7 +61,7 @@ interface TokenBreakdown {
     tools: number
     toolCount: number
     prunedTokens: number
-    prunedCount: number
+    prunedToolCount: number
     prunedMessageCount: number
     total: number
 }
@@ -74,7 +74,7 @@ function analyzeTokens(state: SessionState, messages: WithParts[]): TokenBreakdo
         tools: 0,
         toolCount: 0,
         prunedTokens: state.stats.totalPruneTokens,
-        prunedCount: state.prune.toolIds.size,
+        prunedToolCount: state.prune.toolIds.size,
         prunedMessageCount: state.prune.messageIds.size,
         total: 0,
     }
@@ -198,7 +198,7 @@ function formatContextMessage(breakdown: TokenBreakdown): string {
     const lines: string[] = []
     const barWidth = 30
 
-    const toolsInContext = breakdown.toolCount - breakdown.prunedCount
+    const toolsInContext = breakdown.toolCount - breakdown.prunedToolCount
     const toolsLabel = `Tools (${toolsInContext})`
 
     const categories = [
@@ -236,7 +236,7 @@ function formatContextMessage(breakdown: TokenBreakdown): string {
     if (breakdown.prunedTokens > 0) {
         const withoutPruning = breakdown.total + breakdown.prunedTokens
         const pruned = []
-        if (breakdown.prunedCount > 0) pruned.push(`${breakdown.prunedCount} tools`)
+        if (breakdown.prunedToolCount > 0) pruned.push(`${breakdown.prunedToolCount} tools`)
         if (breakdown.prunedMessageCount > 0)
             pruned.push(`${breakdown.prunedMessageCount} messages`)
         lines.push(

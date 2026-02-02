@@ -8,7 +8,9 @@ import {
     buildToolIdList,
     createSyntheticTextPart,
     createSyntheticToolPart,
+    createSyntheticAssistantMessage,
     isIgnoredUserMessage,
+    isDeepSeekOrKimi,
 } from "./utils"
 import { getFilePathFromParameters, isProtectedFilePath } from "../protected-file-patterns"
 import { getLastUserMessage, isMessageCompacted } from "../shared-utils"
@@ -182,6 +184,7 @@ export const insertPruneToolContext = (
     }
 
     const userInfo = lastUserMessage.info as UserMessage
+    const variant = state.variant ?? userInfo.variant
 
     const lastNonIgnoredMessage = messages.findLast(
         (msg) => !(msg.info.role === "user" && isIgnoredUserMessage(msg)),
@@ -199,12 +202,24 @@ export const insertPruneToolContext = (
         const textPart = createSyntheticTextPart(lastNonIgnoredMessage, combinedContent)
         lastNonIgnoredMessage.parts.push(textPart)
     } else {
-        // Append tool part to existing assistant message. This approach works universally across
-        // models including DeepSeek and Kimi which don't output reasoning parts following an
+        // For non-user message case: push a new synthetic assistant message or append tool part
+        // for DeepSeek/Kimi. DeepSeek and Kimi don't output reasoning parts following an
         // assistant injection containing text parts. Tool parts appended to the last assistant
         // message are the safest way to inject context without disrupting model behavior.
+        const providerID = userInfo.model?.providerID || ""
         const modelID = userInfo.model?.modelID || ""
-        const toolPart = createSyntheticToolPart(lastNonIgnoredMessage, combinedContent, modelID)
-        lastNonIgnoredMessage.parts.push(toolPart)
+
+        if (isDeepSeekOrKimi(providerID, modelID)) {
+            const toolPart = createSyntheticToolPart(
+                lastNonIgnoredMessage,
+                combinedContent,
+                modelID,
+            )
+            lastNonIgnoredMessage.parts.push(toolPart)
+        } else {
+            messages.push(
+                createSyntheticAssistantMessage(lastUserMessage, combinedContent, variant),
+            )
+        }
     }
 }

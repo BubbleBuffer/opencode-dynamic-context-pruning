@@ -45,6 +45,19 @@ export const createSyntheticUserMessage = (
     }
 }
 
+export const createSyntheticTextPart = (baseMessage: WithParts, content: string) => {
+    const userInfo = baseMessage.info as UserMessage
+    const partId = generateUniqueId("prt")
+
+    return {
+        id: partId,
+        sessionID: userInfo.sessionID,
+        messageID: baseMessage.info.id,
+        type: "text" as const,
+        text: content,
+    }
+}
+
 export const createSyntheticToolPart = (
     baseMessage: WithParts,
     content: string,

@@ -6,7 +6,7 @@ import { renderNudge } from "../prompts"
 import {
     extractParameterKey,
     buildToolIdList,
-    createSyntheticUserMessage,
+    createSyntheticTextPart,
     createSyntheticToolPart,
     isIgnoredUserMessage,
 } from "./utils"
@@ -182,18 +182,22 @@ export const insertPruneToolContext = (
     }
 
     const userInfo = lastUserMessage.info as UserMessage
-    const variant = state.variant ?? userInfo.variant
 
     const lastNonIgnoredMessage = messages.findLast(
         (msg) => !(msg.info.role === "user" && isIgnoredUserMessage(msg)),
     )
 
+    if (!lastNonIgnoredMessage) {
+        return
+    }
+
     // It's not safe to inject assistant role messages following a user message as models such
     // as Claude expect the assistant "turn" to start with reasoning parts. Reasoning parts in many
     // cases also cannot be faked as they may be encrypted by the model.
     // Gemini only accepts synth reasoning text if it is "skip_thought_signature_validator"
-    if (!lastNonIgnoredMessage || lastNonIgnoredMessage.info.role === "user") {
-        messages.push(createSyntheticUserMessage(lastUserMessage, combinedContent, variant))
+    if (lastNonIgnoredMessage.info.role === "user") {
+        const textPart = createSyntheticTextPart(lastNonIgnoredMessage, combinedContent)
+        lastNonIgnoredMessage.parts.push(textPart)
     } else {
         // Append tool part to existing assistant message. This approach works universally across
         // models including DeepSeek and Kimi which don't output reasoning parts following an

@@ -112,6 +112,15 @@ const plugin: Plugin = (async (ctx) => {
                 logger.info(
                     `Added ${toolsToAdd.map((t) => `'${t}'`).join(" and ")} to experimental.primary_tools via config mutation`,
                 )
+
+                // Set compress permission to ask
+                if (config.tools.compress.enabled) {
+                    const permission = opencodeConfig.permission ?? {}
+                    opencodeConfig.permission = {
+                        ...permission,
+                        compress: "ask",
+                    } as typeof permission
+                }
             }
         },
     }

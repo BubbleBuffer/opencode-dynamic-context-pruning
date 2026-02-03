@@ -1,11 +1,9 @@
-// Tool specs
-import { PRUNE_TOOL_SPEC } from "./prune-tool-spec"
-import { DISTILL_TOOL_SPEC } from "./distill-tool-spec"
-import { COMPRESS_TOOL_SPEC } from "./compress-tool-spec"
-
 // Generated prompts (from .md files via scripts/generate-prompts.ts)
-import { SYSTEM as SYSTEM_PROMPT } from "./system.generated"
-import { NUDGE } from "./nudge.generated"
+import { SYSTEM as SYSTEM_PROMPT } from "./_codegen/system.generated"
+import { NUDGE } from "./_codegen/nudge.generated"
+import { PRUNE as PRUNE_TOOL_SPEC } from "./_codegen/prune.generated"
+import { DISTILL as DISTILL_TOOL_SPEC } from "./_codegen/distill.generated"
+import { COMPRESS as COMPRESS_TOOL_SPEC } from "./_codegen/compress.generated"
 
 export interface ToolFlags {
     distill: boolean

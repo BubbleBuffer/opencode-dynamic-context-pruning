@@ -29,7 +29,7 @@ Thumbs.db
 .opencode/
 
 # Generated prompt files (from scripts/generate-prompts.ts)
-lib/prompts/*.generated.ts
+lib/prompts/**/*.generated.ts
 
 # Tests
 tests/results/

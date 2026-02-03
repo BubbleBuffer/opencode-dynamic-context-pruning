@@ -25,7 +25,7 @@ Make sure to match enough of the context with start and end strings so you're no
 Contemplate only pruning when you are certain that the tool output is irrelevant to the current task or has been superseded by more recent information. If in doubt, defer for when you are definitive. Evaluate WHAT SHOULD be pruned before jumping the gun.
 </prune>
 
-EVALUATE YOUR CONTEXT AND MANAGE REGULARLY TO AVOID CONTEXT ROT. AVOID USING MANAGEMENT TOOLS AS THE ONLY TOOL CALLS IN YOUR RESPONSE, PARALLELIZE WITH OTHER RELEVANT TOOLS TO TASK CONTINUATION (read, edit, bash...). It is imperative you understand the value or lack thereof of the context you manage and make informed decisions to maintain a high-quality and relevant context.
+EVALUATE YOUR CONTEXT AND MANAGE REGULARLY TO AVOID CONTEXT ROT. AVOID USING MANAGEMENT TOOLS AS THE ONLY TOOL CALLS IN YOUR RESPONSE, PARALLELIZE WITH OTHER RELEVANT TOOLS TO TASK CONTINUATION (read, edit, bash...). It is imperative you understand the value or lack thereof of the context you manage and make informed decisions to maintain a decluttered, high-quality and relevant context.
 
 The session is your responsibility, and effective context management is CRITICAL to your success. Be PROACTIVE, DELIBERATE, and STRATEGIC in your approach to context management. The session is your oyster - keep it clean, relevant, and high-quality to ensure optimal performance and successful task completion.
 

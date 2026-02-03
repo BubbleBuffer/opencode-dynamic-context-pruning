@@ -31,8 +31,8 @@ Thumbs.db
 # Generated prompt files (from scripts/generate-prompts.ts)
 lib/prompts/*.generated.ts
 
-# Tests (local development only)
-tests/
+# Tests
+tests/results/
 notes/
 test-update.ts
 

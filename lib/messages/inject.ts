@@ -9,14 +9,20 @@ import {
     createSyntheticTextPart,
     createSyntheticToolPart,
     isIgnoredUserMessage,
+    formatContextHeader,
+    type ContextInfo,
 } from "./utils"
 import { getFilePathFromParameters, isProtectedFilePath } from "../protected-file-patterns"
 import { getLastUserMessage, isMessageCompacted } from "../shared-utils"
+import { getCurrentTokenUsage } from "../strategies/utils"
 
-export const wrapPrunableTools = (content: string): string => `<prunable-tools>
-The following tools have been invoked and are available for pruning. This list does not mandate immediate action. Consider your current goals and the resources you need before pruning valuable tool inputs or outputs. Consolidate your prunes for efficiency; it is rarely worth pruning a single tiny tool output. Keep the context free of noise.
+export const wrapPrunableTools = (content: string, contextInfo?: ContextInfo): string => {
+    const contextHeader = formatContextHeader(contextInfo)
+    return `<prunable-tools>
+${contextHeader}The following tools have been invoked and are available for pruning. This list does not mandate immediate action. Consider your current goals and the resources you need before pruning valuable tool inputs or outputs. Consolidate your prunes for efficiency; it is rarely worth pruning a single tiny tool output. Keep the context free of noise.
 ${content}
 </prunable-tools>`
+}
 
 export const wrapCompressContext = (messageCount: number): string => `<compress-context>
 Compress available. Conversation: ${messageCount} messages.
@@ -112,7 +118,11 @@ const buildPrunableToolsList = (
         const description = paramKey
             ? `${toolParameterEntry.tool}, ${paramKey}`
             : toolParameterEntry.tool
-        lines.push(`${numericId}: ${description}`)
+        const tokenSuffix =
+            toolParameterEntry.tokenCount !== undefined
+                ? ` (~${toolParameterEntry.tokenCount} tokens)`
+                : ""
+        lines.push(`${numericId}: ${description}${tokenSuffix}`)
         logger.debug(
             `Prunable tool found - ID: ${numericId}, Tool: ${toolParameterEntry.tool}, Call ID: ${toolCallId}`,
         )
@@ -122,7 +132,12 @@ const buildPrunableToolsList = (
         return ""
     }
 
-    return wrapPrunableTools(lines.join("\n"))
+    const contextInfo: ContextInfo = {
+        used: getCurrentTokenUsage(messages),
+        limit: state.modelContextLimit,
+    }
+
+    return wrapPrunableTools(lines.join("\n"), contextInfo)
 }
 
 export const insertPruneToolContext = (

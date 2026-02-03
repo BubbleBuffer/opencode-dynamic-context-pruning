@@ -2,6 +2,7 @@ import type { SessionState, ToolStatus, WithParts } from "./index"
 import type { Logger } from "../logger"
 import { PluginConfig } from "../config"
 import { isMessageCompacted } from "../shared-utils"
+import { countToolTokens } from "../strategies/utils"
 
 const MAX_TOOL_CACHE_SIZE = 1000
 
@@ -62,14 +63,21 @@ export async function syncToolCache(
                     continue
                 }
 
+                const allProtectedTools = config.tools.settings.protectedTools
+                const isProtectedTool = allProtectedTools.includes(part.tool)
+                const tokenCount = isProtectedTool ? undefined : countToolTokens(part)
+
                 state.toolParameters.set(part.callID, {
                     tool: part.tool,
                     parameters: part.state?.input ?? {},
                     status: part.state.status as ToolStatus | undefined,
                     error: part.state.status === "error" ? part.state.error : undefined,
                     turn: turnCounter,
+                    tokenCount,
                 })
-                logger.info(`Cached tool id: ${part.callID} (created on turn ${turnCounter})`)
+                logger.info(
+                    `Cached tool id: ${part.callID} (turn ${turnCounter}${tokenCount !== undefined ? `, ~${tokenCount} tokens` : ""})`,
+                )
             }
         }
 

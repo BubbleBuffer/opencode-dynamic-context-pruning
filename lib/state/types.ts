@@ -13,6 +13,7 @@ export interface ToolParameterEntry {
     status?: ToolStatus
     error?: string
     turn: number
+    tokenCount?: number
 }
 
 export interface SessionStats {
@@ -42,4 +43,5 @@ export interface SessionState {
     lastCompaction: number
     currentTurn: number
     variant: string | undefined
+    modelContextLimit: number | undefined
 }

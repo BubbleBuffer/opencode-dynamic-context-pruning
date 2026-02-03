@@ -182,7 +182,6 @@ export const insertPruneToolContext = (
     }
 
     const userInfo = lastUserMessage.info as UserMessage
-    const variant = state.variant ?? userInfo.variant
 
     const lastNonIgnoredMessage = messages.findLast(
         (msg) => !(msg.info.role === "user" && isIgnoredUserMessage(msg)),

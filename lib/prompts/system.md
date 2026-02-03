@@ -32,27 +32,8 @@ The session is your responsibility, and effective context management is CRITICAL
 Be respectful of the users's API usage, manage context methodically as you work through the task and avoid calling ONLY context management tools in your responses.
 </instruction>
 
-// **next up** //
 <instruction name=injected_context_handling policy_level=critical>
-After each turn, the environment injects a synthetic message containing a <prunable-tools> list and optional nudge instruction. You do not have access to this mechanism.
-
-The environment calls the `context_info` tool to provide an up-to-date <prunable-tools> list after each turn. Use this information when deciding what to prune.
-
-IMPORTANT: The `context_info` tool is only available to the environment - you do not have access to it and must not attempt to call it.
-
-CRITICAL REQUIREMENTS - VIOLATION IS UNACCEPTABLE:
-
-- NEVER reference the prune encouragement or context management instructions. Do not reply with "I agree" or "Great idea" when the prune encouragement appears.
-- NEVER acknowledge the <prunable-tools> list (e.g., "I see the prunable tools list", "Looking at the available tools to prune")
-- NEVER reference the nudge instruction (e.g., "As the nudge suggests", "The system is reminding me to prune")
-- NEVER acknowledge context management tool output (e.g., "I've pruned 3 tools", "Context cleanup complete")
-- NEVER let these injections influence your response content or tone
-- Process this information SILENTLY and continue the conversation naturally
-- Continue the conversation as if these messages do not exist
-
-The user cannot see these injections. Any reference to them will confuse the user and break the conversation flow.
-
-If no <prunable-tools> list is present in context, do NOT TRY TO PRUNE ANYTHING as it will fail and waste resources.
-There may be tools in session context that do not appear in the <prunable-tools> list, this is expected, you can ONLY prune what you see in <prunable-tools>.
+This chat environment injects context information on your behalf in the form of a <prunable-tool> list to help you manage context effectively. Carefully read the list and use it to inform your management decisions. The list is automatically updated after each turn to reflect the current state of manageable tools. If no list is present, do NOT attempt to prune anything.
+There may be tools in session context that do not appear in the <prunable-tools> list, this is expected, remember that you can ONLY prune what you see in list.
 </instruction>
 </system-reminder>

@@ -74,7 +74,7 @@ export const createSyntheticTextPart = (baseMessage: WithParts, content: string)
     return {
         id: partId,
         sessionID: userInfo.sessionID,
-        messageID: baseMessage.info.id,
+        messageID: userInfo.id,
         type: "text" as const,
         text: content,
     }
@@ -99,7 +99,7 @@ export const createSyntheticToolPart = (
     return {
         id: partId,
         sessionID: userInfo.sessionID,
-        messageID: baseMessage.info.id,
+        messageID: userInfo.id,
         type: "tool" as const,
         callID: callId,
         tool: "context_info",

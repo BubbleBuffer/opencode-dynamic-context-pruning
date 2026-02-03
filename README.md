@@ -3,7 +3,7 @@
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/dansmolsky)
 [![npm version](https://img.shields.io/npm/v/@tarquinen/opencode-dcp.svg)](https://www.npmjs.com/package/@tarquinen/opencode-dcp)
 
-Automatically reduces token usage in OpenCode by removing obsolete tools from conversation history.
+Automatically reduces token usage in OpenCode by removing obsolete content from conversation history.
 
 ![DCP in action](assets/images/dcp-demo5.png)
 
@@ -50,7 +50,7 @@ LLM providers like Anthropic and OpenAI cache prompts based on exact prefix matc
 
 **Trade-off:** You lose some cache read benefits but gain larger token savings from reduced context size and performance improvements through reduced context poisoning. In most cases, the token savings outweigh the cache miss cost—especially in long sessions where context bloat becomes significant.
 
-> **Note:** In testing, cache hit rates were approximately 65% with DCP enabled vs 85% without.
+> **Note:** In testing, cache hit rates were approximately 80% with DCP enabled vs 85% without for most providers.
 
 **Best use case:** Providers that count usage in requests, such as Github Copilot and Google Antigravity, have no negative price impact.
 

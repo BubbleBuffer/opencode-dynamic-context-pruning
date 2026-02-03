@@ -9,6 +9,7 @@ import {
     createSyntheticTextPart,
     createSyntheticToolPart,
     createSyntheticAssistantMessage,
+    createSyntheticAssistantMessageWithToolPart,
     isIgnoredUserMessage,
     isDeepSeekOrKimi,
 } from "./utils"
@@ -218,7 +219,12 @@ export const insertPruneToolContext = (
             lastNonIgnoredMessage.parts.push(toolPart)
         } else {
             messages.push(
-                createSyntheticAssistantMessage(lastUserMessage, combinedContent, variant),
+                createSyntheticAssistantMessageWithToolPart(
+                    lastUserMessage,
+                    combinedContent,
+                    modelID,
+                    variant,
+                ),
             )
         }
     }

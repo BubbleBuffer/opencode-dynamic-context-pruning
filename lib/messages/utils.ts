@@ -97,6 +97,63 @@ export const createSyntheticAssistantMessage = (
     }
 }
 
+export const createSyntheticAssistantMessageWithToolPart = (
+    baseMessage: WithParts,
+    content: string,
+    modelID: string,
+    variant?: string,
+): WithParts => {
+    const userInfo = baseMessage.info as UserMessage
+    const now = Date.now()
+    const messageId = generateUniqueId("msg")
+    const partId = generateUniqueId("prt")
+    const callId = generateUniqueId("call")
+
+    // Gemini requires thoughtSignature bypass to accept synthetic tool parts
+    const toolPartMetadata = isGeminiModel(modelID)
+        ? { google: { thoughtSignature: "skip_thought_signature_validator" } }
+        : {}
+
+    return {
+        info: {
+            id: messageId,
+            sessionID: userInfo.sessionID,
+            role: "assistant" as const,
+            agent: userInfo.agent || "code",
+            parentID: userInfo.id,
+            modelID: userInfo.model.modelID,
+            providerID: userInfo.model.providerID,
+            mode: "default",
+            path: {
+                cwd: "/",
+                root: "/",
+            },
+            time: { created: now, completed: now },
+            cost: 0,
+            tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+            ...(variant !== undefined && { variant }),
+        },
+        parts: [
+            {
+                id: partId,
+                sessionID: userInfo.sessionID,
+                messageID: messageId,
+                type: "tool" as const,
+                callID: callId,
+                tool: "context_info",
+                state: {
+                    status: "completed" as const,
+                    input: {},
+                    output: content,
+                    title: "Context Info",
+                    metadata: toolPartMetadata,
+                    time: { start: now, end: now },
+                },
+            },
+        ],
+    }
+}
+
 export const createSyntheticTextPart = (baseMessage: WithParts, content: string) => {
     const userInfo = baseMessage.info as UserMessage
     const partId = generateUniqueId("prt")

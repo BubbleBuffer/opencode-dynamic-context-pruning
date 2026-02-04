@@ -19,40 +19,48 @@ export function createCompressTool(ctx: PruneToolContext): ReturnType<typeof too
     return tool({
         description: COMPRESS_TOOL_DESCRIPTION,
         args: {
-            input: tool.schema
-                .array(tool.schema.string())
-                .describe(
-                    "[startString, endString, topic, summary] - 4 required strings: (1) startString: unique text from conversation marking range start, (2) endString: unique text marking range end, (3) topic: short 3-5 word label for UI, (4) summary: comprehensive text replacing all compressed content",
-                ),
+            topic: tool.schema
+                .string()
+                .describe("Short label (3-5 words) for display - e.g., 'Auth System Exploration'"),
+            content: tool.schema
+                .object({
+                    startString: tool.schema
+                        .string()
+                        .describe("Unique text from conversation marking the beginning of range"),
+                    endString: tool.schema
+                        .string()
+                        .describe("Unique text marking the end of range"),
+                    summary: tool.schema
+                        .string()
+                        .describe("Complete technical summary replacing all content in range"),
+                })
+                .describe("The compression details: boundaries and replacement summary"),
         },
         async execute(args, toolCtx) {
             const { client, state, logger } = ctx
             const sessionId = toolCtx.sessionID
 
-            if (!Array.isArray(args.input)) {
-                throw new Error(
-                    'input must be an array of 4 strings: ["startString", "endString", "topic", "summary"]',
-                )
-            }
-            if (args.input.length !== 4) {
-                throw new Error(
-                    `input must be an array of exactly 4 strings: ["startString", "endString", "topic", "summary"], got ${args.input.length} elements`,
-                )
-            }
+            await toolCtx.ask({
+                permission: "compress",
+                patterns: ["*"],
+                always: ["*"],
+                metadata: {},
+            })
 
-            const [startString, endString, topic, summary] = args.input
+            const { topic, content } = args
+            const { startString, endString, summary } = content || {}
 
-            if (!startString || typeof startString !== "string") {
-                throw new Error("startString is required and must be a non-empty string")
-            }
-            if (!endString || typeof endString !== "string") {
-                throw new Error("endString is required and must be a non-empty string")
-            }
             if (!topic || typeof topic !== "string") {
                 throw new Error("topic is required and must be a non-empty string")
             }
+            if (!startString || typeof startString !== "string") {
+                throw new Error("content.startString is required and must be a non-empty string")
+            }
+            if (!endString || typeof endString !== "string") {
+                throw new Error("content.endString is required and must be a non-empty string")
+            }
             if (!summary || typeof summary !== "string") {
-                throw new Error("summary is required and must be a non-empty string")
+                throw new Error("content.summary is required and must be a non-empty string")
             }
 
             logger.info("Compress tool invoked")

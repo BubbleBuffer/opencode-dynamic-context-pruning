@@ -10,58 +10,50 @@ export function createDistillTool(ctx: PruneToolContext): ReturnType<typeof tool
     return tool({
         description: DISTILL_TOOL_DESCRIPTION,
         args: {
-            ids: tool.schema
-                .array(tool.schema.string())
-                .describe("Numeric IDs as strings to distill from the <prunable-tools> list"),
-            distillation: tool.schema
-                .array(tool.schema.string())
-                .describe(
-                    "Required array of distillation strings, one per ID (positional: distillation[0] for ids[0], etc.)",
-                ),
+            targets: tool.schema
+                .array(
+                    tool.schema.object({
+                        id: tool.schema
+                            .string()
+                            .describe("Numeric ID from the <prunable-tools> list"),
+                        distillation: tool.schema
+                            .string()
+                            .describe("Complete technical distillation for this tool output"),
+                    }),
+                )
+                .describe("Tool outputs to distill, each pairing an ID with its distillation"),
         },
         async execute(args, toolCtx) {
-            if (!args.ids || !Array.isArray(args.ids) || args.ids.length === 0) {
-                ctx.logger.debug("Distill tool called without ids: " + JSON.stringify(args))
-                throw new Error("Missing ids. You must provide at least one ID to distill.")
+            if (!args.targets || !Array.isArray(args.targets) || args.targets.length === 0) {
+                ctx.logger.debug("Distill tool called without targets: " + JSON.stringify(args))
+                throw new Error("Missing targets. Provide at least one { id, distillation } entry.")
             }
 
-            if (!args.ids.every((id) => typeof id === "string" && id.trim() !== "")) {
-                ctx.logger.debug("Distill tool called with invalid ids: " + JSON.stringify(args))
-                throw new Error(
-                    'Invalid ids. All IDs must be numeric strings (e.g., "1", "23") from the <prunable-tools> list.',
-                )
+            for (const target of args.targets) {
+                if (!target.id || typeof target.id !== "string" || target.id.trim() === "") {
+                    ctx.logger.debug("Distill target missing id: " + JSON.stringify(target))
+                    throw new Error(
+                        "Each target must have an id (numeric string from <prunable-tools>).",
+                    )
+                }
+                if (!target.distillation || typeof target.distillation !== "string") {
+                    ctx.logger.debug(
+                        "Distill target missing distillation: " + JSON.stringify(target),
+                    )
+                    throw new Error("Each target must have a distillation string.")
+                }
             }
 
-            if (
-                !args.distillation ||
-                !Array.isArray(args.distillation) ||
-                args.distillation.length === 0
-            ) {
-                ctx.logger.debug(
-                    "Distill tool called without distillation: " + JSON.stringify(args),
-                )
-                throw new Error(
-                    'Missing distillation. You must provide an array of strings (e.g., ["summary 1", "summary 2"]).',
-                )
-            }
-
-            if (!args.distillation.every((d) => typeof d === "string")) {
-                ctx.logger.debug(
-                    "Distill tool called with non-string distillation: " + JSON.stringify(args),
-                )
-                throw new Error("Invalid distillation. All distillation entries must be strings.")
-            }
-
-            // ctx.logger.info("Distillation data received:")
-            // ctx.logger.info(JSON.stringify(args.distillation, null, 2))
+            const ids = args.targets.map((t) => t.id)
+            const distillations = args.targets.map((t) => t.distillation)
 
             return executePruneOperation(
                 ctx,
                 toolCtx,
-                args.ids,
+                ids,
                 "extraction" as PruneReason,
                 "Distill",
-                args.distillation,
+                distillations,
             )
         },
     })

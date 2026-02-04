@@ -504,7 +504,7 @@ const defaultConfig: PluginConfig = {
         },
         compress: {
             enabled: true,
-            showCompression: true,
+            showCompression: false,
         },
         prune: {
             enabled: true,

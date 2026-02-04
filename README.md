@@ -119,7 +119,7 @@ DCP uses its own config file:
 >         "compress": {
 >             "enabled": true,
 >             // Show summary content as an ignored message notification
->             "showCompression": true,
+>             "showCompression": false,
 >         },
 >         // Removes tool content from context without preservation (for completed tasks or noise)
 >         "prune": {

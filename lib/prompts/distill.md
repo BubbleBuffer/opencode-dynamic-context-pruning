@@ -1,48 +1,28 @@
-Distills key findings from tool outputs into preserved knowledge, then removes the raw outputs from context.
+Use this tool to distill relevant findings from a selection of raw tool outputs into preserved knowledge, in order to denoise key bits and parts of context.
 
-## IMPORTANT: The Prunable List
+THE PRUNABLE TOOLS LIST
+A <prunable-tools> will show in context when outputs are available for distillation (you don't need to look for it). Each entry follows the format `ID: tool, parameter (~token usage)` (e.g., `20: read, /path/to/file.ts (~1500 tokens)`). You MUST select outputs by their numeric ID. THESE ARE YOUR ONLY VALID TARGETS.
 
-A `<prunable-tools>` list is provided to you showing available tool outputs you can distill from when there are tools available for pruning. Each line has the format `ID: tool, parameter` (e.g., `20: read, /path/to/file.ts`). You MUST only use numeric IDs that appear in this list to select which tools to distill.
+THE PHILOSOPHY OF DISTILLATION
+`distill` is your favored instrument for transforming raw tool outputs into preserved knowledge. This is not mere summarization; it is high-fidelity extraction that makes the original output obsolete.
 
-## When to Use This Tool
+Your distillation must be COMPLETE. Capture function signatures, type definitions, business logic, constraints, configuration values... EVERYTHING essential. Think of it as creating a high signal technical substitute so faithful that re-fetching the original would yield no additional value. Be thorough; be comprehensive; leave no ambiguity, ensure that your distillation stands alone, and is designed for easy retrieval and comprehension.
 
-Use `distill` when you have individual tool outputs with valuable information you want to **preserve in distilled form** before removing the raw content:
+BE STRATEGIC! Distillation is most powerful when applied to outputs that contain signal buried in noise. A single line requires no distillation; a hundred lines of API documentation do. Make sure the distillation is meaningful.
 
-- **Large Outputs:** The raw output is too large but contains valuable technical details worth keeping.
-- **Knowledge Preservation:** You have context that contains valuable information (signatures, logic, constraints) but also a lot of unnecessary detail.
+THE WAYS OF DISTILL
+`distill` when you have extracted the essence from tool outputs and the raw form has served its purpose.
+Here are some examples:
+EXPLORATION: You've read extensively and grasp the architecture. The original file contents are no longer needed; your understanding, crystallized, is sufficient.
+PRESERVATION: Valuable technical details (signatures, logic, constraints) coexist with noise. Preserve the former; discard the latter.
 
-## When NOT to Use This Tool
+Not everything should be distilled. Prefer keeping raw outputs when:
+PRECISION MATTERS: You will edit the file, grep for exact strings, or need line-accurate references. Distillation sacrifices precision for essence.
+UNCERTAINTY REMAINS: If you might need to re-examine the original, defer. Distillation is irreversible; be certain before you commit.
 
-- **If you need precise syntax:** If you'll edit a file or grep for exact strings, keep the raw output.
-- **If uncertain:** Prefer keeping over re-fetching.
+Before distilling, ask yourself: _"Will I need the raw output for upcoming work?"_ If you plan to edit a file you just read, keep it intact. Distillation is for completed exploration, not active work.
 
-## Best Practices
-
-- **Strategic Batching:** Wait until you have several items or a few large outputs to distill, rather than doing tiny, frequent distillations. Aim for high-impact distillations that significantly reduce context size.
-- **Think ahead:** Before distilling, ask: "Will I need the raw output for upcoming work?" If you researched a file you'll later edit, do NOT distill it.
-
-## Format
-
-- `ids`: Array of numeric IDs as strings from the `<prunable-tools>` list
-- `distillation`: Array of strings, one per ID (positional: distillation[0] is for ids[0], etc.)
-
-Each distillation string should capture the essential information you need to preserve - function signatures, logic, constraints, values, etc. Be as detailed as needed.
-
-## Example
-
-<example_distillation>
-Assistant: [Reads auth service and user types]
-I'll preserve the key details before distilling.
-[Uses distill with:
-ids: ["10", "11"],
-distillation: [
-"auth.ts: validateToken(token: string) -> User|null checks cache first (5min TTL) then OIDC. hashPassword uses bcrypt 12 rounds. Tokens must be 128+ chars.",
-"user.ts: interface User { id: string; email: string; permissions: ('read'|'write'|'admin')[]; status: 'active'|'suspended' }"
-]
-]
-</example_distillation>
-
-<example_keep>
-Assistant: [Reads 'auth.ts' to understand the login flow]
-I've understood the auth flow. I'll need to modify this file to add the new validation, so I'm keeping this read in context rather than distilling.
-</example_keep>
+THE FORMAT OF DISTILL
+`items`: Array of objects, each containing:
+  `id`: Numeric ID (as string) from the `<prunable-tools>` list
+  `distillation`: Complete technical substitute for that tool output

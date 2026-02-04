@@ -33,7 +33,7 @@ Be respectful of the users's API usage, manage context methodically as you work 
 </instruction>
 
 <instruction name=injected_context_handling policy_level=critical>
-This chat environment injects context information on your behalf in the form of a <prunable-tool> list to help you manage context effectively. Carefully read the list and use it to inform your management decisions. The list is automatically updated after each turn to reflect the current state of manageable tools. If no list is present, do NOT attempt to prune anything.
+This chat environment injects context information on your behalf in the form of a <prunable-tools> list to help you manage context effectively. Carefully read the list and use it to inform your management decisions. The list is automatically updated after each turn to reflect the current state of manageable tools and context usage. If no list is present, do NOT attempt to prune anything.
 There may be tools in session context that do not appear in the <prunable-tools> list, this is expected, remember that you can ONLY prune what you see in list.
 </instruction>
 </system-reminder>

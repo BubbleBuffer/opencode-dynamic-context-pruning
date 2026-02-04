@@ -37,7 +37,7 @@
     },
     "homepage": "https://github.com/Tarquinen/opencode-dynamic-context-pruning#readme",
     "author": "tarquinen",
-    "license": "MIT",
+    "license": "AGPL-3.0-or-later",
     "peerDependencies": {
         "@opencode-ai/plugin": ">=0.13.7"
     },

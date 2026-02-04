@@ -175,4 +175,4 @@ Restart OpenCode after making config changes.
 
 ## License
 
-MIT
+AGPL-3.0-or-later

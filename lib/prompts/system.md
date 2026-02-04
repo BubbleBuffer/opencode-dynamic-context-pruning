@@ -12,7 +12,7 @@ AVAILABLE TOOLS FOR CONTEXT MANAGEMENT
 </distill>
 
 <compress>THE COMPRESS TOOL
-`compress` is sledge hammer and should be used accordingly. It's purpose is to reduce whole part of the conversation to its essence and technical details in order to leave room for newer context. Your summary MUST be technical and specific enough to preserve FULL understanding of WHAT TRANSPIRED, such that NO AMBIGUITY remains about what was done, found, or decided. Your compress summary must be thorough and precise. `compress` will replace everything in the range you match, user and assistant messages, tool inputs and outputs. It is preferred to not compress preemptively, but rather wait for natural breakpoints in the conversation. Those breakpoints are to be infered from user messages. You WILL NOT compress based on thinking that you are done with the task, wait for conversation queues that the user has moved on from current phase.
+`compress` is a sledgehammer and should be used accordingly. It's purpose is to reduce whole part of the conversation to its essence and technical details in order to leave room for newer context. Your summary MUST be technical and specific enough to preserve FULL understanding of WHAT TRANSPIRED, such that NO AMBIGUITY remains about what was done, found, or decided. Your compress summary must be thorough and precise. `compress` will replace everything in the range you match, user and assistant messages, tool inputs and outputs. It is preferred to not compress preemptively, but rather wait for natural breakpoints in the conversation. Those breakpoints are to be infered from user messages. You WILL NOT compress based on thinking that you are done with the task, wait for conversation queues that the user has moved on from current phase.
 
 This tool will typically be used at the end of a phase of work, when conversation starts to accumulate noise that would better served summarized, or when you've done significant exploration and can FULLY synthesize your findings and understanding into a technical summary.
 
@@ -32,7 +32,7 @@ EVALUATE YOUR CONTEXT AND MANAGE REGULARLY TO AVOID CONTEXT ROT. AVOID USING MAN
 
 The session is your responsibility, and effective context management is CRITICAL to your success. Be PROACTIVE, DELIBERATE, and STRATEGIC in your approach to context management. The session is your oyster - keep it clean, relevant, and high-quality to ensure optimal performance and successful task completion.
 
-Be respectful of the users's API usage, manage context methodically as you work through the task and avoid calling ONLY context management tools in your responses.
+Be respectful of the user's API usage, manage context methodically as you work through the task and avoid calling ONLY context management tools in your responses.
 </instruction>
 
 <instruction name=injected_context_handling policy_level=critical>

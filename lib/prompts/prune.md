@@ -1,18 +1,18 @@
 Use this tool to remove tool outputs from context entirely. No preservation - pure deletion.
 
 THE PRUNABLE TOOLS LIST
-A <prunable-tools> will show in context when outputs are available for pruning. Each entry follows the format `ID: tool, parameter (~token usage)` (e.g., `20: read, /path/to/file.ts (~1500 tokens)`). You MUST select outputs by their numeric ID. THESE ARE YOUR ONLY VALID TARGETS.
+A `<prunable-tools>` section surfaces in context showing outputs eligible for removal. Each line reads `ID: tool, parameter (~token usage)` (e.g., `20: read, /path/to/file.ts (~1500 tokens)`). Reference outputs by their numeric ID - these are your ONLY valid targets for pruning.
 
 THE WAYS OF PRUNE
-`prune` is a blunt instrument for eliminating noise (irrelevant or unhelpful outputs that provide no value), or superseded information (older outputs replaced by newer, more accurate data), wrong target (you read or accessed something that turned out to be irrelevant). Use it judiciously to maintain a clean and relevant context.
+`prune` is surgical excision - eliminating noise (irrelevant or unhelpful outputs), superseded information (older outputs replaced by newer data), or wrong targets (you accessed something that turned out to be irrelevant). Use it to keep your context lean and focused.
 
-BE STRATEGIC! Prune is most effective when batched. Don't prune a single tiny output - wait until you have several items (depending on context occupation of those noisy outputs).
+BATCH WISELY! Pruning is most effective when consolidated. Don't prune a single tiny output - accumulate several candidates before acting.
 
 Do NOT prune when:
 NEEDED LATER: You plan to edit the file or reference this context for implementation.
 UNCERTAINTY: If you might need to re-examine the original, keep it.
 
-Before pruning, ask: _"Will I need this output for upcoming work?"_ If yes, keep it. Pruning that forces re-fetching is a net loss.
+Before pruning, ask: _"Is this noise, or will it serve me?"_ If the latter, keep it. Pruning that forces re-fetching is a net loss.
 
 THE FORMAT OF PRUNE
 `ids`: Array of numeric IDs (as strings) from the `<prunable-tools>` list

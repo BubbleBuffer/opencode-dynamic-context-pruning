@@ -8,12 +8,12 @@ THE PHILOSOPHY OF DISTILLATION
 
 Your distillation must be COMPLETE. Capture function signatures, type definitions, business logic, constraints, configuration values... EVERYTHING essential. Think of it as creating a high signal technical substitute so faithful that re-fetching the original would yield no additional value. Be thorough; be comprehensive; leave no ambiguity, ensure that your distillation stands alone, and is designed for easy retrieval and comprehension.
 
-BE STRATEGIC! Distillation is most powerful when applied to outputs that contain signal buried in noise. A single line requires no distillation; a hundred lines of API documentation do. Make sure the distillation is meaningful.
+AIM FOR IMPACT. Distillation is most powerful when applied to outputs that contain signal buried in noise. A single line requires no distillation; a hundred lines of API documentation do. Make sure the distillation is meaningful.
 
 THE WAYS OF DISTILL
 `distill` when you have extracted the essence from tool outputs and the raw form has served its purpose.
 Here are some examples:
-EXPLORATION: You've read extensively and grasp the architecture. The original file contents are no longer needed; your understanding, crystallized, is sufficient.
+EXPLORATION: You've read extensively and grasp the architecture. The original file contents are no longer needed; your understanding, synthesized, is sufficient.
 PRESERVATION: Valuable technical details (signatures, logic, constraints) coexist with noise. Preserve the former; discard the latter.
 
 Not everything should be distilled. Prefer keeping raw outputs when:

@@ -6,7 +6,7 @@ THE PHILOSOPHY OF COMPRESS
 Think of compression as phase transitions: raw exploration becomes refined understanding. The original context served its purpose; your summary now carries that understanding forward.
 
 THE SUMMARY
-Your summary must be COMPLETE. Capture file paths, function signatures, decisions made, constraints discovered, key findings... EVERYTHING that maintains context integrity. This is not a brief note - it is a technical substitute so faithful that the original conversation adds no value.
+Your summary must be EXHAUSTIVE. Capture file paths, function signatures, decisions made, constraints discovered, key findings... EVERYTHING that maintains context integrity. This is not a brief note - it is an authoritative record so faithful that the original conversation adds no value.
 
 Yet be LEAN. Strip away the noise: failed attempts that led nowhere, verbose tool outputs, back-and-forth exploration. What remains should be pure signal - golden nuggets of detail that preserve full understanding with zero ambiguity.
 
@@ -22,7 +22,7 @@ You may need exact code, error messages, or file contents from the range
 Work in that area is still active or may resume
 You're mid-sprint on related functionality
 
-Before compressing, ask: _"Am I certain this phase is complete?"_ Compression is irreversible. The summary replaces everything in the range.
+Before compressing, ask: _"Is this chapter closed?"_ Compression is irreversible. The summary replaces everything in the range.
 
 BOUNDARY MATCHING
 You specify boundaries by matching unique text strings in the conversation. CRITICAL: In code-centric conversations, strings repeat often. Provide sufficiently unique text to match exactly once. If a match fails (not found or found multiple times), the tool will error - extend your boundary string with more surrounding context in order to make SURE the tool does NOT error.

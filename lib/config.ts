@@ -27,6 +27,7 @@ export interface ToolSettings {
     nudgeEnabled: boolean
     nudgeFrequency: number
     protectedTools: string[]
+    contextLimit: number | "model"
 }
 
 export interface Tools {
@@ -105,6 +106,7 @@ export const VALID_CONFIG_KEYS = new Set([
     "tools.settings.nudgeEnabled",
     "tools.settings.nudgeFrequency",
     "tools.settings.protectedTools",
+    "tools.settings.contextLimit",
     "tools.distill",
     "tools.distill.enabled",
     "tools.distill.showDistillation",
@@ -286,6 +288,18 @@ function validateConfigTypes(config: Record<string, any>): ValidationError[] {
                     expected: "string[]",
                     actual: typeof tools.settings.protectedTools,
                 })
+            }
+            if (tools.settings.contextLimit !== undefined) {
+                if (
+                    typeof tools.settings.contextLimit !== "number" &&
+                    tools.settings.contextLimit !== "model"
+                ) {
+                    errors.push({
+                        key: "tools.settings.contextLimit",
+                        expected: 'number | "model"',
+                        actual: JSON.stringify(tools.settings.contextLimit),
+                    })
+                }
             }
         }
         if (tools.distill) {
@@ -482,6 +496,7 @@ const defaultConfig: PluginConfig = {
             nudgeEnabled: true,
             nudgeFrequency: 10,
             protectedTools: [...DEFAULT_PROTECTED_TOOLS],
+            contextLimit: 100000,
         },
         distill: {
             enabled: true,
@@ -658,6 +673,7 @@ function mergeTools(
                     ...(override.settings?.protectedTools ?? []),
                 ]),
             ],
+            contextLimit: override.settings?.contextLimit ?? base.settings.contextLimit,
         },
         distill: {
             enabled: override.distill?.enabled ?? base.distill.enabled,

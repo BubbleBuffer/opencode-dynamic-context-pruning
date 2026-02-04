@@ -132,9 +132,17 @@ const buildPrunableToolsList = (
         return ""
     }
 
+    const configLimit =
+        config.tools.settings.contextLimit === "model"
+            ? state.modelContextLimit
+            : config.tools.settings.contextLimit
+
     const contextInfo: ContextInfo = {
         used: getCurrentTokenUsage(messages),
-        limit: state.modelContextLimit,
+        limit:
+            state.modelContextLimit !== undefined && configLimit !== undefined
+                ? Math.min(state.modelContextLimit, configLimit)
+                : (configLimit ?? state.modelContextLimit),
     }
 
     return wrapPrunableTools(lines.join("\n"), contextInfo)

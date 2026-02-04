@@ -104,6 +104,8 @@ DCP uses its own config file:
 >             // Nudge the LLM to use prune tools (every <nudgeFrequency> tool results)
 >             "nudgeEnabled": true,
 >             "nudgeFrequency": 10,
+>             // Encourages the model to stay within this context budget (not a hard limit); set to "model" to use full model capacity
+>             "contextLimit": 100000,
 >             // Additional tools to protect from pruning
 >             "protectedTools": [],
 >         },

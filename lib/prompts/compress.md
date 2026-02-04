@@ -10,8 +10,8 @@ Your summary must be EXHAUSTIVE. Capture file paths, function signatures, decisi
 
 Yet be LEAN. Strip away the noise: failed attempts that led nowhere, verbose tool outputs, back-and-forth exploration. What remains should be pure signal - golden nuggets of detail that preserve full understanding with zero ambiguity.
 
-WHEN TO COMPRESS
-Compress when a phase of work is truly complete and the raw conversation is no longer needed:
+THE WAYS OF COMPRESS
+`compress` when a chapter closes - when a phase of work is truly complete and the raw conversation has served its purpose:
 
 Research concluded and findings are clear
 Implementation finished and verified

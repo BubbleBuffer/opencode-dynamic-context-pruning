@@ -49,7 +49,10 @@ LLM providers like Anthropic and OpenAI cache prompts based on exact prefix matc
 
 > **Note:** In testing, cache hit rates were approximately 65% with DCP enabled vs 85% without.
 
-**Best use case:** Providers that count usage in requests, such as Github Copilot and Google Antigravity have no negative price impact.
+**Best use cases:**
+
+- **Request-based billing** — Providers that count usage in requests, such as Github Copilot and Google Antigravity, have no negative price impact.
+- **Uniform token pricing** — Providers that bill cached tokens at the same rate as regular input tokens, such as Cerebras, see pure savings with no cache-miss penalty.
 
 ## Configuration
 
@@ -57,7 +60,7 @@ DCP uses its own config file:
 
 - Global: `~/.config/opencode/dcp.jsonc` (or `dcp.json`), created automatically on first run
 - Custom config directory: `$OPENCODE_CONFIG_DIR/dcp.jsonc` (or `dcp.json`), if `OPENCODE_CONFIG_DIR` is set
-- Project: `.opencode/dcp.jsonc` (or `dcp.json`) in your project’s `.opencode` directory
+- Project: `.opencode/dcp.jsonc` (or `dcp.json`) in your project's `.opencode` directory
 
 <details>
 <summary><strong>Default Configuration</strong> (click to expand)</summary>

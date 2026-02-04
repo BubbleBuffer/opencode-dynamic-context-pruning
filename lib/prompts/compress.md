@@ -1,58 +1,35 @@
-Collapses a contiguous range of conversation into a single summary.
+Use this tool to collapse a contiguous range of conversation into a preserved summary.
 
-## When to Use This Tool
+THE PHILOSOPHY OF COMPRESS
+`compress` transforms verbose conversation sequences into dense, high-fidelity summaries. This is not cleanup - it is crystallization. Your summary becomes the authoritative record of what transpired.
 
-Use `compress` when you want to condense an entire sequence of work into a brief summary:
+Think of compression as phase transitions: raw exploration becomes refined understanding. The original context served its purpose; your summary now carries that understanding forward.
 
-- **Phase Completion:** You completed a phase (research, tool calls, implementation) and want to collapse the entire sequence into a summary.
-- **Exploration Done:** You explored multiple files or ran multiple commands and only need a summary of what you learned.
-- **Failed Attempts:** You tried several unsuccessful approaches and want to condense them into a brief note.
-- **Verbose Output:** A section of conversation has grown large but can be summarized without losing critical details.
+THE SUMMARY
+Your summary must be COMPLETE. Capture file paths, function signatures, decisions made, constraints discovered, key findings... EVERYTHING that maintains context integrity. This is not a brief note - it is a technical substitute so faithful that the original conversation adds no value.
 
-## When NOT to Use This Tool
+Yet be LEAN. Strip away the noise: failed attempts that led nowhere, verbose tool outputs, back-and-forth exploration. What remains should be pure signal - golden nuggets of detail that preserve full understanding with zero ambiguity.
 
-- **If you need specific details:** If you'll need exact code, file contents, or error messages from the range, keep them.
-- **For individual tool outputs:** Use `prune` or `distill` for single tool outputs. Compress targets conversation ranges.
-- **If it's recent content:** You may still need recent work for the current phase.
+WHEN TO COMPRESS
+Compress when a phase of work is truly complete and the raw conversation is no longer needed:
 
-## How It Works
+Research concluded and findings are clear
+Implementation finished and verified
+Exploration exhausted and patterns understood
 
-1. `startString` — A unique text string that marks the start of the range to compress
-2. `endString` — A unique text string that marks the end of the range to compress
-3. `topic` — A short label (3-5 words) describing the compressed content
-4. `summary` — The replacement text that will be inserted
+Do NOT compress when:
+You may need exact code, error messages, or file contents from the range
+Work in that area is still active or may resume
+You're mid-sprint on related functionality
 
-Everything between startString and endString (inclusive) is removed and replaced with your summary.
+Before compressing, ask: _"Am I certain this phase is complete?"_ Compression is irreversible. The summary replaces everything in the range.
 
-**Important:** The compress will FAIL if `startString` or `endString` is not found in the conversation. The compress will also FAIL if either string is found multiple times. Provide a larger string with more surrounding context to uniquely identify the intended match.
+BOUNDARY MATCHING
+You specify boundaries by matching unique text strings in the conversation. CRITICAL: In code-centric conversations, strings repeat often. Provide sufficiently unique text to match exactly once. If a match fails (not found or found multiple times), the tool will error - extend your boundary string with more surrounding context in order to make SURE the tool does NOT error.
 
-## Best Practices
-
-- **Choose unique strings:** Pick text that appears only once in the conversation.
-- **Write concise topics:** Examples: "Auth System Exploration", "Token Logic Refactor"
-- **Write comprehensive summaries:** Include key information like file names, function signatures, and important findings.
-- **Timing:** Best used after finishing a work phase, not during active exploration.
-
-## Format
-
-- `input`: Array with four elements: [startString, endString, topic, summary]
-
-## Example
-
-<example_compress>
-Conversation: [Asked about auth] -> [Read 5 files] -> [Analyzed patterns] -> [Found "JWT tokens with 24h expiry"]
-
-[Uses compress with:
-input: [
-"Asked about authentication",
-"JWT tokens with 24h expiry",
-"Auth System Exploration",
-"Auth: JWT 24h expiry, bcrypt passwords, refresh rotation. Files: auth.ts, tokens.ts, middleware/auth.ts"
-]
-]
-</example_compress>
-
-<example_keep>
-Assistant: [Just finished reading auth.ts]
-I've read the auth file and now need to make edits based on it. I'm keeping this in context rather than compressing.
-</example_keep>
+THE FORMAT OF COMPRESS
+`topic`: Short label (3-5 words) for display - e.g., "Auth System Exploration"
+  `content`: Object containing:
+    `startString`: Unique text string marking the beginning of the range
+    `endString`: Unique text string marking the end of the range
+    `summary`: Complete technical summary replacing all content in the range

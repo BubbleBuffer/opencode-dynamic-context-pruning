@@ -10,7 +10,7 @@ export function createDistillTool(ctx: PruneToolContext): ReturnType<typeof tool
     return tool({
         description: DISTILL_TOOL_DESCRIPTION,
         args: {
-            items: tool.schema
+            targets: tool.schema
                 .array(
                     tool.schema.object({
                         id: tool.schema
@@ -21,31 +21,31 @@ export function createDistillTool(ctx: PruneToolContext): ReturnType<typeof tool
                             .describe("Complete technical distillation for this tool output"),
                     }),
                 )
-                .describe(
-                    "Array of distillation entries, each pairing an ID with its distillation",
-                ),
+                .describe("Tool outputs to distill, each pairing an ID with its distillation"),
         },
         async execute(args, toolCtx) {
-            if (!args.items || !Array.isArray(args.items) || args.items.length === 0) {
-                ctx.logger.debug("Distill tool called without items: " + JSON.stringify(args))
-                throw new Error("Missing items. Provide at least one { id, distillation } entry.")
+            if (!args.targets || !Array.isArray(args.targets) || args.targets.length === 0) {
+                ctx.logger.debug("Distill tool called without targets: " + JSON.stringify(args))
+                throw new Error("Missing targets. Provide at least one { id, distillation } entry.")
             }
 
-            for (const item of args.items) {
-                if (!item.id || typeof item.id !== "string" || item.id.trim() === "") {
-                    ctx.logger.debug("Distill item missing id: " + JSON.stringify(item))
+            for (const target of args.targets) {
+                if (!target.id || typeof target.id !== "string" || target.id.trim() === "") {
+                    ctx.logger.debug("Distill target missing id: " + JSON.stringify(target))
                     throw new Error(
-                        "Each item must have an id (numeric string from <prunable-tools>).",
+                        "Each target must have an id (numeric string from <prunable-tools>).",
                     )
                 }
-                if (!item.distillation || typeof item.distillation !== "string") {
-                    ctx.logger.debug("Distill item missing distillation: " + JSON.stringify(item))
-                    throw new Error("Each item must have a distillation string.")
+                if (!target.distillation || typeof target.distillation !== "string") {
+                    ctx.logger.debug(
+                        "Distill target missing distillation: " + JSON.stringify(target),
+                    )
+                    throw new Error("Each target must have a distillation string.")
                 }
             }
 
-            const ids = args.items.map((item) => item.id)
-            const distillations = args.items.map((item) => item.distillation)
+            const ids = args.targets.map((t) => t.id)
+            const distillations = args.targets.map((t) => t.distillation)
 
             return executePruneOperation(
                 ctx,

@@ -23,6 +23,6 @@ UNCERTAINTY REMAINS: If you might need to re-examine the original, defer. Distil
 Before distilling, ask yourself: _"Will I need the raw output for upcoming work?"_ If you plan to edit a file you just read, keep it intact. Distillation is for completed exploration, not active work.
 
 THE FORMAT OF DISTILL
-`items`: Array of objects, each containing:
+`targets`: Array of objects, each containing:
   `id`: Numeric ID (as string) from the `<prunable-tools>` list
   `distillation`: Complete technical substitute for that tool output

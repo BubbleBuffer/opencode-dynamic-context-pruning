@@ -111,19 +111,22 @@ DCP uses its own config file:
 >         },
 >         // Distills key findings into preserved knowledge before removing raw content
 >         "distill": {
->             "enabled": true,
+>             // Permission mode: "allow" (no prompt), "ask" (prompt), "deny" (tool not registered)
+>             "permission": "allow",
 >             // Show distillation content as an ignored message notification
 >             "showDistillation": false,
 >         },
 >         // Collapses a range of conversation content into a single summary
 >         "compress": {
->             "enabled": true,
+>             // Permission mode: "ask" (prompt), "allow" (no prompt), "deny" (tool not registered)
+>             "permission": "ask",
 >             // Show summary content as an ignored message notification
 >             "showCompression": false,
 >         },
 >         // Removes tool content from context without preservation (for completed tasks or noise)
 >         "prune": {
->             "enabled": true,
+>             // Permission mode: "allow" (no prompt), "ask" (prompt), "deny" (tool not registered)
+>             "permission": "allow",
 >         },
 >     },
 >     // Automatic pruning strategies

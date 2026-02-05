@@ -10,16 +10,16 @@ export interface Deduplication {
 }
 
 export interface PruneTool {
-    enabled: boolean
+    permission: "ask" | "allow" | "deny"
 }
 
 export interface DistillTool {
-    enabled: boolean
+    permission: "ask" | "allow" | "deny"
     showDistillation: boolean
 }
 
 export interface CompressTool {
-    enabled: boolean
+    permission: "ask" | "allow" | "deny"
     showCompression: boolean
 }
 
@@ -108,13 +108,13 @@ export const VALID_CONFIG_KEYS = new Set([
     "tools.settings.protectedTools",
     "tools.settings.contextLimit",
     "tools.distill",
-    "tools.distill.enabled",
+    "tools.distill.permission",
     "tools.distill.showDistillation",
     "tools.compress",
-    "tools.compress.enabled",
+    "tools.compress.permission",
     "tools.compress.showCompression",
     "tools.prune",
-    "tools.prune.enabled",
+    "tools.prune.permission",
     "strategies",
     // strategies.deduplication
     "strategies.deduplication",
@@ -303,12 +303,15 @@ function validateConfigTypes(config: Record<string, any>): ValidationError[] {
             }
         }
         if (tools.distill) {
-            if (tools.distill.enabled !== undefined && typeof tools.distill.enabled !== "boolean") {
-                errors.push({
-                    key: "tools.distill.enabled",
-                    expected: "boolean",
-                    actual: typeof tools.distill.enabled,
-                })
+            if (tools.distill.permission !== undefined) {
+                const validValues = ["ask", "allow", "deny"]
+                if (!validValues.includes(tools.distill.permission)) {
+                    errors.push({
+                        key: "tools.distill.permission",
+                        expected: '"ask" | "allow" | "deny"',
+                        actual: JSON.stringify(tools.distill.permission),
+                    })
+                }
             }
             if (
                 tools.distill.showDistillation !== undefined &&
@@ -322,15 +325,15 @@ function validateConfigTypes(config: Record<string, any>): ValidationError[] {
             }
         }
         if (tools.compress) {
-            if (
-                tools.compress.enabled !== undefined &&
-                typeof tools.compress.enabled !== "boolean"
-            ) {
-                errors.push({
-                    key: "tools.compress.enabled",
-                    expected: "boolean",
-                    actual: typeof tools.compress.enabled,
-                })
+            if (tools.compress.permission !== undefined) {
+                const validValues = ["ask", "allow", "deny"]
+                if (!validValues.includes(tools.compress.permission)) {
+                    errors.push({
+                        key: "tools.compress.permission",
+                        expected: '"ask" | "allow" | "deny"',
+                        actual: JSON.stringify(tools.compress.permission),
+                    })
+                }
             }
             if (
                 tools.compress.showCompression !== undefined &&
@@ -344,12 +347,15 @@ function validateConfigTypes(config: Record<string, any>): ValidationError[] {
             }
         }
         if (tools.prune) {
-            if (tools.prune.enabled !== undefined && typeof tools.prune.enabled !== "boolean") {
-                errors.push({
-                    key: "tools.prune.enabled",
-                    expected: "boolean",
-                    actual: typeof tools.prune.enabled,
-                })
+            if (tools.prune.permission !== undefined) {
+                const validValues = ["ask", "allow", "deny"]
+                if (!validValues.includes(tools.prune.permission)) {
+                    errors.push({
+                        key: "tools.prune.permission",
+                        expected: '"ask" | "allow" | "deny"',
+                        actual: JSON.stringify(tools.prune.permission),
+                    })
+                }
             }
         }
     }
@@ -499,15 +505,15 @@ const defaultConfig: PluginConfig = {
             contextLimit: 100000,
         },
         distill: {
-            enabled: true,
+            permission: "allow",
             showDistillation: false,
         },
         compress: {
-            enabled: true,
+            permission: "ask",
             showCompression: false,
         },
         prune: {
-            enabled: true,
+            permission: "allow",
         },
     },
     strategies: {
@@ -678,15 +684,15 @@ function mergeTools(
             contextLimit: override.settings?.contextLimit ?? base.settings.contextLimit,
         },
         distill: {
-            enabled: override.distill?.enabled ?? base.distill.enabled,
+            permission: override.distill?.permission ?? base.distill.permission,
             showDistillation: override.distill?.showDistillation ?? base.distill.showDistillation,
         },
         compress: {
-            enabled: override.compress?.enabled ?? base.compress.enabled,
+            permission: override.compress?.permission ?? base.compress.permission,
             showCompression: override.compress?.showCompression ?? base.compress.showCompression,
         },
         prune: {
-            enabled: override.prune?.enabled ?? base.prune.enabled,
+            permission: override.prune?.permission ?? base.prune.permission,
         },
     }
 }

@@ -129,10 +129,11 @@
                     "description": "Configuration for the distill tool",
                     "additionalProperties": false,
                     "properties": {
-                        "enabled": {
-                            "type": "boolean",
-                            "default": true,
-                            "description": "Enable the distill tool"
+                        "permission": {
+                            "type": "string",
+                            "enum": ["ask", "allow", "deny"],
+                            "default": "allow",
+                            "description": "Permission mode (deny disables the tool)"
                         },
                         "showDistillation": {
                             "type": "boolean",
@@ -146,10 +147,11 @@
                     "description": "Configuration for the compress tool",
                     "additionalProperties": false,
                     "properties": {
-                        "enabled": {
-                            "type": "boolean",
-                            "default": true,
-                            "description": "Enable the compress tool"
+                        "permission": {
+                            "type": "string",
+                            "enum": ["ask", "allow", "deny"],
+                            "default": "ask",
+                            "description": "Permission mode (deny disables the tool)"
                         },
                         "showCompression": {
                             "type": "boolean",
@@ -163,10 +165,11 @@
                     "description": "Configuration for the prune tool",
                     "additionalProperties": false,
                     "properties": {
-                        "enabled": {
-                            "type": "boolean",
-                            "default": true,
-                            "description": "Enable the prune tool"
+                        "permission": {
+                            "type": "string",
+                            "enum": ["ask", "allow", "deny"],
+                            "default": "allow",
+                            "description": "Permission mode (deny disables the tool)"
                         }
                     }
                 }

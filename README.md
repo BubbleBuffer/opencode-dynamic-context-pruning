@@ -111,7 +111,8 @@ DCP uses its own config file:
 >         },
 >         // Distills key findings into preserved knowledge before removing raw content
 >         "distill": {
->             "enabled": true,
+>             // Permission mode: "allow" (no prompt), "ask" (prompt), "deny" (tool not registered)
+>             "permission": "allow",
 >             // Show distillation content as an ignored message notification
 >             "showDistillation": false,
 >         },
@@ -124,7 +125,8 @@ DCP uses its own config file:
 >         },
 >         // Removes tool content from context without preservation (for completed tasks or noise)
 >         "prune": {
->             "enabled": true,
+>             // Permission mode: "allow" (no prompt), "ask" (prompt), "deny" (tool not registered)
+>             "permission": "allow",
 >         },
 >     },
 >     // Automatic pruning strategies

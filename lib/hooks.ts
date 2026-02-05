@@ -43,8 +43,8 @@ export function createSystemPromptHandler(
         }
 
         const flags = {
-            prune: config.tools.prune.enabled,
-            distill: config.tools.distill.enabled,
+            prune: config.tools.prune.permission !== "deny",
+            distill: config.tools.distill.permission !== "deny",
             compress: config.tools.compress.permission !== "deny",
         }
 

@@ -61,7 +61,7 @@ const plugin: Plugin = (async (ctx) => {
             ctx.directory,
         ),
         tool: {
-            ...(config.tools.distill.enabled && {
+            ...(config.tools.distill.permission !== "deny" && {
                 distill: createDistillTool({
                     client: ctx.client,
                     state,
@@ -79,7 +79,7 @@ const plugin: Plugin = (async (ctx) => {
                     workingDirectory: ctx.directory,
                 }),
             }),
-            ...(config.tools.prune.enabled && {
+            ...(config.tools.prune.permission !== "deny" && {
                 prune: createPruneTool({
                     client: ctx.client,
                     state,
@@ -99,9 +99,9 @@ const plugin: Plugin = (async (ctx) => {
             }
 
             const toolsToAdd: string[] = []
-            if (config.tools.distill.enabled) toolsToAdd.push("distill")
+            if (config.tools.distill.permission !== "deny") toolsToAdd.push("distill")
             if (config.tools.compress.permission !== "deny") toolsToAdd.push("compress")
-            if (config.tools.prune.enabled) toolsToAdd.push("prune")
+            if (config.tools.prune.permission !== "deny") toolsToAdd.push("prune")
 
             if (toolsToAdd.length > 0) {
                 const existingPrimaryTools = opencodeConfig.experimental?.primary_tools ?? []
@@ -112,16 +112,16 @@ const plugin: Plugin = (async (ctx) => {
                 logger.info(
                     `Added ${toolsToAdd.map((t) => `'${t}'`).join(" and ")} to experimental.primary_tools via config mutation`,
                 )
-
-                // Set compress permission from DCP config
-                if (config.tools.compress.permission !== "deny") {
-                    const permission = opencodeConfig.permission ?? {}
-                    opencodeConfig.permission = {
-                        ...permission,
-                        compress: config.tools.compress.permission,
-                    } as typeof permission
-                }
             }
+
+            // Set tool permissions from DCP config
+            const permission = opencodeConfig.permission ?? {}
+            opencodeConfig.permission = {
+                ...permission,
+                distill: config.tools.distill.permission,
+                compress: config.tools.compress.permission,
+                prune: config.tools.prune.permission,
+            } as typeof permission
         },
     }
 }) satisfies Plugin

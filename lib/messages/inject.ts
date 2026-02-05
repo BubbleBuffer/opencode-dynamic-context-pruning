@@ -57,8 +57,8 @@ Context management was just performed. Do NOT use the ${toolName} again. A fresh
 
 const getNudgeString = (config: PluginConfig): string => {
     const flags = {
-        prune: config.tools.prune.enabled,
-        distill: config.tools.distill.enabled,
+        prune: config.tools.prune.permission !== "deny",
+        distill: config.tools.distill.permission !== "deny",
         compress: config.tools.compress.permission !== "deny",
     }
 
@@ -71,8 +71,8 @@ const getNudgeString = (config: PluginConfig): string => {
 
 const getCooldownMessage = (config: PluginConfig): string => {
     return wrapCooldownMessage({
-        prune: config.tools.prune.enabled,
-        distill: config.tools.distill.enabled,
+        prune: config.tools.prune.permission !== "deny",
+        distill: config.tools.distill.permission !== "deny",
         compress: config.tools.compress.permission !== "deny",
     })
 }
@@ -157,8 +157,8 @@ export const insertPruneToolContext = (
     logger: Logger,
     messages: WithParts[],
 ): void => {
-    const pruneEnabled = config.tools.prune.enabled
-    const distillEnabled = config.tools.distill.enabled
+    const pruneEnabled = config.tools.prune.permission !== "deny"
+    const distillEnabled = config.tools.distill.permission !== "deny"
     const compressEnabled = config.tools.compress.permission !== "deny"
 
     if (!pruneEnabled && !distillEnabled && !compressEnabled) {

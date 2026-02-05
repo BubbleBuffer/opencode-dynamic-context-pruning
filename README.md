@@ -104,9 +104,10 @@ DCP uses its own config file:
 >             // Nudge the LLM to use prune tools (every <nudgeFrequency> tool results)
 >             "nudgeEnabled": true,
 >             "nudgeFrequency": 10,
->             // Token limit at which the model begins actively compressing session context.
->             // Best kept around 40% of the model's context window to stay in the "smart zone".
->             // Set to "model" to use the model's full context window size.
+>             // Token limit at which the model begins actively
+>             // compressing session context. Best kept around 40% of
+>             // the model's context window to stay in the "smart zone".
+>             // Set to "model" to use the model's full context window.
 >             "contextLimit": 100000,
 >             // Additional tools to protect from pruning
 >             "protectedTools": [],
@@ -156,7 +157,6 @@ DCP uses its own config file:
 > ```
 >
 > </details>
-> ```
 
 ### Commands
 

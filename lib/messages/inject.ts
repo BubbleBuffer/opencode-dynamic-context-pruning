@@ -195,19 +195,15 @@ export const insertPruneToolContext = (
             contentParts.push(compressContext)
         }
 
-        // Add nudge if threshold reached
-        if (
+        if (shouldInjectCompressNudge(config, state, messages)) {
+            logger.info("Inserting compress nudge - token usage exceeds contextLimit")
+            contentParts.push(renderCompressNudge())
+        } else if (
             config.tools.settings.nudgeEnabled &&
             state.nudgeCounter >= config.tools.settings.nudgeFrequency
         ) {
             logger.info("Inserting prune nudge message")
             contentParts.push(getNudgeString(config))
-        }
-
-        // Add compress nudge if token usage exceeds contextLimit
-        if (shouldInjectCompressNudge(config, state, messages)) {
-            logger.info("Inserting compress nudge - token usage exceeds contextLimit")
-            contentParts.push(renderCompressNudge())
         }
     }
 

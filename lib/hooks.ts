@@ -45,7 +45,7 @@ export function createSystemPromptHandler(
         const flags = {
             prune: config.tools.prune.enabled,
             distill: config.tools.distill.enabled,
-            compress: config.tools.compress.enabled,
+            compress: config.tools.compress.permission !== "deny",
         }
 
         if (!flags.prune && !flags.distill && !flags.compress) {

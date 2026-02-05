@@ -146,10 +146,11 @@
                     "description": "Configuration for the compress tool",
                     "additionalProperties": false,
                     "properties": {
-                        "enabled": {
-                            "type": "boolean",
-                            "default": true,
-                            "description": "Enable the compress tool"
+                        "permission": {
+                            "type": "string",
+                            "enum": ["ask", "allow", "deny"],
+                            "default": "ask",
+                            "description": "Permission mode (deny disables the tool)"
                         },
                         "showCompression": {
                             "type": "boolean",

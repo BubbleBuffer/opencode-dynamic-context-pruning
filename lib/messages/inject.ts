@@ -59,7 +59,7 @@ const getNudgeString = (config: PluginConfig): string => {
     const flags = {
         prune: config.tools.prune.enabled,
         distill: config.tools.distill.enabled,
-        compress: config.tools.compress.enabled,
+        compress: config.tools.compress.permission !== "deny",
     }
 
     if (!flags.prune && !flags.distill && !flags.compress) {
@@ -73,7 +73,7 @@ const getCooldownMessage = (config: PluginConfig): string => {
     return wrapCooldownMessage({
         prune: config.tools.prune.enabled,
         distill: config.tools.distill.enabled,
-        compress: config.tools.compress.enabled,
+        compress: config.tools.compress.permission !== "deny",
     })
 }
 
@@ -159,7 +159,7 @@ export const insertPruneToolContext = (
 ): void => {
     const pruneEnabled = config.tools.prune.enabled
     const distillEnabled = config.tools.distill.enabled
-    const compressEnabled = config.tools.compress.enabled
+    const compressEnabled = config.tools.compress.permission !== "deny"
 
     if (!pruneEnabled && !distillEnabled && !compressEnabled) {
         return

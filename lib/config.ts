@@ -19,7 +19,7 @@ export interface DistillTool {
 }
 
 export interface CompressTool {
-    enabled: boolean
+    permission: "ask" | "allow" | "deny"
     showCompression: boolean
 }
 
@@ -111,7 +111,7 @@ export const VALID_CONFIG_KEYS = new Set([
     "tools.distill.enabled",
     "tools.distill.showDistillation",
     "tools.compress",
-    "tools.compress.enabled",
+    "tools.compress.permission",
     "tools.compress.showCompression",
     "tools.prune",
     "tools.prune.enabled",
@@ -322,15 +322,15 @@ function validateConfigTypes(config: Record<string, any>): ValidationError[] {
             }
         }
         if (tools.compress) {
-            if (
-                tools.compress.enabled !== undefined &&
-                typeof tools.compress.enabled !== "boolean"
-            ) {
-                errors.push({
-                    key: "tools.compress.enabled",
-                    expected: "boolean",
-                    actual: typeof tools.compress.enabled,
-                })
+            if (tools.compress.permission !== undefined) {
+                const validValues = ["ask", "allow", "deny"]
+                if (!validValues.includes(tools.compress.permission)) {
+                    errors.push({
+                        key: "tools.compress.permission",
+                        expected: '"ask" | "allow" | "deny"',
+                        actual: JSON.stringify(tools.compress.permission),
+                    })
+                }
             }
             if (
                 tools.compress.showCompression !== undefined &&
@@ -503,7 +503,7 @@ const defaultConfig: PluginConfig = {
             showDistillation: false,
         },
         compress: {
-            enabled: true,
+            permission: "ask",
             showCompression: false,
         },
         prune: {
@@ -680,7 +680,7 @@ function mergeTools(
             showDistillation: override.distill?.showDistillation ?? base.distill.showDistillation,
         },
         compress: {
-            enabled: override.compress?.enabled ?? base.compress.enabled,
+            permission: override.compress?.permission ?? base.compress.permission,
             showCompression: override.compress?.showCompression ?? base.compress.showCompression,
         },
         prune: {

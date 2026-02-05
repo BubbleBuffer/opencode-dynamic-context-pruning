@@ -117,7 +117,8 @@ DCP uses its own config file:
 >         },
 >         // Collapses a range of conversation content into a single summary
 >         "compress": {
->             "enabled": true,
+>             // Permission mode: "ask" (prompt), "allow" (no prompt), "deny" (tool not registered)
+>             "permission": "ask",
 >             // Show summary content as an ignored message notification
 >             "showCompression": false,
 >         },

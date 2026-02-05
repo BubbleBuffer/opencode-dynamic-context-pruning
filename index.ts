@@ -70,7 +70,7 @@ const plugin: Plugin = (async (ctx) => {
                     workingDirectory: ctx.directory,
                 }),
             }),
-            ...(config.tools.compress.enabled && {
+            ...(config.tools.compress.permission !== "deny" && {
                 compress: createCompressTool({
                     client: ctx.client,
                     state,
@@ -100,7 +100,7 @@ const plugin: Plugin = (async (ctx) => {
 
             const toolsToAdd: string[] = []
             if (config.tools.distill.enabled) toolsToAdd.push("distill")
-            if (config.tools.compress.enabled) toolsToAdd.push("compress")
+            if (config.tools.compress.permission !== "deny") toolsToAdd.push("compress")
             if (config.tools.prune.enabled) toolsToAdd.push("prune")
 
             if (toolsToAdd.length > 0) {
@@ -113,15 +113,13 @@ const plugin: Plugin = (async (ctx) => {
                     `Added ${toolsToAdd.map((t) => `'${t}'`).join(" and ")} to experimental.primary_tools via config mutation`,
                 )
 
-                // Set compress permission to ask (only if not already configured)
-                if (config.tools.compress.enabled) {
+                // Set compress permission from DCP config
+                if (config.tools.compress.permission !== "deny") {
                     const permission = opencodeConfig.permission ?? {}
-                    if (!("compress" in permission)) {
-                        opencodeConfig.permission = {
-                            ...permission,
-                            compress: "ask",
-                        } as typeof permission
-                    }
+                    opencodeConfig.permission = {
+                        ...permission,
+                        compress: config.tools.compress.permission,
+                    } as typeof permission
                 }
             }
         },

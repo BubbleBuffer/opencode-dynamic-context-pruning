@@ -2,67 +2,119 @@ import type { SessionState, WithParts } from "../state"
 import type { Logger } from "../logger"
 import type { PluginConfig } from "../config"
 import type { UserMessage } from "@opencode-ai/sdk/v2"
-import { loadPrompt } from "../prompts"
+import { renderNudge, renderCompressNudge } from "../prompts"
 import {
     extractParameterKey,
-    buildToolIdList,
-    createSyntheticAssistantMessage,
-    createSyntheticUserMessage,
+    createSyntheticTextPart,
     createSyntheticToolPart,
-    isDeepSeekOrKimi,
     isIgnoredUserMessage,
 } from "./utils"
-import { getFilePathFromParameters, isProtectedFilePath } from "../protected-file-patterns"
-import { getLastUserMessage } from "../shared-utils"
+import { getFilePathsFromParameters, isProtected } from "../protected-file-patterns"
+import { getLastUserMessage, isMessageCompacted } from "../shared-utils"
+import { getCurrentTokenUsage } from "../strategies/utils"
 
-const getNudgeString = (config: PluginConfig): string => {
-    const discardEnabled = config.tools.discard.enabled
-    const extractEnabled = config.tools.extract.enabled
-
-    if (discardEnabled && extractEnabled) {
-        return loadPrompt(`nudge/nudge-both`)
-    } else if (discardEnabled) {
-        return loadPrompt(`nudge/nudge-discard`)
-    } else if (extractEnabled) {
-        return loadPrompt(`nudge/nudge-extract`)
-    }
-    return ""
-}
-
-const wrapPrunableTools = (content: string): string => `<prunable-tools>
-The following tools have been invoked and are available for pruning. This list does not mandate immediate action. Consider your current goals and the resources you need before discarding valuable tool inputs or outputs. Consolidate your prunes for efficiency; it is rarely worth pruning a single tiny tool output. Keep the context free of noise.
+// XML wrappers
+export const wrapPrunableTools = (content: string): string => {
+    return `<prunable-tools>
+The following tools have been invoked and are available for pruning. This list does not mandate immediate action. Consider your current goals and the resources you need before pruning valuable tool inputs or outputs. Consolidate your prunes for efficiency; it is rarely worth pruning a single tiny tool output. Keep the context free of noise.
 ${content}
 </prunable-tools>`
+}
 
-const getCooldownMessage = (config: PluginConfig): string => {
-    const discardEnabled = config.tools.discard.enabled
-    const extractEnabled = config.tools.extract.enabled
+export const wrapCompressContext = (messageCount: number): string => `<compress-context>
+Compress available. Conversation: ${messageCount} messages.
+Compress collapses completed task sequences or exploration phases into summaries.
+Uses text boundaries [startString, endString, topic, summary].
+</compress-context>`
+
+export const wrapCooldownMessage = (flags: {
+    prune: boolean
+    distill: boolean
+    compress: boolean
+}): string => {
+    const enabledTools: string[] = []
+    if (flags.distill) enabledTools.push("distill")
+    if (flags.compress) enabledTools.push("compress")
+    if (flags.prune) enabledTools.push("prune")
 
     let toolName: string
-    if (discardEnabled && extractEnabled) {
-        toolName = "discard or extract tools"
-    } else if (discardEnabled) {
-        toolName = "discard tool"
+    if (enabledTools.length === 0) {
+        toolName = "pruning tools"
+    } else if (enabledTools.length === 1) {
+        toolName = `${enabledTools[0]} tool`
     } else {
-        toolName = "extract tool"
+        const last = enabledTools.pop()
+        toolName = `${enabledTools.join(", ")} or ${last} tools`
     }
 
-    return `<prunable-tools>
-Context management was just performed. Do not use the ${toolName} again. A fresh list will be available after your next tool use.
-</prunable-tools>`
+    return `<context-info>
+Context management was just performed. Do NOT use the ${toolName} again. A fresh list will be available after your next tool use.
+</context-info>`
+}
+
+const resolveContextLimit = (config: PluginConfig, state: SessionState): number | undefined => {
+    const configLimit = config.tools.settings.contextLimit
+    if (configLimit === "model") {
+        return state.modelContextLimit
+    }
+    return configLimit
+}
+
+const shouldInjectCompressNudge = (
+    config: PluginConfig,
+    state: SessionState,
+    messages: WithParts[],
+): boolean => {
+    if (config.tools.compress.permission === "deny") {
+        return false
+    }
+
+    const contextLimit = resolveContextLimit(config, state)
+    if (contextLimit === undefined) {
+        return false
+    }
+
+    const currentTokens = getCurrentTokenUsage(messages)
+    return currentTokens > contextLimit
+}
+
+const getNudgeString = (config: PluginConfig): string => {
+    const flags = {
+        prune: config.tools.prune.permission !== "deny",
+        distill: config.tools.distill.permission !== "deny",
+        compress: config.tools.compress.permission !== "deny",
+    }
+
+    if (!flags.prune && !flags.distill && !flags.compress) {
+        return ""
+    }
+
+    return renderNudge(flags)
+}
+
+const getCooldownMessage = (config: PluginConfig): string => {
+    return wrapCooldownMessage({
+        prune: config.tools.prune.permission !== "deny",
+        distill: config.tools.distill.permission !== "deny",
+        compress: config.tools.compress.permission !== "deny",
+    })
+}
+
+const buildCompressContext = (state: SessionState, messages: WithParts[]): string => {
+    const messageCount = messages.filter((msg) => !isMessageCompacted(state, msg)).length
+    return wrapCompressContext(messageCount)
 }
 
 const buildPrunableToolsList = (
     state: SessionState,
     config: PluginConfig,
     logger: Logger,
-    messages: WithParts[],
 ): string => {
     const lines: string[] = []
-    const toolIdList: string[] = buildToolIdList(state, messages, logger)
+    const toolIdList = state.toolIdList
 
     state.toolParameters.forEach((toolParameterEntry, toolCallId) => {
-        if (state.prune.toolIds.includes(toolCallId)) {
+        if (state.prune.toolIds.has(toolCallId)) {
             return
         }
 
@@ -71,8 +123,11 @@ const buildPrunableToolsList = (
             return
         }
 
-        const filePath = getFilePathFromParameters(toolParameterEntry.parameters)
-        if (isProtectedFilePath(filePath, config.protectedFilePatterns)) {
+        const filePaths = getFilePathsFromParameters(
+            toolParameterEntry.tool,
+            toolParameterEntry.parameters,
+        )
+        if (isProtected(filePaths, config.protectedFilePatterns)) {
             return
         }
 
@@ -88,7 +143,11 @@ const buildPrunableToolsList = (
         const description = paramKey
             ? `${toolParameterEntry.tool}, ${paramKey}`
             : toolParameterEntry.tool
-        lines.push(`${numericId}: ${description}`)
+        const tokenSuffix =
+            toolParameterEntry.tokenCount !== undefined
+                ? ` (~${toolParameterEntry.tokenCount} tokens)`
+                : ""
+        lines.push(`${numericId}: ${description}${tokenSuffix}`)
         logger.debug(
             `Prunable tool found - ID: ${numericId}, Tool: ${toolParameterEntry.tool}, Call ID: ${toolCallId}`,
         )
@@ -107,34 +166,52 @@ export const insertPruneToolContext = (
     logger: Logger,
     messages: WithParts[],
 ): void => {
-    if (!config.tools.discard.enabled && !config.tools.extract.enabled) {
+    const pruneEnabled = config.tools.prune.permission !== "deny"
+    const distillEnabled = config.tools.distill.permission !== "deny"
+    const compressEnabled = config.tools.compress.permission !== "deny"
+
+    if (!pruneEnabled && !distillEnabled && !compressEnabled) {
         return
     }
 
-    let prunableToolsContent: string
+    const pruneOrDistillEnabled = pruneEnabled || distillEnabled
+    const contentParts: string[] = []
 
     if (state.lastToolPrune) {
         logger.debug("Last tool was prune - injecting cooldown message")
-        prunableToolsContent = getCooldownMessage(config)
+        contentParts.push(getCooldownMessage(config))
     } else {
-        const prunableToolsList = buildPrunableToolsList(state, config, logger, messages)
-        if (!prunableToolsList) {
-            return
+        if (pruneOrDistillEnabled) {
+            const prunableToolsList = buildPrunableToolsList(state, config, logger)
+            if (prunableToolsList) {
+                // logger.debug("prunable-tools: \n" + prunableToolsList)
+                contentParts.push(prunableToolsList)
+            }
         }
 
-        logger.debug("prunable-tools: \n" + prunableToolsList)
+        if (compressEnabled) {
+            const compressContext = buildCompressContext(state, messages)
+            // logger.debug("compress-context: \n" + compressContext)
+            contentParts.push(compressContext)
+        }
 
-        let nudgeString = ""
-        if (
+        if (shouldInjectCompressNudge(config, state, messages)) {
+            logger.info("Inserting compress nudge - token usage exceeds contextLimit")
+            contentParts.push(renderCompressNudge())
+        } else if (
             config.tools.settings.nudgeEnabled &&
             state.nudgeCounter >= config.tools.settings.nudgeFrequency
         ) {
             logger.info("Inserting prune nudge message")
-            nudgeString = "\n" + getNudgeString(config)
+            contentParts.push(getNudgeString(config))
         }
-
-        prunableToolsContent = prunableToolsList + nudgeString
     }
+
+    if (contentParts.length === 0) {
+        return
+    }
+
+    const combinedContent = contentParts.join("\n")
 
     const lastUserMessage = getLastUserMessage(messages)
     if (!lastUserMessage) {
@@ -142,30 +219,25 @@ export const insertPruneToolContext = (
     }
 
     const userInfo = lastUserMessage.info as UserMessage
-    const variant = state.variant ?? userInfo.variant
 
-    let lastNonIgnoredMessage: WithParts | undefined
-    for (let i = messages.length - 1; i >= 0; i--) {
-        const msg = messages[i]
-        if (!(msg.info.role === "user" && isIgnoredUserMessage(msg))) {
-            lastNonIgnoredMessage = msg
-            break
-        }
+    const lastNonIgnoredMessage = messages.findLast(
+        (msg) => !(msg.info.role === "user" && isIgnoredUserMessage(msg)),
+    )
+
+    if (!lastNonIgnoredMessage) {
+        return
     }
 
-    if (!lastNonIgnoredMessage || lastNonIgnoredMessage.info.role === "user") {
-        messages.push(createSyntheticUserMessage(lastUserMessage, prunableToolsContent, variant))
+    // When following a user message, append a synthetic text part since models like Claude
+    // expect assistant turns to start with reasoning parts which cannot be easily faked.
+    // For all other cases, append a synthetic tool part to the last message which works
+    // across all models without disrupting their behavior.
+    if (lastNonIgnoredMessage.info.role === "user") {
+        const textPart = createSyntheticTextPart(lastNonIgnoredMessage, combinedContent)
+        lastNonIgnoredMessage.parts.push(textPart)
     } else {
-        const providerID = userInfo.model?.providerID || ""
         const modelID = userInfo.model?.modelID || ""
-
-        if (isDeepSeekOrKimi(providerID, modelID)) {
-            const toolPart = createSyntheticToolPart(lastNonIgnoredMessage, prunableToolsContent)
-            lastNonIgnoredMessage.parts.push(toolPart)
-        } else {
-            messages.push(
-                createSyntheticAssistantMessage(lastUserMessage, prunableToolsContent, variant),
-            )
-        }
+        const toolPart = createSyntheticToolPart(lastNonIgnoredMessage, combinedContent, modelID)
+        lastNonIgnoredMessage.parts.push(toolPart)
     }
 }

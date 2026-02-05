@@ -2,6 +2,7 @@ import type { SessionState, ToolStatus, WithParts } from "./index"
 import type { Logger } from "../logger"
 import { PluginConfig } from "../config"
 import { isMessageCompacted } from "../shared-utils"
+import { countToolTokens } from "../strategies/utils"
 
 const MAX_TOOL_CACHE_SIZE = 1000
 
@@ -43,16 +44,15 @@ export async function syncToolCache(
                     turnProtectionTurns > 0 &&
                     state.currentTurn - turnCounter < turnProtectionTurns
 
-                state.lastToolPrune =
-                    (part.tool === "discard" || part.tool === "extract") &&
-                    part.state.status === "completed"
-
-                const allProtectedTools = config.tools.settings.protectedTools
-
-                if (part.tool === "discard" || part.tool === "extract") {
+                if (part.tool === "distill" || part.tool === "compress" || part.tool === "prune") {
                     state.nudgeCounter = 0
-                } else if (!allProtectedTools.includes(part.tool) && !isProtectedByTurn) {
-                    state.nudgeCounter++
+                    state.lastToolPrune = true
+                } else {
+                    state.lastToolPrune = false
+                    const allProtectedTools = config.tools.settings.protectedTools
+                    if (!allProtectedTools.includes(part.tool) && !isProtectedByTurn) {
+                        state.nudgeCounter++
+                    }
                 }
 
                 if (state.toolParameters.has(part.callID)) {
@@ -63,14 +63,21 @@ export async function syncToolCache(
                     continue
                 }
 
+                const allProtectedTools = config.tools.settings.protectedTools
+                const isProtectedTool = allProtectedTools.includes(part.tool)
+                const tokenCount = isProtectedTool ? undefined : countToolTokens(part)
+
                 state.toolParameters.set(part.callID, {
                     tool: part.tool,
                     parameters: part.state?.input ?? {},
                     status: part.state.status as ToolStatus | undefined,
                     error: part.state.status === "error" ? part.state.error : undefined,
                     turn: turnCounter,
+                    tokenCount,
                 })
-                logger.info(`Cached tool id: ${part.callID} (created on turn ${turnCounter})`)
+                logger.info(
+                    `Cached tool id: ${part.callID} (turn ${turnCounter}${tokenCount !== undefined ? `, ~${tokenCount} tokens` : ""})`,
+                )
             }
         }
 

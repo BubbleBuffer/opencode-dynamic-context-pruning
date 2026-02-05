@@ -4,12 +4,14 @@ import type { PluginConfig } from "./config"
 import { syncToolCache } from "./state/tool-cache"
 import { deduplicate, supersedeWrites, purgeErrors } from "./strategies"
 import { prune, insertPruneToolContext } from "./messages"
+import { buildToolIdList } from "./messages/utils"
 import { checkSession } from "./state"
-import { loadPrompt } from "./prompts"
+import { renderSystemPrompt } from "./prompts"
 import { handleStatsCommand } from "./commands/stats"
 import { handleContextCommand } from "./commands/context"
 import { handleHelpCommand } from "./commands/help"
 import { handleSweepCommand } from "./commands/sweep"
+import { ensureSessionInitialized } from "./state/state"
 
 const INTERNAL_AGENT_SIGNATURES = [
     "You are a title generator",
@@ -22,7 +24,15 @@ export function createSystemPromptHandler(
     logger: Logger,
     config: PluginConfig,
 ) {
-    return async (_input: unknown, output: { system: string[] }) => {
+    return async (
+        input: { sessionID?: string; model: { limit: { context: number } } },
+        output: { system: string[] },
+    ) => {
+        if (input.model?.limit?.context) {
+            state.modelContextLimit = input.model.limit.context
+            logger.debug("Cached model context limit", { limit: state.modelContextLimit })
+        }
+
         if (state.isSubAgent) {
             return
         }
@@ -33,22 +43,17 @@ export function createSystemPromptHandler(
             return
         }
 
-        const discardEnabled = config.tools.discard.enabled
-        const extractEnabled = config.tools.extract.enabled
+        const flags = {
+            prune: config.tools.prune.permission !== "deny",
+            distill: config.tools.distill.permission !== "deny",
+            compress: config.tools.compress.permission !== "deny",
+        }
 
-        let promptName: string
-        if (discardEnabled && extractEnabled) {
-            promptName = "system/system-prompt-both"
-        } else if (discardEnabled) {
-            promptName = "system/system-prompt-discard"
-        } else if (extractEnabled) {
-            promptName = "system/system-prompt-extract"
-        } else {
+        if (!flags.prune && !flags.distill && !flags.compress) {
             return
         }
 
-        const syntheticPrompt = loadPrompt(promptName)
-        output.system.push(syntheticPrompt)
+        output.system.push(renderSystemPrompt(flags))
     }
 }
 
@@ -66,6 +71,7 @@ export function createChatMessageTransformHandler(
         }
 
         syncToolCache(state, config, logger, output.messages)
+        buildToolIdList(state, output.messages, logger)
 
         deduplicate(state, logger, config, output.messages)
         supersedeWrites(state, logger, config, output.messages)
@@ -97,14 +103,16 @@ export function createCommandExecuteHandler(
         }
 
         if (input.command === "dcp") {
-            const args = (input.arguments || "").trim().split(/\s+/).filter(Boolean)
-            const subcommand = args[0]?.toLowerCase() || ""
-            const _subArgs = args.slice(1)
-
             const messagesResponse = await client.session.messages({
                 path: { id: input.sessionID },
             })
             const messages = (messagesResponse.data || messagesResponse) as WithParts[]
+
+            await ensureSessionInitialized(client, state, input.sessionID, logger, messages)
+
+            const args = (input.arguments || "").trim().split(/\s+/).filter(Boolean)
+            const subcommand = args[0]?.toLowerCase() || ""
+            const _subArgs = args.slice(1)
 
             if (subcommand === "context") {
                 await handleContextCommand({

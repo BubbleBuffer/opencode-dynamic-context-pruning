@@ -16,7 +16,7 @@ import { getCurrentParams, calculateTokensSaved } from "../strategies/utils"
 import { buildToolIdList, isIgnoredUserMessage } from "../messages/utils"
 import { saveSessionState } from "../state/persistence"
 import { isMessageCompacted } from "../shared-utils"
-import { getFilePathFromParameters, isProtectedFilePath } from "../protected-file-patterns"
+import { getFilePathsFromParameters, isProtected } from "../protected-file-patterns"
 
 export interface SweepCommandContext {
     client: any
@@ -160,9 +160,8 @@ export async function handleSweepCommand(ctx: SweepCommandContext): Promise<void
     }
 
     // Filter out already-pruned tools, protected tools, and protected file paths
-    const existingPrunedSet = new Set(state.prune.toolIds)
     const newToolIds = toolIdsToSweep.filter((id) => {
-        if (existingPrunedSet.has(id)) {
+        if (state.prune.toolIds.has(id)) {
             return false
         }
         const entry = state.toolParameters.get(id)
@@ -173,9 +172,9 @@ export async function handleSweepCommand(ctx: SweepCommandContext): Promise<void
             logger.debug(`Sweep: skipping protected tool ${entry.tool} (${id})`)
             return false
         }
-        const filePath = getFilePathFromParameters(entry.parameters)
-        if (isProtectedFilePath(filePath, config.protectedFilePatterns)) {
-            logger.debug(`Sweep: skipping protected file path ${filePath} (${id})`)
+        const filePaths = getFilePathsFromParameters(entry.tool, entry.parameters)
+        if (isProtected(filePaths, config.protectedFilePatterns)) {
+            logger.debug(`Sweep: skipping protected file path(s) ${filePaths.join(", ")} (${id})`)
             return false
         }
         return true
@@ -190,8 +189,8 @@ export async function handleSweepCommand(ctx: SweepCommandContext): Promise<void
         if (protectedTools.includes(entry.tool)) {
             return true
         }
-        const filePath = getFilePathFromParameters(entry.parameters)
-        if (isProtectedFilePath(filePath, config.protectedFilePatterns)) {
+        const filePaths = getFilePathsFromParameters(entry.tool, entry.parameters)
+        if (isProtected(filePaths, config.protectedFilePatterns)) {
             return true
         }
         return false
@@ -213,7 +212,9 @@ export async function handleSweepCommand(ctx: SweepCommandContext): Promise<void
     }
 
     // Add to prune list
-    state.prune.toolIds.push(...newToolIds)
+    for (const id of newToolIds) {
+        state.prune.toolIds.add(id)
+    }
 
     // Calculate tokens saved
     const tokensSaved = calculateTokensSaved(state, messages, newToolIds)

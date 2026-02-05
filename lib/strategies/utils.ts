@@ -1,8 +1,30 @@
 import { SessionState, WithParts } from "../state"
-import { UserMessage } from "@opencode-ai/sdk/v2"
+import { AssistantMessage, UserMessage } from "@opencode-ai/sdk/v2"
 import { Logger } from "../logger"
 import { countTokens as anthropicCountTokens } from "@anthropic-ai/tokenizer"
 import { getLastUserMessage, isMessageCompacted } from "../shared-utils"
+
+/**
+ * Get current token usage from the last assistant message.
+ * Returns total tokens (input + output + reasoning + cache).
+ */
+export function getCurrentTokenUsage(messages: WithParts[]): number {
+    for (let i = messages.length - 1; i >= 0; i--) {
+        const msg = messages[i]
+        if (msg.info.role === "assistant") {
+            const assistantInfo = msg.info as AssistantMessage
+            if (assistantInfo.tokens?.output > 0) {
+                const input = assistantInfo.tokens?.input || 0
+                const output = assistantInfo.tokens?.output || 0
+                const reasoning = assistantInfo.tokens?.reasoning || 0
+                const cacheRead = assistantInfo.tokens?.cache?.read || 0
+                const cacheWrite = assistantInfo.tokens?.cache?.write || 0
+                return input + output + reasoning + cacheRead + cacheWrite
+            }
+        }
+    }
+    return 0
+}
 
 export function getCurrentParams(
     state: SessionState,
@@ -42,8 +64,53 @@ export function countTokens(text: string): number {
     }
 }
 
-function estimateTokensBatch(texts: string[]): number[] {
-    return texts.map(countTokens)
+export function estimateTokensBatch(texts: string[]): number {
+    if (texts.length === 0) return 0
+    return countTokens(texts.join(" "))
+}
+
+export function extractToolContent(part: any): string[] {
+    const contents: string[] = []
+
+    if (part.tool === "question") {
+        const questions = part.state?.input?.questions
+        if (questions !== undefined) {
+            const content = typeof questions === "string" ? questions : JSON.stringify(questions)
+            contents.push(content)
+        }
+        return contents
+    }
+
+    if (part.tool === "edit" || part.tool === "write") {
+        if (part.state?.input) {
+            const inputContent =
+                typeof part.state.input === "string"
+                    ? part.state.input
+                    : JSON.stringify(part.state.input)
+            contents.push(inputContent)
+        }
+    }
+
+    if (part.state?.status === "completed" && part.state?.output) {
+        const content =
+            typeof part.state.output === "string"
+                ? part.state.output
+                : JSON.stringify(part.state.output)
+        contents.push(content)
+    } else if (part.state?.status === "error" && part.state?.error) {
+        const content =
+            typeof part.state.error === "string"
+                ? part.state.error
+                : JSON.stringify(part.state.error)
+        contents.push(content)
+    }
+
+    return contents
+}
+
+export function countToolTokens(part: any): number {
+    const contents = extractToolContent(part)
+    return estimateTokensBatch(contents)
 }
 
 export const calculateTokensSaved = (
@@ -62,32 +129,10 @@ export const calculateTokensSaved = (
                 if (part.type !== "tool" || !pruneToolIds.includes(part.callID)) {
                     continue
                 }
-                if (part.tool === "question") {
-                    const questions = part.state.input?.questions
-                    if (questions !== undefined) {
-                        const content =
-                            typeof questions === "string" ? questions : JSON.stringify(questions)
-                        contents.push(content)
-                    }
-                    continue
-                }
-                if (part.state.status === "completed") {
-                    const content =
-                        typeof part.state.output === "string"
-                            ? part.state.output
-                            : JSON.stringify(part.state.output)
-                    contents.push(content)
-                } else if (part.state.status === "error") {
-                    const content =
-                        typeof part.state.error === "string"
-                            ? part.state.error
-                            : JSON.stringify(part.state.error)
-                    contents.push(content)
-                }
+                contents.push(...extractToolContent(part))
             }
         }
-        const tokenCounts: number[] = estimateTokensBatch(contents)
-        return tokenCounts.reduce((sum, count) => sum + count, 0)
+        return estimateTokensBatch(contents)
     } catch (error: any) {
         return 0
     }

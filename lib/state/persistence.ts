@@ -8,17 +8,30 @@ import * as fs from "fs/promises"
 import { existsSync } from "fs"
 import { homedir } from "os"
 import { join } from "path"
-import type { SessionState, SessionStats, Prune } from "./types"
+import type { SessionState, SessionStats, CompressSummary } from "./types"
 import type { Logger } from "../logger"
+
+/** Prune state as stored on disk (arrays for JSON compatibility) */
+export interface PersistedPrune {
+    toolIds: string[]
+    messageIds: string[]
+}
 
 export interface PersistedSessionState {
     sessionName?: string
-    prune: Prune
+    prune: PersistedPrune
+    compressSummaries: CompressSummary[]
     stats: SessionStats
     lastUpdated: string
 }
 
-const STORAGE_DIR = join(homedir(), ".local", "share", "opencode", "storage", "plugin", "dcp")
+const STORAGE_DIR = join(
+    process.env.XDG_DATA_HOME || join(homedir(), ".local", "share"),
+    "opencode",
+    "storage",
+    "plugin",
+    "dcp",
+)
 
 async function ensureStorageDir(): Promise<void> {
     if (!existsSync(STORAGE_DIR)) {
@@ -44,7 +57,11 @@ export async function saveSessionState(
 
         const state: PersistedSessionState = {
             sessionName: sessionName,
-            prune: sessionState.prune,
+            prune: {
+                toolIds: [...sessionState.prune.toolIds],
+                messageIds: [...sessionState.prune.messageIds],
+            },
+            compressSummaries: sessionState.compressSummaries,
             stats: sessionState.stats,
             lastUpdated: new Date().toISOString(),
         }
@@ -86,6 +103,26 @@ export async function loadSessionState(
             return null
         }
 
+        if (Array.isArray(state.compressSummaries)) {
+            const validSummaries = state.compressSummaries.filter(
+                (s): s is CompressSummary =>
+                    s !== null &&
+                    typeof s === "object" &&
+                    typeof s.anchorMessageId === "string" &&
+                    typeof s.summary === "string",
+            )
+            if (validSummaries.length !== state.compressSummaries.length) {
+                logger.warn("Filtered out malformed compressSummaries entries", {
+                    sessionId: sessionId,
+                    original: state.compressSummaries.length,
+                    valid: validSummaries.length,
+                })
+            }
+            state.compressSummaries = validSummaries
+        } else {
+            state.compressSummaries = []
+        }
+
         logger.info("Loaded session state from disk", {
             sessionId: sessionId,
         })
@@ -103,6 +140,7 @@ export async function loadSessionState(
 export interface AggregatedStats {
     totalTokens: number
     totalTools: number
+    totalMessages: number
     sessionCount: number
 }
 
@@ -110,6 +148,7 @@ export async function loadAllSessionStats(logger: Logger): Promise<AggregatedSta
     const result: AggregatedStats = {
         totalTokens: 0,
         totalTools: 0,
+        totalMessages: 0,
         sessionCount: 0,
     }
 
@@ -130,6 +169,7 @@ export async function loadAllSessionStats(logger: Logger): Promise<AggregatedSta
                 if (state?.stats?.totalPruneTokens && state?.prune?.toolIds) {
                     result.totalTokens += state.stats.totalPruneTokens
                     result.totalTools += state.prune.toolIds.length
+                    result.totalMessages += state.prune.messageIds?.length || 0
                     result.sessionCount++
                 }
             } catch {

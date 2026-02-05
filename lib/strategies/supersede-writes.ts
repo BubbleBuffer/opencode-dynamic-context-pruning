@@ -1,8 +1,7 @@
 import { PluginConfig } from "../config"
 import { Logger } from "../logger"
 import type { SessionState, WithParts } from "../state"
-import { buildToolIdList } from "../messages/utils"
-import { getFilePathFromParameters, isProtectedFilePath } from "../protected-file-patterns"
+import { getFilePathsFromParameters, isProtected } from "../protected-file-patterns"
 import { calculateTokensSaved } from "./utils"
 
 /**
@@ -23,16 +22,13 @@ export const supersedeWrites = (
         return
     }
 
-    // Build list of all tool call IDs from messages (chronological order)
-    const allToolIds = buildToolIdList(state, messages, logger)
+    const allToolIds = state.toolIdList
     if (allToolIds.length === 0) {
         return
     }
 
     // Filter out IDs already pruned
-    const alreadyPruned = new Set(state.prune.toolIds)
-
-    const unprunedIds = allToolIds.filter((id) => !alreadyPruned.has(id))
+    const unprunedIds = allToolIds.filter((id) => !state.prune.toolIds.has(id))
     if (unprunedIds.length === 0) {
         return
     }
@@ -51,12 +47,13 @@ export const supersedeWrites = (
             continue
         }
 
-        const filePath = getFilePathFromParameters(metadata.parameters)
-        if (!filePath) {
+        const filePaths = getFilePathsFromParameters(metadata.tool, metadata.parameters)
+        if (filePaths.length === 0) {
             continue
         }
+        const filePath = filePaths[0]
 
-        if (isProtectedFilePath(filePath, config.protectedFilePatterns)) {
+        if (isProtected(filePaths, config.protectedFilePatterns)) {
             continue
         }
 
@@ -85,7 +82,7 @@ export const supersedeWrites = (
         // For each write, check if there's a read that comes after it
         for (const write of writes) {
             // Skip if already pruned
-            if (alreadyPruned.has(write.id)) {
+            if (state.prune.toolIds.has(write.id)) {
                 continue
             }
 
@@ -99,7 +96,9 @@ export const supersedeWrites = (
 
     if (newPruneIds.length > 0) {
         state.stats.totalPruneTokens += calculateTokensSaved(state, messages, newPruneIds)
-        state.prune.toolIds.push(...newPruneIds)
+        for (const id of newPruneIds) {
+            state.prune.toolIds.add(id)
+        }
         logger.debug(`Marked ${newPruneIds.length} superseded write tool calls for pruning`)
     }
 }

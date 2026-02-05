@@ -1,8 +1,7 @@
 import { PluginConfig } from "../config"
 import { Logger } from "../logger"
 import type { SessionState, WithParts } from "../state"
-import { buildToolIdList } from "../messages/utils"
-import { getFilePathFromParameters, isProtectedFilePath } from "../protected-file-patterns"
+import { getFilePathsFromParameters, isProtected } from "../protected-file-patterns"
 import { calculateTokensSaved } from "./utils"
 
 /**
@@ -20,15 +19,13 @@ export const deduplicate = (
         return
     }
 
-    // Build list of all tool call IDs from messages (chronological order)
-    const allToolIds = buildToolIdList(state, messages, logger)
+    const allToolIds = state.toolIdList
     if (allToolIds.length === 0) {
         return
     }
 
     // Filter out IDs already pruned
-    const alreadyPruned = new Set(state.prune.toolIds)
-    const unprunedIds = allToolIds.filter((id) => !alreadyPruned.has(id))
+    const unprunedIds = allToolIds.filter((id) => !state.prune.toolIds.has(id))
 
     if (unprunedIds.length === 0) {
         return
@@ -51,8 +48,8 @@ export const deduplicate = (
             continue
         }
 
-        const filePath = getFilePathFromParameters(metadata.parameters)
-        if (isProtectedFilePath(filePath, config.protectedFilePatterns)) {
+        const filePaths = getFilePathsFromParameters(metadata.tool, metadata.parameters)
+        if (isProtected(filePaths, config.protectedFilePatterns)) {
             continue
         }
 
@@ -77,7 +74,9 @@ export const deduplicate = (
     state.stats.totalPruneTokens += calculateTokensSaved(state, messages, newPruneIds)
 
     if (newPruneIds.length > 0) {
-        state.prune.toolIds.push(...newPruneIds)
+        for (const id of newPruneIds) {
+            state.prune.toolIds.add(id)
+        }
         logger.debug(`Marked ${newPruneIds.length} duplicate tool calls for pruning`)
     }
 }

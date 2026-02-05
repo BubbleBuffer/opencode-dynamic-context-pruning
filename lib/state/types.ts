@@ -13,6 +13,7 @@ export interface ToolParameterEntry {
     status?: ToolStatus
     error?: string
     turn: number
+    tokenCount?: number
 }
 
 export interface SessionStats {
@@ -20,19 +21,28 @@ export interface SessionStats {
     totalPruneTokens: number
 }
 
+export interface CompressSummary {
+    anchorMessageId: string
+    summary: string
+}
+
 export interface Prune {
-    toolIds: string[]
+    toolIds: Set<string>
+    messageIds: Set<string>
 }
 
 export interface SessionState {
     sessionId: string | null
     isSubAgent: boolean
     prune: Prune
+    compressSummaries: CompressSummary[]
     stats: SessionStats
     toolParameters: Map<string, ToolParameterEntry>
+    toolIdList: string[]
     nudgeCounter: number
     lastToolPrune: boolean
     lastCompaction: number
     currentTurn: number
     variant: string | undefined
+    modelContextLimit: number | undefined
 }

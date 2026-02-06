@@ -107,7 +107,7 @@ DCP uses its own config file:
 >             // Token limit at which the model begins actively
 >             // compressing session context. Best kept around 40-60% of
 >             // the model's context window to stay in the "smart zone".
->             // Accepts: number, "model", or "X%" (percentage of model's context window)
+>             // Accepts: number or "X%" (percentage of model's context window)
 >             "contextLimit": "60%",
 >             // Additional tools to protect from pruning
 >             "protectedTools": [],

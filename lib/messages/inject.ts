@@ -77,10 +77,6 @@ const resolveContextLimit = (config: PluginConfig, state: SessionState): number 
             return parsePercentageString(configLimit, state.modelContextLimit)
         }
 
-        if (configLimit === "model") {
-            return state.modelContextLimit
-        }
-
         return undefined
     }
 

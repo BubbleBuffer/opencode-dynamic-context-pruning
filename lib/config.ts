@@ -511,7 +511,7 @@ const defaultConfig: PluginConfig = {
             showDistillation: false,
         },
         compress: {
-            permission: "ask",
+            permission: "deny",
             showCompression: false,
         },
         prune: {

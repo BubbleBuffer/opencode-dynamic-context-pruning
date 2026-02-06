@@ -105,10 +105,10 @@ DCP uses its own config file:
 >             "nudgeEnabled": true,
 >             "nudgeFrequency": 10,
 >             // Token limit at which the model begins actively
->             // compressing session context. Best kept around 40% of
+>             // compressing session context. Best kept around 40-60% of
 >             // the model's context window to stay in the "smart zone".
->             // Set to "model" to use the model's full context window.
->             "contextLimit": 100000,
+>             // Accepts: number or "X%" (percentage of model's context window)
+>             "contextLimit": "60%",
 >             // Additional tools to protect from pruning
 >             "protectedTools": [],
 >         },
@@ -121,8 +121,8 @@ DCP uses its own config file:
 >         },
 >         // Collapses a range of conversation content into a single summary
 >         "compress": {
->             // Permission mode: "ask" (prompt), "allow" (no prompt), "deny" (tool not registered)
->             "permission": "ask",
+>             // Permission mode: "deny" (tool not registered), "ask" (prompt), "allow" (no prompt)
+>             "permission": "deny",
 >             // Show summary content as an ignored message notification
 >             "showCompression": false,
 >         },

@@ -504,7 +504,7 @@ const defaultConfig: PluginConfig = {
             nudgeEnabled: true,
             nudgeFrequency: 10,
             protectedTools: [...DEFAULT_PROTECTED_TOOLS],
-            contextLimit: "60%",
+            contextLimit: 100000,
         },
         distill: {
             permission: "allow",

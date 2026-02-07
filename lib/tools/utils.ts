@@ -2,16 +2,13 @@ import { partial_ratio } from "fuzzball"
 import type { WithParts, CompressSummary } from "../state"
 import type { Logger } from "../logger"
 
-/**
- * Configuration for fuzzy matching behavior
- */
 export interface FuzzyConfig {
-    minScore: number // Minimum score to accept (0-100)
-    minGap: number // Minimum gap between best and second-best match
+    minScore: number
+    minGap: number
 }
 
 export const DEFAULT_FUZZY_CONFIG: FuzzyConfig = {
-    minScore: 85,
+    minScore: 95,
     minGap: 15,
 }
 
@@ -22,10 +19,6 @@ interface MatchResult {
     matchType: "exact" | "fuzzy"
 }
 
-/**
- * Extracts all textual content from a message for matching purposes.
- * Includes: text, reasoning, tool (input/output), compaction, and subtask parts.
- */
 function extractMessageContent(msg: WithParts): string {
     const parts = Array.isArray(msg.parts) ? msg.parts : []
     let content = ""
@@ -83,9 +76,6 @@ function extractMessageContent(msg: WithParts): string {
     return content
 }
 
-/**
- * Find all exact substring matches across messages and compress summaries.
- */
 function findExactMatches(
     messages: WithParts[],
     searchString: string,
@@ -130,9 +120,6 @@ function findExactMatches(
     return matches
 }
 
-/**
- * Find all fuzzy substring matches above the minimum score threshold.
- */
 function findFuzzyMatches(
     messages: WithParts[],
     searchString: string,
@@ -180,12 +167,6 @@ function findFuzzyMatches(
     return matches
 }
 
-/**
- * Searches messages for a string and returns the message ID where it's found.
- * Uses exact matching first, then falls back to fuzzy matching with confidence thresholds.
- * Searches in text parts, tool outputs, tool inputs, and compress summaries.
- * Throws an error if no confident match is found.
- */
 export function findStringInMessages(
     messages: WithParts[],
     searchString: string,
@@ -194,8 +175,10 @@ export function findStringInMessages(
     stringType: "startString" | "endString",
     fuzzyConfig: FuzzyConfig = DEFAULT_FUZZY_CONFIG,
 ): { messageId: string; messageIndex: number } {
-    // ============ PHASE 1: Exact Match ============
-    const exactMatches = findExactMatches(messages, searchString, compressSummaries)
+    const searchableMessages = messages.length > 1 ? messages.slice(0, -1) : messages
+    const lastMessage = messages.length > 0 ? messages[messages.length - 1] : undefined
+
+    const exactMatches = findExactMatches(searchableMessages, searchString, compressSummaries)
 
     if (exactMatches.length === 1) {
         return { messageId: exactMatches[0].messageId, messageIndex: exactMatches[0].messageIndex }
@@ -203,38 +186,57 @@ export function findStringInMessages(
 
     if (exactMatches.length > 1) {
         throw new Error(
-            `Found multiple exact matches for ${stringType}. ` +
-                `Provide more surrounding context to uniquely identify the intended match.`,
+            `Found multiple matches for ${stringType}. ` +
+            `Provide more surrounding context to uniquely identify the intended match.`,
         )
     }
 
-    // ============ PHASE 2: Fuzzy Match ============
     const fuzzyMatches = findFuzzyMatches(
-        messages,
+        searchableMessages,
         searchString,
         compressSummaries,
         fuzzyConfig.minScore,
     )
 
     if (fuzzyMatches.length === 0) {
+        if (lastMessage) {
+            const lastMsgContent = extractMessageContent(lastMessage)
+            const lastMsgIndex = messages.length - 1
+            if (lastMsgContent.includes(searchString)) {
+                // logger.info(
+                //     `${stringType} found in last message (last resort) at index ${lastMsgIndex}`,
+                // )
+                return {
+                    messageId: lastMessage.info.id,
+                    messageIndex: lastMsgIndex,
+                }
+            }
+        }
+
         throw new Error(
-            `${stringType} not found in conversation (exact or fuzzy). ` +
-                `Make sure the string exists and is spelled correctly.`,
+            `${stringType} not found in conversation. ` +
+            `Make sure the string exists and is spelled correctly.`,
         )
     }
 
-    // Sort by score descending to find best match
     fuzzyMatches.sort((a, b) => b.score - a.score)
 
     const best = fuzzyMatches[0]
     const secondBest = fuzzyMatches[1]
 
+    // Log fuzzy match candidates
+    // logger.info(
+    //     `Fuzzy match for ${stringType}: best=${best.score}% (msg ${best.messageIndex})` +
+    //     (secondBest
+    //         ? `, secondBest=${secondBest.score}% (msg ${secondBest.messageIndex})`
+    //         : ""),
+    // )
+
     // Check confidence gap - best must be significantly better than second best
     if (secondBest && best.score - secondBest.score < fuzzyConfig.minGap) {
         throw new Error(
-            `Ambiguous fuzzy match for ${stringType}: ` +
-                `two candidates scored similarly (${best.score}% vs ${secondBest.score}%). ` +
-                `Provide more unique text to disambiguate.`,
+            `Found multiple matches for ${stringType}. ` +
+            `Provide more unique surrounding context to disambiguate.`,
         )
     }
 
@@ -245,9 +247,6 @@ export function findStringInMessages(
     return { messageId: best.messageId, messageIndex: best.messageIndex }
 }
 
-/**
- * Collects all tool callIDs from messages between start and end indices (inclusive).
- */
 export function collectToolIdsInRange(
     messages: WithParts[],
     startIndex: number,
@@ -271,9 +270,6 @@ export function collectToolIdsInRange(
     return toolIds
 }
 
-/**
- * Collects all message IDs from messages between start and end indices (inclusive).
- */
 export function collectMessageIdsInRange(
     messages: WithParts[],
     startIndex: number,
@@ -291,10 +287,6 @@ export function collectMessageIdsInRange(
     return messageIds
 }
 
-/**
- * Collects all textual content (text parts, tool inputs, and tool outputs)
- * from a range of messages. Used for token estimation.
- */
 export function collectContentInRange(
     messages: WithParts[],
     startIndex: number,

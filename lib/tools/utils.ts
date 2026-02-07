@@ -187,7 +187,7 @@ export function findStringInMessages(
     if (exactMatches.length > 1) {
         throw new Error(
             `Found multiple matches for ${stringType}. ` +
-            `Provide more surrounding context to uniquely identify the intended match.`,
+                `Provide more surrounding context to uniquely identify the intended match.`,
         )
     }
 
@@ -215,7 +215,7 @@ export function findStringInMessages(
 
         throw new Error(
             `${stringType} not found in conversation. ` +
-            `Make sure the string exists and is spelled correctly.`,
+                `Make sure the string exists and is spelled correctly.`,
         )
     }
 
@@ -236,7 +236,7 @@ export function findStringInMessages(
     if (secondBest && best.score - secondBest.score < fuzzyConfig.minGap) {
         throw new Error(
             `Found multiple matches for ${stringType}. ` +
-            `Provide more unique surrounding context to disambiguate.`,
+                `Provide more unique surrounding context to disambiguate.`,
         )
     }
 

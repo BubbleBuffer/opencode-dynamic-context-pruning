@@ -215,7 +215,7 @@ export function findStringInMessages(
 
         throw new Error(
             `${stringType} not found in conversation. ` +
-                `Make sure the string exists and is spelled correctly.`,
+                `Make sure the string exists and is spelled exactly as it appears.`,
         )
     }
 

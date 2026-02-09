@@ -123,7 +123,7 @@
                             ]
                         },
                         "modelLimits": {
-                            "description": "Model-specific context limits with optional wildcard patterns (exact match first, then most specific wildcard). Examples: \"openai/gpt-5\", \"*/zen-1\", \"ollama/*\", \"*sonnet*\"",
+                            "description": "Model-specific context limits by exact provider/model key. Examples: \"openai/gpt-5\", \"anthropic/claude-3-7-sonnet\", \"ollama/llama3.1\"",
                             "type": "object",
                             "additionalProperties": {
                                 "oneOf": [

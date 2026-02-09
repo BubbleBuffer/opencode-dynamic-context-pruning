@@ -139,7 +139,7 @@ function getConfigKeyPaths(obj: Record<string, any>, prefix = ""): string[] {
         const fullKey = prefix ? `${prefix}.${key}` : key
         keys.push(fullKey)
 
-        // modelLimits is a dynamic map keyed by model ID; do not recurse into arbitrary IDs.
+        // modelLimits is a dynamic map keyed by providerID/modelID; do not recurse into arbitrary IDs.
         if (fullKey === "tools.settings.modelLimits") {
             continue
         }
@@ -322,13 +322,15 @@ export function validateConfigTypes(config: Record<string, any>): ValidationErro
                         actual: typeof tools.settings.modelLimits,
                     })
                 } else {
-                    for (const [modelId, limit] of Object.entries(tools.settings.modelLimits)) {
+                    for (const [providerModelKey, limit] of Object.entries(
+                        tools.settings.modelLimits,
+                    )) {
                         const isValidNumber = typeof limit === "number"
                         const isPercentString =
                             typeof limit === "string" && /^\d+(?:\.\d+)?%$/.test(limit)
                         if (!isValidNumber && !isPercentString) {
                             errors.push({
-                                key: `tools.settings.modelLimits.${modelId}`,
+                                key: `tools.settings.modelLimits.${providerModelKey}`,
                                 expected: 'number | "${number}%"',
                                 actual: JSON.stringify(limit),
                             })
@@ -336,25 +338,27 @@ export function validateConfigTypes(config: Record<string, any>): ValidationErro
                     }
                 }
             }
-            if (tools.distill?.permission !== undefined) {
-                const validValues = ["ask", "allow", "deny"]
-                if (!validValues.includes(tools.distill.permission)) {
+            if (tools.distill) {
+                if (tools.distill.permission !== undefined) {
+                    const validValues = ["ask", "allow", "deny"]
+                    if (!validValues.includes(tools.distill.permission)) {
+                        errors.push({
+                            key: "tools.distill.permission",
+                            expected: '"ask" | "allow" | "deny"',
+                            actual: JSON.stringify(tools.distill.permission),
+                        })
+                    }
+                }
+                if (
+                    tools.distill.showDistillation !== undefined &&
+                    typeof tools.distill.showDistillation !== "boolean"
+                ) {
                     errors.push({
-                        key: "tools.distill.permission",
-                        expected: '"ask" | "allow" | "deny"',
-                        actual: JSON.stringify(tools.distill.permission),
+                        key: "tools.distill.showDistillation",
+                        expected: "boolean",
+                        actual: typeof tools.distill.showDistillation,
                     })
                 }
-            }
-            if (
-                tools.distill?.showDistillation !== undefined &&
-                typeof tools.distill.showDistillation !== "boolean"
-            ) {
-                errors.push({
-                    key: "tools.distill.showDistillation",
-                    expected: "boolean",
-                    actual: typeof tools.distill.showDistillation,
-                })
             }
         }
         if (tools.compress) {

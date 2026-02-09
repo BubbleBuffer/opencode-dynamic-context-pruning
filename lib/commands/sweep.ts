@@ -17,6 +17,7 @@ import { buildToolIdList, isIgnoredUserMessage } from "../messages/utils"
 import { saveSessionState } from "../state/persistence"
 import { isMessageCompacted } from "../shared-utils"
 import { getFilePathsFromParameters, isProtected } from "../protected-file-patterns"
+import { syncToolCache } from "../state/tool-cache"
 
 export interface SweepCommandContext {
     client: any
@@ -126,6 +127,9 @@ export async function handleSweepCommand(ctx: SweepCommandContext): Promise<void
     const params = getCurrentParams(state, messages, logger)
     const protectedTools = config.commands.protectedTools
 
+    syncToolCache(state, config, logger, messages)
+    buildToolIdList(state, messages, logger)
+
     // Parse optional numeric argument
     const numArg = args[0] ? parseInt(args[0], 10) : null
     const isLastNMode = numArg !== null && !isNaN(numArg) && numArg > 0
@@ -136,9 +140,8 @@ export async function handleSweepCommand(ctx: SweepCommandContext): Promise<void
     if (isLastNMode) {
         // Mode: Sweep last N tools
         mode = "last-n"
-        const allToolIds = buildToolIdList(state, messages, logger)
-        const startIndex = Math.max(0, allToolIds.length - numArg!)
-        toolIdsToSweep = allToolIds.slice(startIndex)
+        const startIndex = Math.max(0, state.toolIdList.length - numArg!)
+        toolIdsToSweep = state.toolIdList.slice(startIndex)
         logger.info(`Sweep command: last ${numArg} mode, found ${toolIdsToSweep.length} tools`)
     } else {
         // Mode: Sweep since last user message

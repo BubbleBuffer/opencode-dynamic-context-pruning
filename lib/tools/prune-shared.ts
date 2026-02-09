@@ -9,6 +9,7 @@ import { ensureSessionInitialized } from "../state"
 import { saveSessionState } from "../state/persistence"
 import { calculateTokensSaved, getCurrentParams } from "../strategies/utils"
 import { getFilePathsFromParameters, isProtected } from "../protected-file-patterns"
+import { buildToolIdList } from "../messages/utils"
 
 // Shared logic for executing prune operations.
 export async function executePruneOperation(
@@ -47,8 +48,11 @@ export async function executePruneOperation(
     })
     const messages: WithParts[] = messagesResponse.data || messagesResponse
 
+    // These 3 are probably not needed as they should always be set in the message
+    // transform handler, but in case something causes state to reset, this is a safety net
     await ensureSessionInitialized(ctx.client, state, sessionId, logger, messages)
-    await syncToolCache(state, config, logger, messages)
+    syncToolCache(state, config, logger, messages)
+    buildToolIdList(state, messages, logger)
 
     const currentParams = getCurrentParams(state, messages, logger)
 

@@ -131,6 +131,7 @@ const getNudgeString = (config: PluginConfig): string => {
         prune: config.tools.prune.permission !== "deny",
         distill: config.tools.distill.permission !== "deny",
         compress: config.tools.compress.permission !== "deny",
+        manual: false,
     }
 
     if (!flags.prune && !flags.distill && !flags.compress) {
@@ -153,7 +154,7 @@ const buildCompressContext = (state: SessionState, messages: WithParts[]): strin
     return wrapCompressContext(messageCount)
 }
 
-const buildPrunableToolsList = (
+export const buildPrunableToolsList = (
     state: SessionState,
     config: PluginConfig,
     logger: Logger,

@@ -44,10 +44,12 @@ export const checkSession = async (
     state.currentTurn = countTurns(state, messages)
 }
 
-export function createSessionState(): SessionState {
+export function createSessionState(manualModeDefault = false): SessionState {
     return {
         sessionId: null,
         isSubAgent: false,
+        manualMode: manualModeDefault,
+        manualModeDefault,
         prune: {
             tools: new Map<string, number>(),
             messages: new Map<string, number>(),
@@ -71,6 +73,7 @@ export function createSessionState(): SessionState {
 export function resetSessionState(state: SessionState): void {
     state.sessionId = null
     state.isSubAgent = false
+    state.manualMode = state.manualModeDefault
     state.prune = {
         tools: new Map<string, number>(),
         messages: new Map<string, number>(),

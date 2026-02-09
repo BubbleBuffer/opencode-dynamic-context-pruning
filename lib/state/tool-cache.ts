@@ -7,14 +7,14 @@ import { countToolTokens } from "../strategies/utils"
 const MAX_TOOL_CACHE_SIZE = 1000
 
 /**
- * Sync tool parameters from OpenCode's session.messages() API.
+ * Sync tool parameters from session messages.
  */
-export async function syncToolCache(
+export function syncToolCache(
     state: SessionState,
     config: PluginConfig,
     logger: Logger,
     messages: WithParts[],
-): Promise<void> {
+): void {
     try {
         logger.info("Syncing tool parameters from OpenCode messages")
 

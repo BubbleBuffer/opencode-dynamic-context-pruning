@@ -16,22 +16,29 @@ export interface HelpCommandContext {
     messages: WithParts[]
 }
 
+const HELP_COMMANDS: [string, string][] = [
+    ["/dcp context", "Show token usage breakdown for current session"],
+    ["/dcp stats", "Show DCP pruning statistics"],
+    ["/dcp sweep [n]", "Prune tools since last user message, or last n tools"],
+    ["/dcp manual [on|off]", "Toggle manual mode or set explicit state"],
+    ["/dcp prune [focus]", "Trigger manual prune tool execution"],
+    ["/dcp distill [focus]", "Trigger manual distill tool execution"],
+    ["/dcp compress [focus]", "Trigger manual compress tool execution"],
+]
+
 function formatHelpMessage(manualMode: boolean): string {
+    const colWidth = Math.max(...HELP_COMMANDS.map(([cmd]) => cmd.length)) + 4
     const lines: string[] = []
 
-    lines.push("╭───────────────────────────────────────────────────────────╮")
-    lines.push("│                      DCP Commands                         │")
-    lines.push("╰───────────────────────────────────────────────────────────╯")
+    lines.push("╭─────────────────────────────────────────────────────────────────────────╮")
+    lines.push("│                              DCP Commands                               │")
+    lines.push("╰─────────────────────────────────────────────────────────────────────────╯")
     lines.push("")
-    lines.push(`  Manual mode:      ${manualMode ? "ON" : "OFF"}`)
+    lines.push(`  ${"Manual mode:".padEnd(colWidth)}${manualMode ? "ON" : "OFF"}`)
     lines.push("")
-    lines.push("  /dcp context      Show token usage breakdown for current session")
-    lines.push("  /dcp stats        Show DCP pruning statistics")
-    lines.push("  /dcp sweep [n]    Prune tools since last user message, or last n tools")
-    lines.push("  /dcp manual [on|off]  Toggle manual mode or set explicit state")
-    lines.push("  /dcp prune        Trigger manual prune tool execution")
-    lines.push("  /dcp distill      Trigger manual distill tool execution")
-    lines.push("  /dcp compress     Trigger manual compress tool execution")
+    for (const [cmd, desc] of HELP_COMMANDS) {
+        lines.push(`  ${cmd.padEnd(colWidth)}${desc}`)
+    }
     lines.push("")
 
     return lines.join("\n")

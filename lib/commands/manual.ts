@@ -18,8 +18,6 @@ import { syncToolCache } from "../state/tool-cache"
 import { buildToolIdList } from "../messages/utils"
 import { buildPrunableToolsList } from "../messages/inject"
 
-// --- Messages ---
-
 const MANUAL_MODE_ON =
     "Manual mode is now ON. Automatic context injection is disabled; use /dcp prune, /dcp distill, or /dcp compress to trigger context tools manually."
 
@@ -30,8 +28,6 @@ const NO_PRUNABLE_TOOLS = "No prunable tool outputs are currently available for 
 function toolDisabledMessage(tool: string): string {
     return `The ${tool} tool is disabled by config (permission=deny).`
 }
-
-// --- Trigger prompts ---
 
 const PRUNE_TRIGGER_PROMPT = [
     "<prune triggered manually>",
@@ -80,8 +76,6 @@ function getTriggerPrompt(
     return sections.join("\n\n")
 }
 
-// --- Command context ---
-
 export interface ManualCommandContext {
     client: any
     state: SessionState
@@ -90,8 +84,6 @@ export interface ManualCommandContext {
     sessionId: string
     messages: WithParts[]
 }
-
-// --- Handlers ---
 
 export async function handleManualToggleCommand(
     ctx: ManualCommandContext,

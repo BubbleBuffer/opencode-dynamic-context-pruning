@@ -27,6 +27,22 @@ Before compressing, ask: _"Is this chapter closed?"_ Compression is irreversible
 BOUNDARY MATCHING
 You specify boundaries by matching unique text strings in the conversation. CRITICAL: In code-centric conversations, strings repeat often. Provide sufficiently unique text to match exactly once. If a match fails (not found or found multiple times), the tool will error - extend your boundary string with more surrounding context in order to make SURE the tool does NOT error.
 
+WHERE TO PICK STRINGS FROM (important for reliable matching):
+
+- Your own assistant text responses (MOST RELIABLE - always stored verbatim)
+- The user's own words in their messages
+- Tool result output text (distinctive substrings within the output)
+- Previous compress summaries
+- Tool input string values (individual values, not whole serialized objects)
+
+WHERE TO NEVER PICK STRINGS FROM:
+
+- `<system-reminder>` tags or any XML wrapper/meta-commentary around messages
+- Injected system instructions (plan mode text, max-steps warnings, mode-switch text, environment info)
+- File/directory listing framing text (e.g. "Called the Read tool with the following input...")
+- Strings that span across message or part boundaries
+- Entire serialized JSON objects (key ordering may differ - pick a distinctive substring within instead)
+
 THE FORMAT OF COMPRESS
 `topic`: Short label (3-5 words) for display - e.g., "Auth System Exploration"
 `content`: Object containing:

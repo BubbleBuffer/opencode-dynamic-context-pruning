@@ -199,14 +199,14 @@ export function createCommandExecuteHandler(
                 config.tools[subcommand].permission !== "deny"
             ) {
                 const userFocus = subArgs.join(" ").trim()
-                const result = await handleManualTriggerCommand(commandCtx, subcommand, userFocus)
-                if (!result) {
+                const prompt = await handleManualTriggerCommand(commandCtx, subcommand, userFocus)
+                if (!prompt) {
                     throw new Error("__DCP_MANUAL_TRIGGER_BLOCKED__")
                 }
 
                 state.pendingManualTrigger = {
                     sessionId: input.sessionID,
-                    prompt: result.prompt,
+                    prompt,
                 }
                 const rawArgs = (input.arguments || "").trim()
                 output.parts.length = 0

@@ -107,15 +107,11 @@ export async function handleManualToggleCommand(
     logger.info("Manual mode toggled", { manualMode: state.manualMode })
 }
 
-export interface ManualTriggerResult {
-    prompt: string
-}
-
 export async function handleManualTriggerCommand(
     ctx: ManualCommandContext,
     tool: "prune" | "distill" | "compress",
     userFocus?: string,
-): Promise<ManualTriggerResult | null> {
+): Promise<string | null> {
     const { client, state, config, logger, sessionId, messages } = ctx
 
     if (tool === "prune" || tool === "distill") {
@@ -128,8 +124,8 @@ export async function handleManualTriggerCommand(
             return null
         }
 
-        return { prompt: getTriggerPrompt(tool, prunableToolsList, userFocus) }
+        return getTriggerPrompt(tool, prunableToolsList, userFocus)
     }
 
-    return { prompt: getTriggerPrompt("compress", undefined, userFocus) }
+    return getTriggerPrompt("compress", undefined, userFocus)
 }

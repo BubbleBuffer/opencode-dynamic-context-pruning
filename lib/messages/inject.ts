@@ -215,6 +215,10 @@ export const insertPruneToolContext = (
     logger: Logger,
     messages: WithParts[],
 ): void => {
+    if (state.manualMode) {
+        return
+    }
+
     const pruneEnabled = config.tools.prune.permission !== "deny"
     const distillEnabled = config.tools.distill.permission !== "deny"
     const compressEnabled = config.tools.compress.permission !== "deny"

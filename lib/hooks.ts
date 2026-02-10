@@ -112,18 +112,12 @@ export function createChatMessageTransformHandler(
         syncToolCache(state, config, logger, output.messages)
         buildToolIdList(state, output.messages, logger)
 
-        const shouldApplyStrategies = !state.manualMode || config.manualMode.automaticStrategies
-        if (shouldApplyStrategies) {
-            deduplicate(state, logger, config, output.messages)
-            supersedeWrites(state, logger, config, output.messages)
-            purgeErrors(state, logger, config, output.messages)
-        }
+        deduplicate(state, logger, config, output.messages)
+        supersedeWrites(state, logger, config, output.messages)
+        purgeErrors(state, logger, config, output.messages)
 
         prune(state, logger, config, output.messages)
-
-        if (!state.manualMode) {
-            insertPruneToolContext(state, config, logger, output.messages)
-        }
+        insertPruneToolContext(state, config, logger, output.messages)
 
         applyPendingManualTriggerPrompt(state, output.messages, logger)
 

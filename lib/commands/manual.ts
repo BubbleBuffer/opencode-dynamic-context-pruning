@@ -19,15 +19,11 @@ import { buildToolIdList } from "../messages/utils"
 import { buildPrunableToolsList } from "../messages/inject"
 
 const MANUAL_MODE_ON =
-    "Manual mode is now ON. Automatic context injection is disabled; use /dcp prune, /dcp distill, or /dcp compress to trigger context tools manually."
+    "Manual mode is now ON. Use /dcp prune, /dcp distill, or /dcp compress to trigger context tools manually."
 
-const MANUAL_MODE_OFF = "Manual mode is now OFF. Automatic context injection is enabled again."
+const MANUAL_MODE_OFF = "Manual mode is now OFF."
 
 const NO_PRUNABLE_TOOLS = "No prunable tool outputs are currently available for manual triggering."
-
-function toolDisabledMessage(tool: string): string {
-    return `The ${tool} tool is disabled by config (permission=deny).`
-}
 
 const PRUNE_TRIGGER_PROMPT = [
     "<prune triggered manually>",
@@ -121,19 +117,13 @@ export async function handleManualTriggerCommand(
     userFocus?: string,
 ): Promise<ManualTriggerResult | null> {
     const { client, state, config, logger, sessionId, messages } = ctx
-    const params = getCurrentParams(state, messages, logger)
-
-    const toolPermission = config.tools[tool].permission
-    if (toolPermission === "deny") {
-        await sendIgnoredMessage(client, sessionId, toolDisabledMessage(tool), params, logger)
-        return null
-    }
 
     if (tool === "prune" || tool === "distill") {
         syncToolCache(state, config, logger, messages)
         buildToolIdList(state, messages, logger)
         const prunableToolsList = buildPrunableToolsList(state, config, logger)
         if (!prunableToolsList) {
+            const params = getCurrentParams(state, messages, logger)
             await sendIgnoredMessage(client, sessionId, NO_PRUNABLE_TOOLS, params, logger)
             return null
         }

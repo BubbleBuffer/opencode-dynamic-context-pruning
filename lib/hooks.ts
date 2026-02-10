@@ -200,7 +200,10 @@ export function createCommandExecuteHandler(
                 throw new Error("__DCP_MANUAL_HANDLED__")
             }
 
-            if (subcommand === "prune" || subcommand === "distill" || subcommand === "compress") {
+            if (
+                (subcommand === "prune" || subcommand === "distill" || subcommand === "compress") &&
+                config.tools[subcommand].permission !== "deny"
+            ) {
                 const userFocus = subArgs.join(" ").trim()
                 const result = await handleManualTriggerCommand(commandCtx, subcommand, userFocus)
                 if (!result) {

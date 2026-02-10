@@ -4,13 +4,8 @@ import type { PruneToolContext } from "./types"
 import { ensureSessionInitialized } from "../state"
 import { saveSessionState } from "../state/persistence"
 import { loadPrompt } from "../prompts"
-import { estimateTokensBatch, getCurrentParams } from "../strategies/utils"
-import {
-    collectContentInRange,
-    findStringInMessages,
-    collectToolIdsInRange,
-    collectMessageIdsInRange,
-} from "./utils"
+import { getCurrentParams, getTotalToolTokens, countMessageTextTokens } from "../strategies/utils"
+import { findStringInMessages, collectToolIdsInRange, collectMessageIdsInRange } from "./utils"
 import { sendCompressNotification } from "../ui/notification"
 
 const COMPRESS_TOOL_DESCRIPTION = loadPrompt("compress-tool-spec")
@@ -113,23 +108,12 @@ export function createCompressTool(ctx: PruneToolContext): ReturnType<typeof too
                 endResult.messageIndex,
             )
 
-            for (const id of containedToolIds) {
-                state.prune.toolIds.add(id)
-            }
-            for (const id of containedMessageIds) {
-                state.prune.messageIds.add(id)
-            }
-
             // Remove any existing summaries whose anchors are now inside this range
             // This prevents duplicate injections when a larger compress subsumes a smaller one
             const removedSummaries = state.compressSummaries.filter((s) =>
                 containedMessageIds.includes(s.anchorMessageId),
             )
             if (removedSummaries.length > 0) {
-                // logger.info("Removing subsumed compress summaries", {
-                //     count: removedSummaries.length,
-                //     anchorIds: removedSummaries.map((s) => s.anchorMessageId),
-                // })
                 state.compressSummaries = state.compressSummaries.filter(
                     (s) => !containedMessageIds.includes(s.anchorMessageId),
                 )
@@ -141,12 +125,22 @@ export function createCompressTool(ctx: PruneToolContext): ReturnType<typeof too
             }
             state.compressSummaries.push(compressSummary)
 
-            const contentsToTokenize = collectContentInRange(
-                messages,
-                startResult.messageIndex,
-                endResult.messageIndex,
-            )
-            const estimatedCompressedTokens = estimateTokensBatch(contentsToTokenize)
+            let textTokens = 0
+            for (let i = startResult.messageIndex; i <= endResult.messageIndex; i++) {
+                const msgId = messages[i].info.id
+                if (!state.prune.messages.has(msgId)) {
+                    const tokens = countMessageTextTokens(messages[i])
+                    textTokens += tokens
+                    state.prune.messages.set(msgId, tokens)
+                }
+            }
+            const newToolIds = containedToolIds.filter((id) => !state.prune.tools.has(id))
+            const toolTokens = getTotalToolTokens(state, newToolIds)
+            for (const id of newToolIds) {
+                const entry = state.toolParameters.get(id)
+                state.prune.tools.set(id, entry?.tokenCount ?? 0)
+            }
+            const estimatedCompressedTokens = textTokens + toolTokens
 
             state.stats.pruneTokenCounter += estimatedCompressedTokens
 

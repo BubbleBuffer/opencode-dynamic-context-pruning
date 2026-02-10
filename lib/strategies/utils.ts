@@ -2,7 +2,7 @@ import { SessionState, WithParts } from "../state"
 import { AssistantMessage, UserMessage } from "@opencode-ai/sdk/v2"
 import { Logger } from "../logger"
 import { countTokens as anthropicCountTokens } from "@anthropic-ai/tokenizer"
-import { getLastUserMessage, isMessageCompacted } from "../shared-utils"
+import { getLastUserMessage } from "../shared-utils"
 
 /**
  * Get current token usage from the last assistant message.
@@ -113,27 +113,23 @@ export function countToolTokens(part: any): number {
     return estimateTokensBatch(contents)
 }
 
-export const calculateTokensSaved = (
-    state: SessionState,
-    messages: WithParts[],
-    pruneToolIds: string[],
-): number => {
-    try {
-        const contents: string[] = []
-        for (const msg of messages) {
-            if (isMessageCompacted(state, msg)) {
-                continue
-            }
-            const parts = Array.isArray(msg.parts) ? msg.parts : []
-            for (const part of parts) {
-                if (part.type !== "tool" || !pruneToolIds.includes(part.callID)) {
-                    continue
-                }
-                contents.push(...extractToolContent(part))
-            }
-        }
-        return estimateTokensBatch(contents)
-    } catch (error: any) {
-        return 0
+export function getTotalToolTokens(state: SessionState, toolIds: string[]): number {
+    let total = 0
+    for (const id of toolIds) {
+        const entry = state.toolParameters.get(id)
+        total += entry?.tokenCount ?? 0
     }
+    return total
+}
+
+export function countMessageTextTokens(msg: WithParts): number {
+    const texts: string[] = []
+    const parts = Array.isArray(msg.parts) ? msg.parts : []
+    for (const part of parts) {
+        if (part.type === "text") {
+            texts.push(part.text)
+        }
+    }
+    if (texts.length === 0) return 0
+    return estimateTokensBatch(texts)
 }

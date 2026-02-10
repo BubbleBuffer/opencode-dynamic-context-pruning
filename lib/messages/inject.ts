@@ -162,7 +162,7 @@ const buildPrunableToolsList = (
     const toolIdList = state.toolIdList
 
     state.toolParameters.forEach((toolParameterEntry, toolCallId) => {
-        if (state.prune.toolIds.has(toolCallId)) {
+        if (state.prune.tools.has(toolCallId)) {
             return
         }
 

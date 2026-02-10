@@ -36,10 +36,19 @@ export function countTurns(state: SessionState, messages: WithParts[]): number {
     return turnCount
 }
 
+export function loadPruneMap(
+    obj?: Record<string, number>,
+    legacyArr?: string[],
+): Map<string, number> {
+    if (obj) return new Map(Object.entries(obj))
+    if (legacyArr) return new Map(legacyArr.map((id) => [id, 0]))
+    return new Map()
+}
+
 export function resetOnCompaction(state: SessionState): void {
     state.toolParameters.clear()
-    state.prune.toolIds = new Set<string>()
-    state.prune.messageIds = new Set<string>()
+    state.prune.tools = new Map<string, number>()
+    state.prune.messages = new Map<string, number>()
     state.compressSummaries = []
     state.nudgeCounter = 0
     state.lastToolPrune = false

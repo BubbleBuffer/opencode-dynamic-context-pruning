@@ -6,6 +6,7 @@ import {
     findLastCompactionTimestamp,
     countTurns,
     resetOnCompaction,
+    loadPruneMap,
 } from "./utils"
 import { getLastUserMessage } from "../shared-utils"
 
@@ -48,8 +49,8 @@ export function createSessionState(): SessionState {
         sessionId: null,
         isSubAgent: false,
         prune: {
-            toolIds: new Set<string>(),
-            messageIds: new Set<string>(),
+            tools: new Map<string, number>(),
+            messages: new Map<string, number>(),
         },
         compressSummaries: [],
         stats: {
@@ -71,8 +72,8 @@ export function resetSessionState(state: SessionState): void {
     state.sessionId = null
     state.isSubAgent = false
     state.prune = {
-        toolIds: new Set<string>(),
-        messageIds: new Set<string>(),
+        tools: new Map<string, number>(),
+        messages: new Map<string, number>(),
     }
     state.compressSummaries = []
     state.stats = {
@@ -118,10 +119,8 @@ export async function ensureSessionInitialized(
         return
     }
 
-    state.prune = {
-        toolIds: new Set(persisted.prune.toolIds || []),
-        messageIds: new Set(persisted.prune.messageIds || []),
-    }
+    state.prune.tools = loadPruneMap(persisted.prune.tools, persisted.prune.toolIds)
+    state.prune.messages = loadPruneMap(persisted.prune.messages, persisted.prune.messageIds)
     state.compressSummaries = persisted.compressSummaries || []
     state.stats = {
         pruneTokenCounter: persisted.stats?.pruneTokenCounter || 0,

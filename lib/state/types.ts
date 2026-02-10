@@ -27,8 +27,8 @@ export interface CompressSummary {
 }
 
 export interface Prune {
-    toolIds: Set<string>
-    messageIds: Set<string>
+    tools: Map<string, number>
+    messages: Map<string, number>
 }
 
 export interface SessionState {

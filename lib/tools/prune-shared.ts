@@ -7,7 +7,7 @@ import { PruneReason, sendUnifiedNotification } from "../ui/notification"
 import { formatPruningResultForTool } from "../ui/utils"
 import { ensureSessionInitialized } from "../state"
 import { saveSessionState } from "../state/persistence"
-import { calculateTokensSaved, getCurrentParams } from "../strategies/utils"
+import { getTotalToolTokens, getCurrentParams } from "../strategies/utils"
 import { getFilePathsFromParameters, isProtected } from "../protected-file-patterns"
 import { buildToolIdList } from "../messages/utils"
 
@@ -120,7 +120,8 @@ export async function executePruneOperation(
 
     const pruneToolIds: string[] = validNumericIds.map((index) => toolIdList[index])
     for (const id of pruneToolIds) {
-        state.prune.toolIds.add(id)
+        const entry = state.toolParameters.get(id)
+        state.prune.tools.set(id, entry?.tokenCount ?? 0)
     }
 
     const toolMetadata = new Map<string, ToolParameterEntry>()
@@ -133,7 +134,7 @@ export async function executePruneOperation(
         }
     }
 
-    state.stats.pruneTokenCounter += calculateTokensSaved(state, messages, pruneToolIds)
+    state.stats.pruneTokenCounter += getTotalToolTokens(state, pruneToolIds)
 
     await sendUnifiedNotification(
         client,

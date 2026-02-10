@@ -2,7 +2,7 @@ import { PluginConfig } from "../config"
 import { Logger } from "../logger"
 import type { SessionState, WithParts } from "../state"
 import { getFilePathsFromParameters, isProtected } from "../protected-file-patterns"
-import { calculateTokensSaved } from "./utils"
+import { getTotalToolTokens } from "./utils"
 
 /**
  * Purge Errors strategy - prunes tool inputs for tools that errored
@@ -18,6 +18,10 @@ export const purgeErrors = (
     config: PluginConfig,
     messages: WithParts[],
 ): void => {
+    if (state.manualMode && !config.manualMode.automaticStrategies) {
+        return
+    }
+
     if (!config.strategies.purgeErrors.enabled) {
         return
     }
@@ -28,7 +32,7 @@ export const purgeErrors = (
     }
 
     // Filter out IDs already pruned
-    const unprunedIds = allToolIds.filter((id) => !state.prune.toolIds.has(id))
+    const unprunedIds = allToolIds.filter((id) => !state.prune.tools.has(id))
 
     if (unprunedIds.length === 0) {
         return
@@ -68,9 +72,10 @@ export const purgeErrors = (
     }
 
     if (newPruneIds.length > 0) {
-        state.stats.totalPruneTokens += calculateTokensSaved(state, messages, newPruneIds)
+        state.stats.totalPruneTokens += getTotalToolTokens(state, newPruneIds)
         for (const id of newPruneIds) {
-            state.prune.toolIds.add(id)
+            const entry = state.toolParameters.get(id)
+            state.prune.tools.set(id, entry?.tokenCount ?? 0)
         }
         logger.debug(
             `Marked ${newPruneIds.length} error tool calls for pruning (older than ${turnThreshold} turns)`,

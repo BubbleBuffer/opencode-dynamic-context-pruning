@@ -7,8 +7,9 @@ import { PruneReason, sendUnifiedNotification } from "../ui/notification"
 import { formatPruningResultForTool } from "../ui/utils"
 import { ensureSessionInitialized } from "../state"
 import { saveSessionState } from "../state/persistence"
-import { calculateTokensSaved, getCurrentParams } from "../strategies/utils"
+import { getTotalToolTokens, getCurrentParams } from "../strategies/utils"
 import { getFilePathsFromParameters, isProtected } from "../protected-file-patterns"
+import { buildToolIdList } from "../messages/utils"
 
 // Shared logic for executing prune operations.
 export async function executePruneOperation(
@@ -47,8 +48,18 @@ export async function executePruneOperation(
     })
     const messages: WithParts[] = messagesResponse.data || messagesResponse
 
-    await ensureSessionInitialized(ctx.client, state, sessionId, logger, messages)
-    await syncToolCache(state, config, logger, messages)
+    // These 3 are probably not needed as they should always be set in the message
+    // transform handler, but in case something causes state to reset, this is a safety net
+    await ensureSessionInitialized(
+        ctx.client,
+        state,
+        sessionId,
+        logger,
+        messages,
+        config.manualMode.enabled,
+    )
+    syncToolCache(state, config, logger, messages)
+    buildToolIdList(state, messages, logger)
 
     const currentParams = getCurrentParams(state, messages, logger)
 
@@ -116,7 +127,8 @@ export async function executePruneOperation(
 
     const pruneToolIds: string[] = validNumericIds.map((index) => toolIdList[index])
     for (const id of pruneToolIds) {
-        state.prune.toolIds.add(id)
+        const entry = state.toolParameters.get(id)
+        state.prune.tools.set(id, entry?.tokenCount ?? 0)
     }
 
     const toolMetadata = new Map<string, ToolParameterEntry>()
@@ -129,7 +141,7 @@ export async function executePruneOperation(
         }
     }
 
-    state.stats.pruneTokenCounter += calculateTokensSaved(state, messages, pruneToolIds)
+    state.stats.pruneTokenCounter += getTotalToolTokens(state, pruneToolIds)
 
     await sendUnifiedNotification(
         client,

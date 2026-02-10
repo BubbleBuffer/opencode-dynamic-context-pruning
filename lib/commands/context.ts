@@ -74,8 +74,8 @@ function analyzeTokens(state: SessionState, messages: WithParts[]): TokenBreakdo
         tools: 0,
         toolCount: 0,
         prunedTokens: state.stats.totalPruneTokens,
-        prunedToolCount: state.prune.toolIds.size,
-        prunedMessageCount: state.prune.messageIds.size,
+        prunedToolCount: state.prune.tools.size,
+        prunedMessageCount: state.prune.messages.size,
         total: 0,
     }
 
@@ -129,7 +129,7 @@ function analyzeTokens(state: SessionState, messages: WithParts[]): TokenBreakdo
                     foundToolIds.add(toolPart.callID)
                 }
 
-                const isPruned = toolPart.callID && state.prune.toolIds.has(toolPart.callID)
+                const isPruned = toolPart.callID && state.prune.tools.has(toolPart.callID)
                 if (!isCompacted && !isPruned) {
                     if (toolPart.state?.input) {
                         const inputStr =

@@ -5,7 +5,7 @@ export const isMessageCompacted = (state: SessionState, msg: WithParts): boolean
     if (msg.info.time.created < state.lastCompaction) {
         return true
     }
-    if (state.prune.messageIds.has(msg.info.id)) {
+    if (state.prune.messages.has(msg.info.id)) {
         return true
     }
     return false

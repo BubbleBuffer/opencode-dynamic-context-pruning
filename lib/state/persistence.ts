@@ -11,10 +11,14 @@ import { join } from "path"
 import type { SessionState, SessionStats, CompressSummary } from "./types"
 import type { Logger } from "../logger"
 
-/** Prune state as stored on disk (arrays for JSON compatibility) */
+/** Prune state as stored on disk */
 export interface PersistedPrune {
-    toolIds: string[]
-    messageIds: string[]
+    // New format: tool/message IDs with token counts
+    tools?: Record<string, number>
+    messages?: Record<string, number>
+    // Legacy format: plain ID arrays (backward compatibility)
+    toolIds?: string[]
+    messageIds?: string[]
 }
 
 export interface PersistedSessionState {
@@ -58,8 +62,8 @@ export async function saveSessionState(
         const state: PersistedSessionState = {
             sessionName: sessionName,
             prune: {
-                toolIds: [...sessionState.prune.toolIds],
-                messageIds: [...sessionState.prune.messageIds],
+                tools: Object.fromEntries(sessionState.prune.tools),
+                messages: Object.fromEntries(sessionState.prune.messages),
             },
             compressSummaries: sessionState.compressSummaries,
             stats: sessionState.stats,
@@ -96,7 +100,9 @@ export async function loadSessionState(
         const content = await fs.readFile(filePath, "utf-8")
         const state = JSON.parse(content) as PersistedSessionState
 
-        if (!state || !state.prune || !Array.isArray(state.prune.toolIds) || !state.stats) {
+        const hasNewFormat = state?.prune?.tools && typeof state.prune.tools === "object"
+        const hasLegacyFormat = Array.isArray(state?.prune?.toolIds)
+        if (!state || !state.prune || (!hasNewFormat && !hasLegacyFormat) || !state.stats) {
             logger.warn("Invalid session state file, ignoring", {
                 sessionId: sessionId,
             })
@@ -166,10 +172,14 @@ export async function loadAllSessionStats(logger: Logger): Promise<AggregatedSta
                 const content = await fs.readFile(filePath, "utf-8")
                 const state = JSON.parse(content) as PersistedSessionState
 
-                if (state?.stats?.totalPruneTokens && state?.prune?.toolIds) {
+                if (state?.stats?.totalPruneTokens && state?.prune) {
                     result.totalTokens += state.stats.totalPruneTokens
-                    result.totalTools += state.prune.toolIds.length
-                    result.totalMessages += state.prune.messageIds?.length || 0
+                    result.totalTools += state.prune.tools
+                        ? Object.keys(state.prune.tools).length
+                        : (state.prune.toolIds?.length ?? 0)
+                    result.totalMessages += state.prune.messages
+                        ? Object.keys(state.prune.messages).length
+                        : (state.prune.messageIds?.length ?? 0)
                     result.sessionCount++
                 }
             } catch {

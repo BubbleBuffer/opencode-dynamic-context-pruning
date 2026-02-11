@@ -9,6 +9,8 @@ const PRUNED_TOOL_OUTPUT_REPLACEMENT =
     "[Output removed to save context - information superseded or no longer needed]"
 const PRUNED_TOOL_ERROR_INPUT_REPLACEMENT = "[input removed due to failed tool call]"
 const PRUNED_QUESTION_INPUT_REPLACEMENT = "[questions removed - see output for user's answers]"
+const PRUNED_COMPRESS_INPUT_REPLACEMENT =
+    "[compress content removed - topic retained for reference]"
 
 export const prune = (
     state: SessionState,
@@ -36,11 +38,6 @@ const pruneFullTool = (state: SessionState, logger: Logger, messages: WithParts[
 
         for (const part of parts) {
             if (part.type !== "tool") {
-                continue
-            }
-
-            if (part.tool === "compress" && part.state.status === "completed") {
-                partsToRemove.push(part.callID)
                 continue
             }
 
@@ -111,6 +108,13 @@ const pruneToolInputs = (state: SessionState, logger: Logger, messages: WithPart
             if (part.type !== "tool") {
                 continue
             }
+            if (part.tool === "compress" && part.state.status === "completed") {
+                if (part.state.input?.content !== undefined) {
+                    part.state.input.content = PRUNED_COMPRESS_INPUT_REPLACEMENT
+                }
+                continue
+            }
+
             if (!state.prune.tools.has(part.callID)) {
                 continue
             }

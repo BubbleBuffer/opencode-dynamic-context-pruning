@@ -123,6 +123,7 @@ const shouldInjectCompressNudge = (
         const hasDcpTool = parts.some(
             (part) =>
                 part.type === "tool" &&
+                part.state.status === "completed" &&
                 (part.tool === "compress" || part.tool === "prune" || part.tool === "distill"),
         )
         if (hasDcpTool) {

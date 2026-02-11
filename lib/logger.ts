@@ -111,6 +111,11 @@ export class Logger {
         return this.write("ERROR", component, message, data)
     }
 
+    devError(message: string, data?: any) {
+        // Developer error log - only writes to file, never to console/TUI
+        this.error(message, data)
+    }
+
     /**
      * Strips unnecessary metadata from messages for cleaner debug logs.
      *

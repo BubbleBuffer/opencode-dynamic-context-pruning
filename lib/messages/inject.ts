@@ -274,7 +274,7 @@ export const insertPruneToolContext = (
             contentParts.push(renderCompressNudge())
         } else if (
             config.tools.settings.nudgeEnabled &&
-            state.nudgeCounter >= config.tools.settings.nudgeFrequency
+            state.nudgeCounter >= Math.max(1, config.tools.settings.nudgeFrequency)
         ) {
             logger.info("Inserting prune nudge message")
             contentParts.push(getNudgeString(config))

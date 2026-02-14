@@ -85,9 +85,8 @@ export class Logger {
 
             const logFile = join(dailyLogDir, `${new Date().toISOString().split("T")[0]}.log`)
             await writeFile(logFile, logLine, { flag: "a" })
-        } catch (error) {
-            // Fallback to console if file logging fails
-            console.error("[DCP Logger] Failed to write log:", error)
+        } catch {
+            // Silently ignore logging errors - don't pollute TUI
         }
     }
 
@@ -214,8 +213,8 @@ export class Logger {
             const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
             const contextFile = join(contextDir, `${timestamp}.json`)
             await writeFile(contextFile, JSON.stringify(minimized, null, 2))
-        } catch (error) {
-            console.error("[DCP Logger] Failed to save context:", error)
+        } catch {
+            // Silently ignore logging errors - don't pollute TUI
         }
     }
 }

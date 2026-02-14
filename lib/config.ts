@@ -243,7 +243,6 @@ export function validateConfigTypes(config: Record<string, any>): ValidationErro
                 actual: typeof config.turnProtection.turns,
             })
         }
-        // Warn if turns is 0 or negative
         if (
             typeof config.turnProtection.turns === "number" &&
             config.turnProtection.turns < 1
@@ -337,7 +336,6 @@ export function validateConfigTypes(config: Record<string, any>): ValidationErro
                     actual: typeof tools.settings.nudgeFrequency,
                 })
             }
-            // Warn if nudgeFrequency is 0 or negative
             if (
                 typeof tools.settings.nudgeFrequency === "number" &&
                 tools.settings.nudgeFrequency < 1
@@ -588,7 +586,7 @@ function showConfigValidationWarnings(
                     duration: 7000,
                 },
             })
-        } catch {}
+        } catch { }
     }, 7000)
 }
 
@@ -892,7 +890,7 @@ export function getConfig(ctx: PluginInput): PluginConfig {
                             duration: 7000,
                         },
                     })
-                } catch {}
+                } catch { }
             }, 7000)
         } else if (result.data) {
             // Validate config keys and types
@@ -938,7 +936,7 @@ export function getConfig(ctx: PluginInput): PluginConfig {
                             duration: 7000,
                         },
                     })
-                } catch {}
+                } catch { }
             }, 7000)
         } else if (result.data) {
             // Validate config keys and types
@@ -981,7 +979,7 @@ export function getConfig(ctx: PluginInput): PluginConfig {
                             duration: 7000,
                         },
                     })
-                } catch {}
+                } catch { }
             }, 7000)
         } else if (result.data) {
             // Validate config keys and types

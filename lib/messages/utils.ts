@@ -1,10 +1,15 @@
-import { ulid } from "ulid"
+import { createHash } from "node:crypto"
 import { isMessageCompacted } from "../shared-utils"
 import { Logger } from "../logger"
 import type { SessionState, WithParts } from "../state"
 import type { UserMessage } from "@opencode-ai/sdk/v2"
 
-const generateUniqueId = (prefix: string): string => `${prefix}_${ulid()}`
+const SUMMARY_ID_HASH_LENGTH = 16
+
+const generateStableId = (prefix: string, seed: string): string => {
+    const hash = createHash("sha256").update(seed).digest("hex").slice(0, SUMMARY_ID_HASH_LENGTH)
+    return `${prefix}_${hash}`
+}
 
 type MessagePart = WithParts["parts"][number]
 type ToolPart = Extract<MessagePart, { type: "tool" }>
@@ -18,12 +23,13 @@ export const createSyntheticUserMessage = (
     baseMessage: WithParts,
     content: string,
     variant?: string,
-    _stableSeed?: string,
+    stableSeed?: string,
 ): WithParts => {
     const userInfo = baseMessage.info as UserMessage
     const now = Date.now()
-    const messageId = generateUniqueId("msg")
-    const partId = generateUniqueId("prt")
+    const deterministicSeed = stableSeed?.trim() || userInfo.id
+    const messageId = generateStableId("msg_dcp_summary", deterministicSeed)
+    const partId = generateStableId("prt_dcp_summary", deterministicSeed)
 
     return {
         info: {
@@ -50,10 +56,11 @@ export const createSyntheticUserMessage = (
 export const createSyntheticTextPart = (
     baseMessage: WithParts,
     content: string,
-    _stableSeed?: string,
+    stableSeed?: string,
 ) => {
     const userInfo = baseMessage.info as UserMessage
-    const partId = generateUniqueId("prt")
+    const deterministicSeed = stableSeed?.trim() || userInfo.id
+    const partId = generateStableId("prt_dcp_text", deterministicSeed)
 
     return {
         id: partId,
@@ -68,13 +75,14 @@ export const createSyntheticToolPart = (
     baseMessage: WithParts,
     content: string,
     modelID: string,
-    _stableSeed?: string,
+    stableSeed?: string,
 ) => {
     const userInfo = baseMessage.info as UserMessage
     const now = Date.now()
 
-    const partId = generateUniqueId("prt")
-    const callId = generateUniqueId("call")
+    const deterministicSeed = stableSeed?.trim() || userInfo.id
+    const partId = generateStableId("prt_dcp_tool", deterministicSeed)
+    const callId = generateStableId("call_dcp_tool", deterministicSeed)
 
     // Gemini requires thoughtSignature bypass to accept synthetic tool parts
     const toolPartMetadata = isGeminiModel(modelID)

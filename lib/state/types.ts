@@ -22,6 +22,7 @@ export interface SessionStats {
 }
 
 export interface CompressSummary {
+    blockId: number
     anchorMessageId: string
     summary: string
 }
@@ -36,6 +37,12 @@ export interface PendingManualTrigger {
     prompt: string
 }
 
+export interface MessageIdState {
+    byRawId: Map<string, string>
+    byRef: Map<string, string>
+    nextRef: number
+}
+
 export interface SessionState {
     sessionId: string | null
     isSubAgent: boolean
@@ -46,6 +53,7 @@ export interface SessionState {
     stats: SessionStats
     toolParameters: Map<string, ToolParameterEntry>
     toolIdList: string[]
+    messageIds: MessageIdState
     nudgeCounter: number
     lastToolPrune: boolean
     lastCompaction: number

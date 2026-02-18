@@ -50,6 +50,11 @@ export function resetOnCompaction(state: SessionState): void {
     state.prune.tools = new Map<string, number>()
     state.prune.messages = new Map<string, number>()
     state.compressSummaries = []
+    state.messageIds = {
+        byRawId: new Map<string, string>(),
+        byRef: new Map<string, string>(),
+        nextRef: 0,
+    }
     state.nudgeCounter = 0
     state.lastToolPrune = false
 }

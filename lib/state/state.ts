@@ -1,6 +1,6 @@
 import type { SessionState, ToolParameterEntry, WithParts } from "./types"
 import type { Logger } from "../logger"
-import { loadSessionState } from "./persistence"
+import { loadSessionState, saveSessionState } from "./persistence"
 import {
     isSubAgentSession,
     findLastCompactionTimestamp,
@@ -47,6 +47,12 @@ export const checkSession = async (
         logger.info("Detected compaction - reset stale state", {
             timestamp: lastCompactionTimestamp,
         })
+
+        saveSessionState(state, logger).catch((error) => {
+            logger.warn("Failed to persist state reset after compaction", {
+                error: error instanceof Error ? error.message : String(error),
+            })
+        })
     }
 
     state.currentTurn = countTurns(state, messages)
@@ -69,6 +75,11 @@ export function createSessionState(): SessionState {
         },
         toolParameters: new Map<string, ToolParameterEntry>(),
         toolIdList: [],
+        messageIds: {
+            byRawId: new Map<string, string>(),
+            byRef: new Map<string, string>(),
+            nextRef: 0,
+        },
         nudgeCounter: 0,
         lastToolPrune: false,
         lastCompaction: 0,
@@ -94,6 +105,11 @@ export function resetSessionState(state: SessionState): void {
     }
     state.toolParameters.clear()
     state.toolIdList = []
+    state.messageIds = {
+        byRawId: new Map<string, string>(),
+        byRef: new Map<string, string>(),
+        nextRef: 0,
+    }
     state.nudgeCounter = 0
     state.lastToolPrune = false
     state.lastCompaction = 0

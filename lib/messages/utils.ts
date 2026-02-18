@@ -4,9 +4,10 @@ import { Logger } from "../logger"
 import type { SessionState, WithParts } from "../state"
 import type { UserMessage } from "@opencode-ai/sdk/v2"
 
-export const COMPRESS_SUMMARY_PREFIX = "[Compressed conversation block]\n\n"
-
 const generateUniqueId = (prefix: string): string => `${prefix}_${ulid()}`
+
+type MessagePart = WithParts["parts"][number]
+type ToolPart = Extract<MessagePart, { type: "tool" }>
 
 const isGeminiModel = (modelID: string): boolean => {
     const lowerModelID = modelID.toLowerCase()
@@ -17,6 +18,7 @@ export const createSyntheticUserMessage = (
     baseMessage: WithParts,
     content: string,
     variant?: string,
+    _stableSeed?: string,
 ): WithParts => {
     const userInfo = baseMessage.info as UserMessage
     const now = Date.now()
@@ -45,7 +47,11 @@ export const createSyntheticUserMessage = (
     }
 }
 
-export const createSyntheticTextPart = (baseMessage: WithParts, content: string) => {
+export const createSyntheticTextPart = (
+    baseMessage: WithParts,
+    content: string,
+    _stableSeed?: string,
+) => {
     const userInfo = baseMessage.info as UserMessage
     const partId = generateUniqueId("prt")
 
@@ -62,6 +68,7 @@ export const createSyntheticToolPart = (
     baseMessage: WithParts,
     content: string,
     modelID: string,
+    _stableSeed?: string,
 ) => {
     const userInfo = baseMessage.info as UserMessage
     const now = Date.now()
@@ -90,6 +97,30 @@ export const createSyntheticToolPart = (
             time: { start: now, end: now },
         },
     }
+}
+
+export const appendMessageIdTagToToolOutput = (part: ToolPart, tag: string): boolean => {
+    if (part.state?.status !== "completed" || typeof part.state.output !== "string") {
+        return false
+    }
+    if (part.state.output.includes(tag)) {
+        return true
+    }
+
+    const separator = part.state.output.length > 0 && !part.state.output.endsWith("\n") ? "\n" : ""
+    part.state.output = `${part.state.output}${separator}${tag}`
+    return true
+}
+
+export const findLastToolPart = (message: WithParts): ToolPart | null => {
+    for (let i = message.parts.length - 1; i >= 0; i--) {
+        const part = message.parts[i]
+        if (part.type === "tool") {
+            return part
+        }
+    }
+
+    return null
 }
 
 /**

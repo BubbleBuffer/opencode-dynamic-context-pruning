@@ -1,9 +1,10 @@
 import type { SessionState, WithParts } from "./state"
 import type { Logger } from "./logger"
 import type { PluginConfig } from "./config"
+import { assignMessageRefs } from "./message-ids"
 import { syncToolCache } from "./state/tool-cache"
 import { deduplicate, supersedeWrites, purgeErrors } from "./strategies"
-import { prune, insertPruneToolContext } from "./messages"
+import { prune, insertPruneToolContext, insertMessageIdContext } from "./messages"
 import { buildToolIdList, isIgnoredUserMessage } from "./messages/utils"
 import { checkSession } from "./state"
 import { renderSystemPrompt } from "./prompts"
@@ -13,7 +14,6 @@ import { handleHelpCommand } from "./commands/help"
 import { handleSweepCommand } from "./commands/sweep"
 import { handleManualToggleCommand, handleManualTriggerCommand } from "./commands/manual"
 import { ensureSessionInitialized } from "./state/state"
-import { getCurrentParams } from "./strategies/utils"
 
 const INTERNAL_AGENT_SIGNATURES = [
     "You are a title generator",
@@ -109,6 +109,8 @@ export function createChatMessageTransformHandler(
             return
         }
 
+        assignMessageRefs(state, output.messages)
+
         syncToolCache(state, config, logger, output.messages)
         buildToolIdList(state, output.messages, logger)
 
@@ -118,6 +120,7 @@ export function createChatMessageTransformHandler(
 
         prune(state, logger, config, output.messages)
         insertPruneToolContext(state, config, logger, output.messages)
+        insertMessageIdContext(state, output.messages)
 
         applyPendingManualTriggerPrompt(state, output.messages, logger)
 

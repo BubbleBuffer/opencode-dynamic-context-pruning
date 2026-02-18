@@ -115,8 +115,7 @@ export const appendMessageIdTagToToolOutput = (part: ToolPart, tag: string): boo
         return true
     }
 
-    const separator = part.state.output.length > 0 && !part.state.output.endsWith("\n") ? "\n" : ""
-    part.state.output = `${part.state.output}${separator}${tag}`
+    part.state.output = `${part.state.output}${tag}`
     return true
 }
 

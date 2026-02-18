@@ -120,7 +120,7 @@ export function createChatMessageTransformHandler(
 
         prune(state, logger, config, output.messages)
         insertPruneToolContext(state, config, logger, output.messages)
-        insertMessageIdContext(state, output.messages)
+        insertMessageIdContext(state, config, output.messages)
 
         applyPendingManualTriggerPrompt(state, output.messages, logger)
 

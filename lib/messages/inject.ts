@@ -288,7 +288,7 @@ export const insertPruneToolContext = (
         return
     }
 
-    const combinedContent = contentParts.join("\n")
+    const combinedContent = `\n${contentParts.join("\n")}`
 
     if (!lastUserMessage) {
         return
@@ -324,7 +324,15 @@ export const insertPruneToolContext = (
     }
 }
 
-export const insertMessageIdContext = (state: SessionState, messages: WithParts[]): void => {
+export const insertMessageIdContext = (
+    state: SessionState,
+    config: PluginConfig,
+    messages: WithParts[],
+): void => {
+    if (config.tools.compress.permission === "deny") {
+        return
+    }
+
     const lastUserMessage = getLastUserMessage(messages)
     const toolModelId = lastUserMessage
         ? ((lastUserMessage.info as UserMessage).model.modelID ?? "")

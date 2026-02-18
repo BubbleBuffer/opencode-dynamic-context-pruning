@@ -2,12 +2,15 @@ import type { SessionState, WithParts } from "../state"
 import type { Logger } from "../logger"
 import type { PluginConfig } from "../config"
 import type { UserMessage } from "@opencode-ai/sdk/v2"
+import { formatMessageIdTag } from "../message-ids"
 import { renderNudge, renderCompressNudge } from "../prompts"
 import {
     extractParameterKey,
     createSyntheticTextPart,
     createSyntheticToolPart,
     isIgnoredUserMessage,
+    appendMessageIdTagToToolOutput,
+    findLastToolPart,
 } from "./utils"
 import { getFilePathsFromParameters, isProtected } from "../protected-file-patterns"
 import { getLastUserMessage, isMessageCompacted } from "../shared-utils"
@@ -38,7 +41,7 @@ ${content}
 export const wrapCompressContext = (messageCount: number): string => `<compress-context>
 Compress available. Conversation: ${messageCount} messages.
 Compress collapses completed task sequences or exploration phases into summaries.
-Uses text boundaries [startString, endString, topic, summary].
+Uses ID boundaries [startId, endId, topic, summary].
 </compress-context>`
 
 export const wrapCooldownMessage = (flags: {
@@ -291,8 +294,6 @@ export const insertPruneToolContext = (
         return
     }
 
-    const userInfo = lastUserMessage.info as UserMessage
-
     const lastNonIgnoredMessage = messages.findLast(
         (msg) => !(msg.info.role === "user" && isIgnoredUserMessage(msg)),
     )
@@ -306,11 +307,56 @@ export const insertPruneToolContext = (
     // For all other cases, append a synthetic tool part to the last message which works
     // across all models without disrupting their behavior.
     if (lastNonIgnoredMessage.info.role === "user") {
-        const textPart = createSyntheticTextPart(lastNonIgnoredMessage, combinedContent)
+        const textPart = createSyntheticTextPart(
+            lastNonIgnoredMessage,
+            combinedContent,
+            `${lastNonIgnoredMessage.info.id}:context`,
+        )
         lastNonIgnoredMessage.parts.push(textPart)
     } else {
-        const modelID = userInfo.model?.modelID || ""
-        const toolPart = createSyntheticToolPart(lastNonIgnoredMessage, combinedContent, modelID)
+        const toolPart = createSyntheticToolPart(
+            lastNonIgnoredMessage,
+            combinedContent,
+            modelId ?? "",
+            `${lastNonIgnoredMessage.info.id}:context`,
+        )
         lastNonIgnoredMessage.parts.push(toolPart)
+    }
+}
+
+export const insertMessageIdContext = (state: SessionState, messages: WithParts[]): void => {
+    const lastUserMessage = getLastUserMessage(messages)
+    const toolModelId = lastUserMessage
+        ? ((lastUserMessage.info as UserMessage).model.modelID ?? "")
+        : ""
+
+    for (const message of messages) {
+        if (message.info.role === "user" && isIgnoredUserMessage(message)) {
+            continue
+        }
+
+        const messageRef = state.messageIds.byRawId.get(message.info.id)
+        if (!messageRef) {
+            continue
+        }
+
+        const tag = formatMessageIdTag(messageRef)
+        const messageIdSeed = `${message.info.id}:message-id:${messageRef}`
+
+        if (message.info.role === "user") {
+            message.parts.push(createSyntheticTextPart(message, tag, messageIdSeed))
+            continue
+        }
+
+        if (message.info.role !== "assistant") {
+            continue
+        }
+
+        const lastToolPart = findLastToolPart(message)
+        if (lastToolPart && appendMessageIdTagToToolOutput(lastToolPart, tag)) {
+            continue
+        }
+
+        message.parts.push(createSyntheticToolPart(message, tag, toolModelId, messageIdSeed))
     }
 }

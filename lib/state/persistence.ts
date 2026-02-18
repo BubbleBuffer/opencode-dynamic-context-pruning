@@ -110,21 +110,57 @@ export async function loadSessionState(
         }
 
         if (Array.isArray(state.compressSummaries)) {
-            const validSummaries = state.compressSummaries.filter(
-                (s): s is CompressSummary =>
-                    s !== null &&
-                    typeof s === "object" &&
-                    typeof s.anchorMessageId === "string" &&
-                    typeof s.summary === "string",
-            )
-            if (validSummaries.length !== state.compressSummaries.length) {
+            const migratedSummaries: CompressSummary[] = []
+            let nextBlockId = 1
+
+            for (const entry of state.compressSummaries) {
+                if (
+                    entry === null ||
+                    typeof entry !== "object" ||
+                    typeof entry.anchorMessageId !== "string" ||
+                    typeof entry.summary !== "string"
+                ) {
+                    continue
+                }
+
+                const blockId =
+                    typeof entry.blockId === "number" && Number.isInteger(entry.blockId)
+                        ? entry.blockId
+                        : nextBlockId
+                migratedSummaries.push({
+                    blockId,
+                    anchorMessageId: entry.anchorMessageId,
+                    summary: entry.summary,
+                })
+                nextBlockId = Math.max(nextBlockId, blockId + 1)
+            }
+
+            if (migratedSummaries.length !== state.compressSummaries.length) {
                 logger.warn("Filtered out malformed compressSummaries entries", {
                     sessionId: sessionId,
                     original: state.compressSummaries.length,
-                    valid: validSummaries.length,
+                    valid: migratedSummaries.length,
                 })
             }
-            state.compressSummaries = validSummaries
+
+            const seenBlockIds = new Set<number>()
+            const dedupedSummaries = migratedSummaries.filter((summary) => {
+                if (seenBlockIds.has(summary.blockId)) {
+                    return false
+                }
+                seenBlockIds.add(summary.blockId)
+                return true
+            })
+
+            if (dedupedSummaries.length !== migratedSummaries.length) {
+                logger.warn("Removed duplicate compress block IDs", {
+                    sessionId: sessionId,
+                    original: migratedSummaries.length,
+                    valid: dedupedSummaries.length,
+                })
+            }
+
+            state.compressSummaries = dedupedSummaries
         } else {
             state.compressSummaries = []
         }

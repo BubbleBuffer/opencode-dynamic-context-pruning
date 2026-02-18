@@ -8,6 +8,8 @@ Think of compression as phase transitions: raw exploration becomes refined under
 THE SUMMARY
 Your summary must be EXHAUSTIVE. Capture file paths, function signatures, decisions made, constraints discovered, key findings... EVERYTHING that maintains context integrity. This is not a brief note - it is an authoritative record so faithful that the original conversation adds no value.
 
+When the selected range includes user messages, preserve the user's intent with extra care. Do not change scope, constraints, priorities, acceptance criteria, or requested outcomes.
+
 Yet be LEAN. Strip away the noise: failed attempts that led nowhere, verbose tool outputs, back-and-forth exploration. What remains should be pure signal - golden nuggets of detail that preserve full understanding with zero ambiguity.
 
 THE WAYS OF COMPRESS
@@ -24,28 +26,36 @@ You're mid-sprint on related functionality
 
 Before compressing, ask: _"Is this chapter closed?"_ Compression is irreversible. The summary replaces everything in the range.
 
-BOUNDARY MATCHING
-You specify boundaries by matching unique text strings in the conversation. CRITICAL: In code-centric conversations, strings repeat often. Provide sufficiently unique text to match exactly once. If a match fails (not found or found multiple times), the tool will error - extend your boundary string with more surrounding context in order to make SURE the tool does NOT error.
+BOUNDARY IDS
+You specify boundaries by ID.
 
-WHERE TO PICK STRINGS FROM (important for reliable matching):
+Use the injected IDs visible in the conversation:
 
-- Your own assistant text responses (MOST RELIABLE - always stored verbatim)
-- The user's own words in their messages
-- Tool result output text (distinctive substrings within the output)
-- Previous compress summaries
-- Tool input string values (individual values, not whole serialized objects)
+- `mNNNN` IDs identify raw messages
+- `bN` IDs identify previously compressed blocks
 
-WHERE TO NEVER PICK STRINGS FROM:
+Rules:
 
-- `<system-reminder>` tags or any XML wrapper/meta-commentary around messages
-- Injected system instructions (plan mode text, max-steps warnings, mode-switch text, environment info)
-- File/directory listing framing text (e.g. "Called the Read tool with the following input...")
-- Strings that span across message or part boundaries
-- Entire serialized JSON objects (key ordering may differ - pick a distinctive substring within instead)
+- Pick `startId` and `endId` directly from injected IDs in context.
+- IDs must exist in the current visible context.
+- `startId` must appear before `endId`.
+- Do not invent IDs.
+
+COMPRESSED BLOCK PLACEHOLDERS
+When the selected range includes previously compressed blocks, use placeholders in this exact format:
+
+- `(bN)`
+
+Rules:
+
+- Include every required placeholder exactly once.
+- Do not include placeholders for blocks outside the selected range.
+- Treat `(bN)` placeholders as reserved tokens and only use them intentionally.
+- If needed in prose, refer to a block as plain text like `compressed b3` (not as a placeholder token).
 
 THE FORMAT OF COMPRESS
 `topic`: Short label (3-5 words) for display - e.g., "Auth System Exploration"
 `content`: Object containing:
-`startString`: Unique text string marking the beginning of the range
-`endString`: Unique text string marking the end of the range
+`startId`: Boundary ID marking the beginning of the range (`mNNNN` or `bN`)
+`endId`: Boundary ID marking the end of the range (`mNNNN` or `bN`)
 `summary`: Complete technical summary replacing all content in the range

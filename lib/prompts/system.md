@@ -12,11 +12,11 @@ AVAILABLE TOOLS FOR CONTEXT MANAGEMENT
 </distill>
 
 <compress>THE COMPRESS TOOL
-`compress` is a sledgehammer and should be used accordingly. It's purpose is to reduce whole part of the conversation to its essence and technical details in order to leave room for newer context. Your summary MUST be technical and specific enough to preserve FULL understanding of WHAT TRANSPIRED, such that NO AMBIGUITY remains about what was done, found, or decided. Your compress summary must be thorough and precise. `compress` will replace everything in the range you match, user and assistant messages, tool inputs and outputs. It is preferred to not compress preemptively, but rather wait for natural breakpoints in the conversation. Those breakpoints are to be infered from user messages. You WILL NOT compress based on thinking that you are done with the task, wait for conversation queues that the user has moved on from current phase.
+`compress` is a sledgehammer and should be used accordingly. It's purpose is to reduce whole part of the conversation to its essence and technical details in order to leave room for newer context. Your summary MUST be technical and specific enough to preserve FULL understanding of WHAT TRANSPIRED, such that NO AMBIGUITY remains about what was done, found, or decided. Your compress summary must be thorough and precise. `compress` will replace everything in the range you match, user and assistant messages, tool inputs and outputs. It is preferred to not compress preemptively, but rather wait for natural breakpoints in the conversation. Those breakpoints are to be infered from user messages. You WILL NOT compress based on thinking that you are done with the task, wait for conversation queues that the user has moved on from current phase. Use injected boundary IDs (`startId`/`endId`) to select ranges.
 
 This tool will typically be used at the end of a phase of work, when conversation starts to accumulate noise that would better served summarized, or when you've done significant exploration and can FULLY synthesize your findings and understanding into a technical summary.
 
-Make sure to match enough of the context with start and end strings so you're not faced with an error calling the tool. Be VERY CAREFUL AND CONSERVATIVE when using `compress`.
+Use only injected `mNNNN`/`bN` IDs that are visible in the current context. If compressed blocks are included in your range, preserve their content through required `(bN)` placeholders in your summary. Be VERY CAREFUL AND CONSERVATIVE when using `compress`.
 </compress>
 
 <prune>THE PRUNE TOOL

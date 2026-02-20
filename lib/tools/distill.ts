@@ -53,6 +53,7 @@ export function createDistillTool(ctx: PruneToolContext): ReturnType<typeof tool
                 ids,
                 "extraction" as PruneReason,
                 "Distill",
+                "distill",
                 distillations,
             )
         },

@@ -1,4 +1,4 @@
-import type { SessionState, ToolParameterEntry, WithParts } from "../state"
+import type { PruneOriginSource, SessionState, ToolParameterEntry, WithParts } from "../state"
 import type { PluginConfig } from "../config"
 import type { Logger } from "../logger"
 import type { PruneToolContext } from "./types"
@@ -14,10 +14,11 @@ import { buildToolIdList } from "../messages/utils"
 // Shared logic for executing prune operations.
 export async function executePruneOperation(
     ctx: PruneToolContext,
-    toolCtx: { sessionID: string },
+    toolCtx: { sessionID: string; messageID?: string },
     ids: string[],
     reason: PruneReason,
     toolName: string,
+    source: PruneOriginSource,
     distillation?: string[],
 ): Promise<string> {
     const { client, state, logger, config, workingDirectory } = ctx
@@ -132,9 +133,21 @@ export async function executePruneOperation(
     }
 
     const pruneToolIds: string[] = validNumericIds.map((index) => toolIdList[index])
+    const originMessageId =
+        typeof toolCtx.messageID === "string" && toolCtx.messageID.length > 0
+            ? toolCtx.messageID
+            : ""
+
+    if (!originMessageId) {
+        logger.warn(`Missing tool message ID for ${toolName} prune origin tracking`)
+    }
+
     for (const id of pruneToolIds) {
         const entry = state.toolParameters.get(id)
         state.prune.tools.set(id, entry?.tokenCount ?? 0)
+        if (originMessageId) {
+            state.prune.origins.set(id, { source, originMessageId })
+        }
     }
 
     const toolMetadata = new Map<string, ToolParameterEntry>()

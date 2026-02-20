@@ -114,6 +114,12 @@ export async function executePruneOperation(
             continue
         }
 
+        if (state.prune.tools.has(id)) {
+            logger.debug("Rejecting prune request - already pruned", { index, id })
+            skippedIds.push(index.toString())
+            continue
+        }
+
         validNumericIds.push(index)
     }
 
@@ -167,7 +173,7 @@ export async function executePruneOperation(
 
     let result = formatPruningResultForTool(pruneToolIds, toolMetadata, workingDirectory)
     if (skippedIds.length > 0) {
-        result += `\n\nNote: ${skippedIds.length} IDs were skipped (invalid, protected, or missing metadata): ${skippedIds.join(", ")}`
+        result += `\n\nNote: ${skippedIds.length} IDs were skipped (invalid, protected, already pruned, or missing metadata): ${skippedIds.join(", ")}`
     }
     return result
 }

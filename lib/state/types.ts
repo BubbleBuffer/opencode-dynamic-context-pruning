@@ -27,9 +27,23 @@ export interface CompressSummary {
     summary: string
 }
 
+export type PruneOriginSource =
+    | "prune"
+    | "distill"
+    | "sweep"
+    | "deduplication"
+    | "supersedeWrites"
+    | "purgeErrors"
+
+export interface PruneOrigin {
+    source: PruneOriginSource
+    originMessageId: string
+}
+
 export interface Prune {
     tools: Map<string, number>
     messages: Map<string, number>
+    origins: Map<string, PruneOrigin>
 }
 
 export interface PendingManualTrigger {

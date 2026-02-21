@@ -1,4 +1,4 @@
-import type { SessionState, WithParts } from "./types"
+import type { PruneOrigin, SessionState, WithParts } from "./types"
 import { isMessageCompacted } from "../shared-utils"
 
 export async function isSubAgentSession(client: any, sessionID: string): Promise<boolean> {
@@ -45,10 +45,32 @@ export function loadPruneMap(
     return new Map()
 }
 
+export function loadPruneOriginMap(obj?: Record<string, PruneOrigin>): Map<string, PruneOrigin> {
+    if (!obj || typeof obj !== "object") {
+        return new Map()
+    }
+
+    const entries: [string, PruneOrigin][] = []
+    for (const [toolId, origin] of Object.entries(obj)) {
+        if (
+            origin &&
+            typeof origin === "object" &&
+            typeof origin.source === "string" &&
+            typeof origin.originMessageId === "string" &&
+            origin.originMessageId.length > 0
+        ) {
+            entries.push([toolId, origin])
+        }
+    }
+
+    return new Map(entries)
+}
+
 export function resetOnCompaction(state: SessionState): void {
     state.toolParameters.clear()
     state.prune.tools = new Map<string, number>()
     state.prune.messages = new Map<string, number>()
+    state.prune.origins = new Map()
     state.compressSummaries = []
     state.messageIds = {
         byRawId: new Map<string, string>(),

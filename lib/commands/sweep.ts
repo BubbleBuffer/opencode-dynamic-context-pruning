@@ -15,7 +15,7 @@ import { formatPrunedItemsList } from "../ui/utils"
 import { getCurrentParams, getTotalToolTokens } from "../strategies/utils"
 import { buildToolIdList, isIgnoredUserMessage } from "../messages/utils"
 import { saveSessionState } from "../state/persistence"
-import { isMessageCompacted } from "../shared-utils"
+import { getLastUserMessage, isMessageCompacted } from "../shared-utils"
 import { getFilePathsFromParameters, isProtected } from "../protected-file-patterns"
 import { syncToolCache } from "../state/tool-cache"
 
@@ -215,11 +215,21 @@ export async function handleSweepCommand(ctx: SweepCommandContext): Promise<void
     }
 
     const tokensSaved = getTotalToolTokens(state, newToolIds)
+    const originMessageId = getLastUserMessage(messages)?.info.id || ""
+    if (!originMessageId) {
+        logger.warn("Sweep prune origin unavailable - missing user message")
+    }
 
     // Add to prune list
     for (const id of newToolIds) {
         const entry = state.toolParameters.get(id)
         state.prune.tools.set(id, entry?.tokenCount ?? 0)
+        if (originMessageId) {
+            state.prune.origins.set(id, {
+                source: "sweep",
+                originMessageId,
+            })
+        }
     }
     state.stats.pruneTokenCounter += tokensSaved
     state.stats.totalPruneTokens += state.stats.pruneTokenCounter

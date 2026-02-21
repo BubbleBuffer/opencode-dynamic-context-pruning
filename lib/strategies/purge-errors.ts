@@ -2,6 +2,7 @@ import { PluginConfig } from "../config"
 import { Logger } from "../logger"
 import type { SessionState, WithParts } from "../state"
 import { getFilePathsFromParameters, isProtected } from "../protected-file-patterns"
+import { getLastUserMessage } from "../shared-utils"
 import { getTotalToolTokens } from "./utils"
 
 /**
@@ -72,10 +73,20 @@ export const purgeErrors = (
     }
 
     if (newPruneIds.length > 0) {
+        const decisionMessageId = getLastUserMessage(messages)?.info.id || ""
+        if (!decisionMessageId) {
+            logger.warn("Purge errors prune origin unavailable - missing user message")
+        }
         state.stats.totalPruneTokens += getTotalToolTokens(state, newPruneIds)
         for (const id of newPruneIds) {
             const entry = state.toolParameters.get(id)
             state.prune.tools.set(id, entry?.tokenCount ?? 0)
+            if (decisionMessageId) {
+                state.prune.origins.set(id, {
+                    source: "purgeErrors",
+                    originMessageId: decisionMessageId,
+                })
+            }
         }
         logger.debug(
             `Marked ${newPruneIds.length} error tool calls for pruning (older than ${turnThreshold} turns)`,

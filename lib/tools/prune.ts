@@ -30,7 +30,7 @@ export function createPruneTool(ctx: PruneToolContext): ReturnType<typeof tool> 
             const numericIds = args.ids
             const reason = "noise"
 
-            return executePruneOperation(ctx, toolCtx, numericIds, reason, "Prune")
+            return executePruneOperation(ctx, toolCtx, numericIds, reason, "Prune", "prune")
         },
     })
 }

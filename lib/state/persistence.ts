@@ -8,7 +8,7 @@ import * as fs from "fs/promises"
 import { existsSync } from "fs"
 import { homedir } from "os"
 import { join } from "path"
-import type { SessionState, SessionStats, CompressSummary } from "./types"
+import type { SessionState, SessionStats, CompressSummary, PruneOrigin } from "./types"
 import type { Logger } from "../logger"
 
 /** Prune state as stored on disk */
@@ -16,6 +16,7 @@ export interface PersistedPrune {
     // New format: tool/message IDs with token counts
     tools?: Record<string, number>
     messages?: Record<string, number>
+    origins?: Record<string, PruneOrigin>
     // Legacy format: plain ID arrays (backward compatibility)
     toolIds?: string[]
     messageIds?: string[]
@@ -64,6 +65,7 @@ export async function saveSessionState(
             prune: {
                 tools: Object.fromEntries(sessionState.prune.tools),
                 messages: Object.fromEntries(sessionState.prune.messages),
+                origins: Object.fromEntries(sessionState.prune.origins),
             },
             compressSummaries: sessionState.compressSummaries,
             stats: sessionState.stats,

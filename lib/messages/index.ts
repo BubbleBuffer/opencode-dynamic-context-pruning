@@ -1,4 +1,4 @@
 export { prune } from "./prune"
-export { reconcilePruneOrigins } from "./reconcile"
+export { syncToolOrigins } from "./sync"
 export { insertPruneToolContext } from "./inject"
 export { insertMessageIdContext } from "./inject"

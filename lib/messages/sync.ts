@@ -1,7 +1,7 @@
 import type { SessionState, WithParts } from "../state"
 import type { Logger } from "../logger"
 
-export const reconcilePruneOrigins = (
+export const syncToolOrigins = (
     state: SessionState,
     logger: Logger,
     messages: WithParts[],
@@ -31,7 +31,7 @@ export const reconcilePruneOrigins = (
     }
 
     if (removedToolCount > 0 || removedOriginCount > 0) {
-        logger.info("Reconciled prune origins", {
+        logger.info("Synced prune origins", {
             removedToolCount,
             removedOriginCount,
         })

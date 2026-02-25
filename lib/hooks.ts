@@ -92,7 +92,12 @@ export function createSystemPromptHandler(
             return
         }
 
-        output.system.push(renderSystemPrompt(flags))
+        const newPrompt = renderSystemPrompt(flags)
+        if (output.system.length > 0) {
+            output.system[output.system.length - 1] += "\n\n" + newPrompt
+        } else {
+            output.system.push(newPrompt)
+        }
     }
 }
 

@@ -41,3 +41,9 @@ docs/
 SCHEMA_NOTES.md
 
 repomix-output.xml
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd

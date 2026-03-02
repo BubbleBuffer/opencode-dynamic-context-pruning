@@ -18,7 +18,7 @@ import {
     validateCompressArgs,
     validateSummaryPlaceholders,
     type CompressToolArgs,
-} from "./compress-utils"
+} from "./utils"
 import { isIgnoredUserMessage } from "../messages/utils"
 import { getCurrentParams, getCurrentTokenUsage, countTokens } from "../strategies/utils"
 import { deduplicate, supersedeWrites, purgeErrors } from "../strategies"

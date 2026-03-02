@@ -18,7 +18,7 @@ Add to your OpenCode config:
 }
 ```
 
-Using `@latest` ensures you always get the newest version automatically when OpenCode starts.
+Using `@beta` ensures you always get the newest version automatically when OpenCode starts.
 
 Restart OpenCode. The plugin will automatically start optimizing your sessions.
 
@@ -209,22 +209,13 @@ DCP exposes six editable prompts:
 
 This feature is disabled by default. Set `experimental.customPrompts` to `true` in your DCP config to activate it.
 
-When enabled, managed defaults are written to `~/.config/opencode/dcp-prompts/defaults/` as plain-text prompt files (no XML wrappers and no inline comments). A single `README.md` in that directory explains each prompt and how to create overrides.
+When enabled, managed defaults are written to `~/.config/opencode/dcp-prompts/defaults/` as plain-text prompt files. A single `README.md` in that directory explains each prompt and how to create overrides.
 
-To customize behavior, add a file with the same name under an overrides directory and edit it as plain text. DCP wraps override text with the required XML at runtime.
-
-Override precedence:
-
-1. `.opencode/dcp-prompts/overrides/` (project)
-2. `$OPENCODE_CONFIG_DIR/dcp-prompts/overrides/` (config dir)
-3. `~/.config/opencode/dcp-prompts/overrides/` (global)
+To customize behavior, add a file with the same name under an overrides directory and edit it as plain text.
 
 To reset an override, delete the matching file from your overrides directory.
 
-If you later set `experimental.customPrompts` to `false`, DCP stops reading overrides and does not regenerate the defaults directory.
-
 > [!NOTE]
-> Default prompts remain bundler-safe: runtime uses bundled/generated TypeScript prompt strings and does not read packaged markdown files.
 > `compress` prompt changes apply after plugin restart because tool descriptions are registered at startup.
 
 ### Protected Tools

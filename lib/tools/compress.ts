@@ -2,6 +2,7 @@ import { tool } from "@opencode-ai/plugin"
 import type { ToolContext } from "./types"
 import { ensureSessionInitialized } from "../state"
 import {
+    appendMissingBlockSummaries,
     appendProtectedTools,
     wrapCompressedSummary,
     allocateBlockId,
@@ -93,7 +94,7 @@ export function createCompressTool(ctx: ToolContext): ReturnType<typeof tool> {
             const anchorMessageId = resolveAnchorMessageId(range.startReference)
 
             const parsedPlaceholders = parseBlockPlaceholders(compressArgs.content.summary)
-            validateSummaryPlaceholders(
+            const missingRequiredBlockIds = validateSummaryPlaceholders(
                 parsedPlaceholders,
                 range.requiredBlockIds,
                 range.startReference,
@@ -109,7 +110,7 @@ export function createCompressTool(ctx: ToolContext): ReturnType<typeof tool> {
                 range.endReference,
             )
 
-            const finalSummary = await appendProtectedTools(
+            const summaryWithProtectedTools = await appendProtectedTools(
                 ctx.client,
                 ctx.state,
                 ctx.config.experimental.allowSubAgents,
@@ -119,6 +120,15 @@ export function createCompressTool(ctx: ToolContext): ReturnType<typeof tool> {
                 ctx.config.compress.protectedTools,
                 ctx.config.protectedFilePatterns,
             )
+
+            const finalSummaryResult = appendMissingBlockSummaries(
+                summaryWithProtectedTools,
+                missingRequiredBlockIds,
+                searchContext.summaryByBlockId,
+                injected.consumedBlockIds,
+            )
+
+            const finalSummary = finalSummaryResult.expandedSummary
 
             const blockId = allocateBlockId(ctx.state)
             const storedSummary = wrapCompressedSummary(blockId, finalSummary)
@@ -136,7 +146,7 @@ export function createCompressTool(ctx: ToolContext): ReturnType<typeof tool> {
                 anchorMessageId,
                 blockId,
                 storedSummary,
-                injected.consumedBlockIds,
+                finalSummaryResult.consumedBlockIds,
             )
 
             await saveSessionState(ctx.state, ctx.logger)

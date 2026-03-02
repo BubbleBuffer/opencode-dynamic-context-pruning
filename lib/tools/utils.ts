@@ -382,7 +382,7 @@ export function validateSummaryPlaceholders(
     startReference: BoundaryReference,
     endReference: BoundaryReference,
     summaryByBlockId: Map<number, CompressionBlock>,
-): void {
+): number[] {
     const issues: string[] = []
 
     const boundaryOptionalIds = new Set<number>()
@@ -416,11 +416,6 @@ export function validateSummaryPlaceholders(
     }
 
     const missing = strictRequiredIds.filter((id) => !placeholderSet.has(id))
-    if (missing.length > 0) {
-        issues.push(
-            `Missing required block placeholders: ${missing.map(formatBlockPlaceholder).join(", ")}`,
-        )
-    }
 
     const unknown = placeholderIds.filter((id) => !summaryByBlockId.has(id))
     if (unknown.length > 0) {
@@ -447,6 +442,8 @@ export function validateSummaryPlaceholders(
     if (issues.length > 0) {
         throwCombinedIssues(issues)
     }
+
+    return missing
 }
 
 export function injectBlockPlaceholders(
@@ -886,6 +883,49 @@ export async function appendProtectedTools(
 
     const heading = "\n\nThe following protected tools were used in this conversation as well:"
     return summary + heading + protectedOutputs.join("")
+}
+
+export function appendMissingBlockSummaries(
+    summary: string,
+    missingBlockIds: number[],
+    summaryByBlockId: Map<number, CompressionBlock>,
+    consumedBlockIds: number[],
+): InjectedSummaryResult {
+    const consumedSeen = new Set<number>(consumedBlockIds)
+    const consumed = [...consumedBlockIds]
+
+    const missingSummaries: string[] = []
+    for (const blockId of missingBlockIds) {
+        if (consumedSeen.has(blockId)) {
+            continue
+        }
+
+        const target = summaryByBlockId.get(blockId)
+        if (!target) {
+            throw new Error(`Compressed block not found: ${formatBlockPlaceholder(blockId)}`)
+        }
+
+        missingSummaries.push(
+            `\n### ${formatBlockPlaceholder(blockId)}\n${restoreSummary(target.summary)}`,
+        )
+        consumedSeen.add(blockId)
+        consumed.push(blockId)
+    }
+
+    if (missingSummaries.length === 0) {
+        return {
+            expandedSummary: summary,
+            consumedBlockIds: consumed,
+        }
+    }
+
+    const heading =
+        "\n\nThe following previously compressed summaries were also part of this conversation section:"
+
+    return {
+        expandedSummary: summary + heading + missingSummaries.join(""),
+        consumedBlockIds: consumed,
+    }
 }
 
 function throwCombinedIssues(issues: string[]): never {

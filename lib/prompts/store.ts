@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, statSync } from "fs
 import { join, dirname } from "path"
 import { homedir } from "os"
 import type { Logger } from "../logger"
-import { SYSTEM as SYSTEM_PROMPT } from "./_codegen/system.generated"
+import { SYSTEM as SYSTEM_PROMPT } from "./system"
 import { COMPRESS as COMPRESS_PROMPT } from "./compress"
 import { CONTEXT_LIMIT_NUDGE } from "./context-limit-nudge"
 import { USER_TURN_NUDGE, ASSISTANT_TURN_NUDGE } from "./turn-nudge"
@@ -309,6 +309,8 @@ function buildDefaultsReadmeContent(): string {
     )
     lines.push("2. Edit the copied file using plain text.")
     lines.push("3. Restart OpenCode.")
+    lines.push("")
+    lines.push("To reset an override, delete the matching file from your overrides directory.")
     lines.push("")
     lines.push(
         "Do not edit the default prompt files directly, they are just for reference, only files in the overrides directory are used.",

@@ -5,6 +5,7 @@ import {
     getSubAgentId,
     mergeSubagentResult,
 } from "../../subagents/subagent-results"
+import { stripHallucinationsFromString } from "../utils"
 
 async function fetchSubAgentMessages(client: any, sessionId: string): Promise<WithParts[]> {
     const response = await client.session.messages({
@@ -43,7 +44,9 @@ export const injectExtendedSubAgentResults = async (
             const cachedResult = state.subAgentResultCache.get(part.callID)
             if (cachedResult !== undefined) {
                 if (cachedResult) {
-                    part.state.output = mergeSubagentResult(part.state.output, cachedResult)
+                    part.state.output = stripHallucinationsFromString(
+                        mergeSubagentResult(part.state.output, cachedResult),
+                    )
                 }
                 continue
             }
@@ -71,7 +74,9 @@ export const injectExtendedSubAgentResults = async (
             }
 
             state.subAgentResultCache.set(part.callID, subAgentResultText)
-            part.state.output = mergeSubagentResult(part.state.output, subAgentResultText)
+            part.state.output = stripHallucinationsFromString(
+                mergeSubagentResult(part.state.output, subAgentResultText),
+            )
         }
     }
 }

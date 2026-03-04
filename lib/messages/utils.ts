@@ -181,14 +181,18 @@ export const isIgnoredUserMessage = (message: WithParts): boolean => {
     return true
 }
 
+export const stripHallucinationsFromString = (text: string): string => {
+    return text
+        .replace(TURN_NUDGE_BLOCK_REGEX, "")
+        .replace(ITERATION_NUDGE_BLOCK_REGEX, "")
+        .replace(DCP_MESSAGE_ID_TAG_REGEX, "")
+}
+
 export const stripHallucinations = (messages: WithParts[]): void => {
     for (const message of messages) {
         for (const part of message.parts) {
             if (part.type === "text" && typeof part.text === "string") {
-                part.text = part.text
-                    .replace(TURN_NUDGE_BLOCK_REGEX, "")
-                    .replace(ITERATION_NUDGE_BLOCK_REGEX, "")
-                    .replace(DCP_MESSAGE_ID_TAG_REGEX, "")
+                part.text = stripHallucinationsFromString(part.text)
             }
 
             if (
@@ -196,10 +200,7 @@ export const stripHallucinations = (messages: WithParts[]): void => {
                 part.state?.status === "completed" &&
                 typeof part.state.output === "string"
             ) {
-                part.state.output = part.state.output
-                    .replace(TURN_NUDGE_BLOCK_REGEX, "")
-                    .replace(ITERATION_NUDGE_BLOCK_REGEX, "")
-                    .replace(DCP_MESSAGE_ID_TAG_REGEX, "")
+                part.state.output = stripHallucinationsFromString(part.state.output)
             }
         }
     }

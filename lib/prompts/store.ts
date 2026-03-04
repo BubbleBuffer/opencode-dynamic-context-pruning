@@ -5,7 +5,7 @@ import type { Logger } from "../logger"
 import { SYSTEM as SYSTEM_PROMPT } from "./system"
 import { COMPRESS as COMPRESS_PROMPT } from "./compress"
 import { CONTEXT_LIMIT_NUDGE } from "./context-limit-nudge"
-import { USER_TURN_NUDGE, ASSISTANT_TURN_NUDGE } from "./turn-nudge"
+import { TURN_NUDGE } from "./turn-nudge"
 import { ITERATION_NUDGE } from "./iteration-nudge"
 import { MANUAL_MODE_SYSTEM_OVERLAY, SUBAGENT_SYSTEM_OVERLAY } from "./internal-overlays"
 
@@ -13,16 +13,14 @@ export type PromptKey =
     | "system"
     | "compress"
     | "context-limit-nudge"
-    | "user-turn-nudge"
-    | "assistant-turn-nudge"
+    | "turn-nudge"
     | "iteration-nudge"
 
 type EditablePromptField =
     | "system"
     | "compress"
     | "contextLimitNudge"
-    | "userTurnNudge"
-    | "assistantTurnNudge"
+    | "turnNudge"
     | "iterationNudge"
 
 interface PromptDefinition {
@@ -50,8 +48,7 @@ export interface RuntimePrompts {
     system: string
     compress: string
     contextLimitNudge: string
-    userTurnNudge: string
-    assistantTurnNudge: string
+    turnNudge: string
     iterationNudge: string
     manualOverlay: string
     subagentOverlay: string
@@ -84,21 +81,12 @@ const PROMPT_DEFINITIONS: PromptDefinition[] = [
         instructionName: "context_buildup_warning",
     },
     {
-        key: "user-turn-nudge",
-        fileName: "user-turn-nudge.md",
-        label: "User Turn Nudge",
-        description: "Strong turn nudge attached to user messages",
-        usage: "Used when nudge force is strong",
-        runtimeField: "userTurnNudge",
-        instructionName: "turn_nudge",
-    },
-    {
-        key: "assistant-turn-nudge",
-        fileName: "assistant-turn-nudge.md",
-        label: "Assistant Turn Nudge",
-        description: "Soft turn nudge attached to assistant messages",
-        usage: "Used when nudge force is soft",
-        runtimeField: "assistantTurnNudge",
+        key: "turn-nudge",
+        fileName: "turn-nudge.md",
+        label: "Turn Nudge",
+        description: "Nudge to compress closed ranges at turn boundaries",
+        usage: "Injected when context is between min and max limits at a new user turn",
+        runtimeField: "turnNudge",
         instructionName: "turn_nudge",
     },
     {
@@ -116,8 +104,7 @@ export const PROMPT_KEYS: PromptKey[] = [
     "system",
     "compress",
     "context-limit-nudge",
-    "user-turn-nudge",
-    "assistant-turn-nudge",
+    "turn-nudge",
     "iteration-nudge",
 ]
 
@@ -130,8 +117,7 @@ const BUNDLED_EDITABLE_PROMPTS: Record<EditablePromptField, string> = {
     system: SYSTEM_PROMPT,
     compress: COMPRESS_PROMPT,
     contextLimitNudge: CONTEXT_LIMIT_NUDGE,
-    userTurnNudge: USER_TURN_NUDGE,
-    assistantTurnNudge: ASSISTANT_TURN_NUDGE,
+    turnNudge: TURN_NUDGE,
     iterationNudge: ITERATION_NUDGE,
 }
 
@@ -145,8 +131,7 @@ function createBundledRuntimePrompts(): RuntimePrompts {
         system: BUNDLED_EDITABLE_PROMPTS.system,
         compress: BUNDLED_EDITABLE_PROMPTS.compress,
         contextLimitNudge: BUNDLED_EDITABLE_PROMPTS.contextLimitNudge,
-        userTurnNudge: BUNDLED_EDITABLE_PROMPTS.userTurnNudge,
-        assistantTurnNudge: BUNDLED_EDITABLE_PROMPTS.assistantTurnNudge,
+        turnNudge: BUNDLED_EDITABLE_PROMPTS.turnNudge,
         iterationNudge: BUNDLED_EDITABLE_PROMPTS.iterationNudge,
         manualOverlay: INTERNAL_PROMPT_OVERLAYS.manualOverlay,
         subagentOverlay: INTERNAL_PROMPT_OVERLAYS.subagentOverlay,

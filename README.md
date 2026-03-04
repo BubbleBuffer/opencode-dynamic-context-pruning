@@ -176,13 +176,12 @@ DCP provides a `/dcp` slash command:
 
 ### Prompt Overrides
 
-DCP exposes six editable prompts:
+DCP exposes five editable prompts:
 
 - `system`
 - `compress`
 - `context-limit-nudge`
-- `user-turn-nudge`
-- `assistant-turn-nudge`
+- `turn-nudge`
 - `iteration-nudge`
 
 This feature is disabled by default. Set `experimental.customPrompts` to `true` in your DCP config to activate it.

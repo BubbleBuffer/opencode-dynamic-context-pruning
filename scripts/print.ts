@@ -17,10 +17,8 @@ function getPromptByKey(prompts: RuntimePrompts, key: PromptKey): string {
             return prompts.compress
         case "context-limit-nudge":
             return prompts.contextLimitNudge
-        case "user-turn-nudge":
-            return prompts.userTurnNudge
-        case "assistant-turn-nudge":
-            return prompts.assistantTurnNudge
+        case "turn-nudge":
+            return prompts.turnNudge
         case "iteration-nudge":
             return prompts.iterationNudge
     }
@@ -46,7 +44,7 @@ Options:
 
 Prompt keys:
   system, compress, context-limit-nudge,
-  user-turn-nudge, assistant-turn-nudge, iteration-nudge
+  turn-nudge, iteration-nudge
 
 Examples:
   npm run dcp -- --list

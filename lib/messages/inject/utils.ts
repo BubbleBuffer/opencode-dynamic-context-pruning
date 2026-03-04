@@ -255,9 +255,7 @@ export function applyAnchoredNudges(
 
     const turnNudgeAnchors = new Set<string>()
     const targetRole = config.compress.nudgeForce === "strong" ? "user" : "assistant"
-    const promptToUse =
-        config.compress.nudgeForce === "strong" ? prompts.userTurnNudge : prompts.assistantTurnNudge
-    const turnNudge = appendGuidanceToInstructionXml(promptToUse, compressedBlockGuidance)
+    const turnNudge = appendGuidanceToInstructionXml(prompts.turnNudge, compressedBlockGuidance)
 
     for (const message of messages) {
         if (!state.nudges.turnNudgeAnchors.has(message.info.id)) continue

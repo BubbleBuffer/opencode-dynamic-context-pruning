@@ -14,8 +14,11 @@
  *
  * HOW WE CALCULATE EACH CATEGORY:
  *
- *   SYSTEM = firstAssistant.input + cache.read - tokenizer(firstUserMessage)
- *            The first response's input contains system + first user message.
+ *   SYSTEM = firstAssistant.input + cache.read + cache.write - tokenizer(firstUserMessage)
+ *            The first response's total input (input + cache.read + cache.write)
+ *            contains system + first user message. On the first request of a
+ *            session, the system prompt appears in cache.write (cache creation),
+ *            not cache.read.
  *
  *   TOOLS  = tokenizer(toolInputs + toolOutputs) - prunedTokens
  *            We must tokenize tools anyway for pruning decisions.
@@ -85,7 +88,11 @@ function analyzeTokens(state: SessionState, messages: WithParts[]): TokenBreakdo
     for (const msg of messages) {
         if (msg.info.role === "assistant") {
             const assistantInfo = msg.info as AssistantMessage
-            if (assistantInfo.tokens?.input > 0 || assistantInfo.tokens?.cache?.read > 0) {
+            if (
+                assistantInfo.tokens?.input > 0 ||
+                assistantInfo.tokens?.cache?.read > 0 ||
+                assistantInfo.tokens?.cache?.write > 0
+            ) {
                 firstAssistant = assistantInfo
                 break
             }
@@ -209,7 +216,9 @@ function analyzeTokens(state: SessionState, messages: WithParts[]): TokenBreakdo
 
     if (firstAssistant) {
         const firstInput =
-            (firstAssistant.tokens?.input || 0) + (firstAssistant.tokens?.cache?.read || 0)
+            (firstAssistant.tokens?.input || 0) +
+            (firstAssistant.tokens?.cache?.read || 0) +
+            (firstAssistant.tokens?.cache?.write || 0)
         breakdown.system = Math.max(0, firstInput - firstUserTokens)
     }
 

@@ -198,8 +198,9 @@ export function cacheSystemPromptTokens(state: SessionState, messages: WithParts
         const info = msg.info as any
         const input = info?.tokens?.input || 0
         const cacheRead = info?.tokens?.cache?.read || 0
-        if (input > 0 || cacheRead > 0) {
-            firstInputTokens = input + cacheRead
+        const cacheWrite = info?.tokens?.cache?.write || 0
+        if (input > 0 || cacheRead > 0 || cacheWrite > 0) {
+            firstInputTokens = input + cacheRead + cacheWrite
             break
         }
     }

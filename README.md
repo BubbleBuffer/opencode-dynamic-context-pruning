@@ -14,11 +14,11 @@ Add to your OpenCode config:
 ```jsonc
 // opencode.jsonc
 {
-    "plugin": ["@tarquinen/opencode-dcp@beta"],
+    "plugin": ["@tarquinen/opencode-dcp@latest"],
 }
 ```
 
-Using `@beta` ensures you always get the newest version automatically when OpenCode starts.
+Using `@latest` ensures you always get the newest version automatically when OpenCode starts.
 
 Restart OpenCode. The plugin will automatically start optimizing your sessions.
 
@@ -28,9 +28,9 @@ DCP reduces context size through a compress tool and automatic cleanup. Your ses
 
 ### Compress
 
-A tool exposed to your model that selects a conversation range and replaces it with a technical summary. When a new compression overlaps an earlier one, the earlier summary is nested inside the new one — so information is preserved through layers of compression rather than diluted away.
+Compress is a tool exposed to your model that selects a conversation range and replaces it with a technical summary. You can think of this as a much smarter version of Opencode's compaction process. Instead of triggering statically when your session reaches its maximum context and on the entire coding session, Compress allows the model to pick when to activate based on task completion, and to only compress a subset of messages containing the completed task. This allows the summaries replacing the session content to be much more focused and precise than Opencode's native compaction.
 
-The model compresses at whatever scale fits: small ranges for noise cleanup, focused ranges for key findings, or broad ranges for completed work. Context thresholds (`minContextLimit`, `maxContextLimit`) and nudge settings control how aggressively the model is prompted to compress.
+When a new compression overlaps an earlier one, the earlier summary is nested inside the new one — so information is preserved through layers of compression rather than diluted away. Additionally, protected tool outputs (such as subagents and skills) and protected file patterns are always kept in compression summaries, ensuring that the most important information is never lost. You can also enable `protectUserMessages` to preserve your messages verbatim during compression, though note that large prompts (e.g. copy-pasting log files in the prompt) will then never be compressed away.
 
 ### Deduplication
 
@@ -174,7 +174,6 @@ DCP provides a `/dcp` slash command:
 - `/dcp stats` — Shows cumulative pruning statistics across all sessions.
 - `/dcp sweep` — Prunes all tools since the last user message. Accepts an optional count: `/dcp sweep 10` prunes the last 10 tools. Respects `commands.protectedTools`.
 - `/dcp manual [on|off]` — Toggle manual mode or set explicit state. When on, the AI will not autonomously use context management tools.
-
 - `/dcp compress [focus]` — Trigger a single compress tool execution. Optional focus text directs what range to compress.
 - `/dcp decompress <n>` — Restore a specific active compression by ID (for example `/dcp decompress 2`). Running without an argument shows available compression IDs, token sizes, and topics.
 - `/dcp recompress <n>` — Re-apply a user-decompressed compression by ID (for example `/dcp recompress 2`). Running without an argument shows recompressible IDs, token sizes, and topics.
@@ -223,16 +222,13 @@ LLM providers cache prompts based on exact prefix matching. When DCP prunes cont
 
 **Trade-off:** You lose some cache reads but gain token savings from reduced context size and fewer hallucinations from stale context. In most cases, especially in long sessions, the savings outweigh the cache miss cost.
 
-> **Note:** In testing, cache hit rates were approximately 85% with DCP vs 90% without.
+> [!NOTE]
+> In testing, cache hit rates were approximately 85% with DCP vs 90% without.
 
 **No impact for:**
 
-- **Request-based billing** — Providers like Github Copilot that charge per request, not tokens.
+- **Request-based billing** — Providers like GitHub Copilot that charge per request, not tokens.
 - **Uniform token pricing** — Providers like Cerebras that bill cached and uncached tokens at the same rate.
-
-## Limitations
-
-**Subagents** — Disabled by default. Subagent sessions prioritize returning concise summaries to the main agent, and pruning could interfere with that. Opt in with `experimental.allowSubAgents: true`.
 
 ## License
 

@@ -14,7 +14,7 @@ Add to your OpenCode config:
 ```jsonc
 // opencode.jsonc
 {
-    "plugin": ["@tarquinen/opencode-dcp@beta"],
+    "plugin": ["@tarquinen/opencode-dcp@latest"],
 }
 ```
 

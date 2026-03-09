@@ -230,10 +230,6 @@ LLM providers cache prompts based on exact prefix matching. When DCP prunes cont
 - **Request-based billing** — Providers like GitHub Copilot that charge per request, not tokens.
 - **Uniform token pricing** — Providers like Cerebras that bill cached and uncached tokens at the same rate.
 
-## Limitations
-
-**Subagents** — Disabled by default. Subagent sessions prioritize returning concise summaries to the main agent, and pruning could interfere with that. Opt in with `experimental.allowSubAgents: true`.
-
 ## License
 
 AGPL-3.0-or-later

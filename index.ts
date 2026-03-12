@@ -1,5 +1,10 @@
 import type { Plugin } from "@opencode-ai/plugin"
 import { getConfig } from "./lib/config"
+import {
+    compressDisabledByOpencode,
+    hasExplicitToolPermission,
+    type HostPermissionSnapshot,
+} from "./lib/host-permissions"
 import { Logger } from "./lib/logger"
 import { createSessionState } from "./lib/state"
 import { createCompressTool } from "./lib/tools"
@@ -22,6 +27,10 @@ const plugin: Plugin = (async (ctx) => {
     const logger = new Logger(config.debug)
     const state = createSessionState()
     const prompts = new PromptStore(logger, ctx.directory, config.experimental.customPrompts)
+    const hostPermissions: HostPermissionSnapshot = {
+        global: undefined,
+        agents: {},
+    }
 
     if (isSecureMode()) {
         configureClientAuth(ctx.client)
@@ -46,6 +55,7 @@ const plugin: Plugin = (async (ctx) => {
             logger,
             config,
             prompts,
+            hostPermissions,
         ) as any,
         "chat.message": async (
             input: {
@@ -57,8 +67,6 @@ const plugin: Plugin = (async (ctx) => {
             },
             _output: any,
         ) => {
-            // Cache variant from real user messages (not synthetic)
-            // This avoids scanning all messages to find variant
             state.variant = input.variant
             logger.debug("Cached variant from chat.message hook", { variant: input.variant })
         },
@@ -69,6 +77,7 @@ const plugin: Plugin = (async (ctx) => {
             logger,
             config,
             ctx.directory,
+            hostPermissions,
         ),
         tool: {
             ...(config.compress.permission !== "deny" && {
@@ -91,6 +100,13 @@ const plugin: Plugin = (async (ctx) => {
                 }
             }
 
+            if (
+                config.compress.permission !== "deny" &&
+                compressDisabledByOpencode(opencodeConfig.permission)
+            ) {
+                config.compress.permission = "deny"
+            }
+
             const toolsToAdd: string[] = []
             if (config.compress.permission !== "deny" && !config.experimental.allowSubAgents) {
                 toolsToAdd.push("compress")
@@ -104,12 +120,21 @@ const plugin: Plugin = (async (ctx) => {
                 }
             }
 
-            // Set tool permissions from DCP config
-            const permission = opencodeConfig.permission ?? {}
-            opencodeConfig.permission = {
-                ...permission,
-                compress: config.compress.permission,
-            } as typeof permission
+            if (!hasExplicitToolPermission(opencodeConfig.permission, "compress")) {
+                const permission = opencodeConfig.permission ?? {}
+                opencodeConfig.permission = {
+                    ...permission,
+                    compress: config.compress.permission,
+                } as typeof permission
+            }
+
+            hostPermissions.global = opencodeConfig.permission
+            hostPermissions.agents = Object.fromEntries(
+                Object.entries(opencodeConfig.agent ?? {}).map(([name, agent]) => [
+                    name,
+                    agent?.permission,
+                ]),
+            )
         },
     }
 }) satisfies Plugin

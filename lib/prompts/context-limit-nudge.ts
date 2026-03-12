@@ -1,4 +1,4 @@
-export const CONTEXT_LIMIT_NUDGE = `<instruction name=context_buildup_warning>
+export const CONTEXT_LIMIT_NUDGE = `<dcp-system-reminder>
 CRITICAL WARNING: MAX CONTEXT LIMIT REACHED
 
 You are at or beyond the configured max context threshold. This is an emergency context-recovery moment.
@@ -20,5 +20,5 @@ Use visible injected boundary IDs for compression (\`mNNNN\` for messages, \`bN\
 SUMMARY REQUIREMENTS
 Your summary must cover all essential details from the selected range so work can continue without reopening raw messages.
 If the compressed range includes user messages, preserve user intent exactly. Prefer direct quotes for short user messages to avoid semantic drift.
-</instruction>
+</dcp-system-reminder>
 `

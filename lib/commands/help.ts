@@ -6,6 +6,7 @@
 import type { Logger } from "../logger"
 import type { PluginConfig } from "../config"
 import type { SessionState, WithParts } from "../state"
+import { compressPermission } from "../shared-utils"
 import { sendIgnoredMessage } from "../ui/notification"
 import { getCurrentParams } from "../strategies/utils"
 
@@ -31,10 +32,10 @@ const TOOL_COMMANDS: Record<string, [string, string]> = {
     recompress: ["/dcp recompress <n>", "Re-apply a user-decompressed compression"],
 }
 
-function getVisibleCommands(config: PluginConfig): [string, string][] {
+function getVisibleCommands(state: SessionState, config: PluginConfig): [string, string][] {
     const commands = [...BASE_COMMANDS]
 
-    if (config.compress.permission !== "deny") {
+    if (compressPermission(state, config) !== "deny") {
         commands.push(TOOL_COMMANDS.compress)
         commands.push(TOOL_COMMANDS.decompress)
         commands.push(TOOL_COMMANDS.recompress)
@@ -43,8 +44,8 @@ function getVisibleCommands(config: PluginConfig): [string, string][] {
     return commands
 }
 
-function formatHelpMessage(manualMode: boolean, config: PluginConfig): string {
-    const commands = getVisibleCommands(config)
+function formatHelpMessage(state: SessionState, config: PluginConfig): string {
+    const commands = getVisibleCommands(state, config)
     const colWidth = Math.max(...commands.map(([cmd]) => cmd.length)) + 4
     const lines: string[] = []
 
@@ -52,7 +53,7 @@ function formatHelpMessage(manualMode: boolean, config: PluginConfig): string {
     lines.push("│                              DCP Commands                               │")
     lines.push("╰─────────────────────────────────────────────────────────────────────────╯")
     lines.push("")
-    lines.push(`  ${"Manual mode:".padEnd(colWidth)}${manualMode ? "ON" : "OFF"}`)
+    lines.push(`  ${"Manual mode:".padEnd(colWidth)}${state.manualMode ? "ON" : "OFF"}`)
     lines.push("")
     for (const [cmd, desc] of commands) {
         lines.push(`  ${cmd.padEnd(colWidth)}${desc}`)
@@ -66,7 +67,7 @@ export async function handleHelpCommand(ctx: HelpCommandContext): Promise<void> 
     const { client, state, logger, sessionId, messages } = ctx
 
     const { config } = ctx
-    const message = formatHelpMessage(!!state.manualMode, config)
+    const message = formatHelpMessage(state, config)
 
     const params = getCurrentParams(state, messages, logger)
     await sendIgnoredMessage(client, sessionId, message, params, logger)

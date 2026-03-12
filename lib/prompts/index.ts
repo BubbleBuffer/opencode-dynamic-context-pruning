@@ -4,20 +4,8 @@ function stripLegacyInlineComments(content: string): string {
     return content.replace(/^[ \t]*\/\/.*?\/\/[ \t]*$/gm, "")
 }
 
-function injectIntoSystemReminder(systemPrompt: string, overlays: string[]): string {
-    if (overlays.length === 0) {
-        return systemPrompt
-    }
-
-    const closeTag = "</system-reminder>"
-    const closeTagIndex = systemPrompt.lastIndexOf(closeTag)
-    if (closeTagIndex === -1) {
-        return [systemPrompt, ...overlays].join("\n\n")
-    }
-
-    const beforeClose = systemPrompt.slice(0, closeTagIndex).trimEnd()
-    const afterClose = systemPrompt.slice(closeTagIndex)
-    return `${beforeClose}\n\n${overlays.join("\n\n")}\n\n${afterClose}`
+function appendSystemOverlays(systemPrompt: string, overlays: string[]): string {
+    return [systemPrompt, ...overlays].filter(Boolean).join("\n\n")
 }
 
 export function renderSystemPrompt(
@@ -35,6 +23,6 @@ export function renderSystemPrompt(
     }
 
     const strippedSystem = stripLegacyInlineComments(prompts.system).trim()
-    const withOverlays = injectIntoSystemReminder(strippedSystem, overlays)
+    const withOverlays = appendSystemOverlays(strippedSystem, overlays)
     return withOverlays.replace(/\n([ \t]*\n)+/g, "\n\n").trim()
 }

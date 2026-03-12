@@ -30,7 +30,6 @@ interface PromptDefinition {
     description: string
     usage: string
     runtimeField: EditablePromptField
-    instructionName?: string
 }
 
 interface PromptOverrideCandidate {
@@ -78,7 +77,6 @@ const PROMPT_DEFINITIONS: PromptDefinition[] = [
         description: "High-priority nudge when context is over max threshold",
         usage: "Injected when context usage is beyond configured max limits",
         runtimeField: "contextLimitNudge",
-        instructionName: "context_buildup_warning",
     },
     {
         key: "turn-nudge",
@@ -87,7 +85,6 @@ const PROMPT_DEFINITIONS: PromptDefinition[] = [
         description: "Nudge to compress closed ranges at turn boundaries",
         usage: "Injected when context is between min and max limits at a new user turn",
         runtimeField: "turnNudge",
-        instructionName: "turn_nudge",
     },
     {
         key: "iteration-nudge",
@@ -96,7 +93,6 @@ const PROMPT_DEFINITIONS: PromptDefinition[] = [
         description: "Nudge after many iterations without user input",
         usage: "Injected when iteration threshold is crossed",
         runtimeField: "iterationNudge",
-        instructionName: "iteration_nudge",
     },
 ]
 
@@ -110,7 +106,8 @@ export const PROMPT_KEYS: PromptKey[] = [
 
 const HTML_COMMENT_REGEX = /<!--[\s\S]*?-->/g
 const LEGACY_INLINE_COMMENT_LINE_REGEX = /^[ \t]*\/\/.*?\/\/[ \t]*$/gm
-const INSTRUCTION_TAG_REGEX = /^\s*<instruction\b[^>]*>[\s\S]*<\/instruction>\s*$/i
+const DCP_SYSTEM_REMINDER_TAG_REGEX =
+    /^\s*<dcp-system-reminder\b[^>]*>[\s\S]*<\/dcp-system-reminder>\s*$/i
 const DEFAULTS_README_FILE = "README.md"
 
 const BUNDLED_EDITABLE_PROMPTS: Record<EditablePromptField, string> = {
@@ -192,29 +189,27 @@ function hasTagPairMismatch(content: string, tagName: string): boolean {
     return openRegex.test(content) !== closeRegex.test(content)
 }
 
-function unwrapTagIfWrapped(content: string, tagName: string): string {
-    const regex = new RegExp(
-        `^\\s*<${tagName}\\b[^>]*>\\s*([\\s\\S]*?)\\s*<\\/${tagName}>\\s*$`,
-        "i",
-    )
-    const match = content.match(regex)
-    if (!match) {
-        return content.trim()
-    }
-
-    return match[1].trim()
-}
-
-function unwrapInstructionIfWrapped(content: string): string {
+function unwrapDcpTagIfWrapped(content: string): string {
     const trimmed = content.trim()
-    if (!INSTRUCTION_TAG_REGEX.test(trimmed)) {
+
+    if (DCP_SYSTEM_REMINDER_TAG_REGEX.test(trimmed)) {
         return trimmed
+            .replace(/^\s*<dcp-system-reminder\b[^>]*>\s*/i, "")
+            .replace(/\s*<\/dcp-system-reminder>\s*$/i, "")
+            .trim()
     }
 
     return trimmed
-        .replace(/^\s*<instruction\b[^>]*>\s*/i, "")
-        .replace(/\s*<\/instruction>\s*$/i, "")
-        .trim()
+}
+
+function normalizeReminderPromptContent(content: string): string {
+    const normalized = content.trim()
+
+    if (hasTagPairMismatch(normalized, "dcp-system-reminder")) {
+        return ""
+    }
+
+    return unwrapDcpTagIfWrapped(normalized)
 }
 
 function stripPromptComments(content: string): string {
@@ -234,26 +229,10 @@ function toEditablePromptText(definition: PromptDefinition, rawContent: string):
     if (definition.key === "system") {
         normalized = stripConditionalTag(normalized, "manual")
         normalized = stripConditionalTag(normalized, "subagent")
-
-        if (hasTagPairMismatch(normalized, "system-reminder")) {
-            return ""
-        }
-
-        normalized = unwrapTagIfWrapped(normalized, "system-reminder")
-
-        if (hasTagPairMismatch(normalized, "instruction")) {
-            return ""
-        }
-
-        normalized = unwrapInstructionIfWrapped(normalized)
-        return normalized.trim()
     }
 
-    if (definition.instructionName) {
-        if (hasTagPairMismatch(normalized, "instruction")) {
-            return ""
-        }
-        normalized = unwrapInstructionIfWrapped(normalized)
+    if (definition.key !== "compress") {
+        normalized = normalizeReminderPromptContent(normalized)
     }
 
     return normalized.trim()
@@ -265,15 +244,11 @@ function wrapRuntimePromptContent(definition: PromptDefinition, editableText: st
         return ""
     }
 
-    if (definition.key === "system") {
-        return `<system-reminder>\n<instruction name=compress_tool attention_level=high>\n${trimmed}\n</instruction>\n</system-reminder>`
+    if (definition.key === "compress") {
+        return trimmed
     }
 
-    if (definition.instructionName) {
-        return `<instruction name=${definition.instructionName}>\n${trimmed}\n</instruction>`
-    }
-
-    return trimmed
+    return `<dcp-system-reminder>\n${trimmed}\n</dcp-system-reminder>`
 }
 
 function buildDefaultPromptFileContent(bundledEditableText: string): string {

@@ -32,9 +32,7 @@ const INTERNAL_AGENT_SIGNATURES = [
 ]
 
 const DCP_MESSAGE_ID_TAG_REGEX = /<dcp-message-id>(?:m\d+|b\d+)<\/dcp-message-id>/g
-const TURN_NUDGE_BLOCK_REGEX = /<instruction\s+name=turn_nudge\b[^>]*>[\s\S]*?<\/instruction>/g
-const ITERATION_NUDGE_BLOCK_REGEX =
-    /<instruction\s+name=iteration_nudge\b[^>]*>[\s\S]*?<\/instruction>/g
+const DCP_SYSTEM_REMINDER_REGEX = /<dcp-system-reminder\b[^>]*>[\s\S]*?<\/dcp-system-reminder>/g
 
 function applyManualPrompt(state: SessionState, messages: WithParts[], logger: Logger): void {
     const pending = state.pendingManualTrigger
@@ -268,8 +266,7 @@ export function createTextCompleteHandler() {
         output: { text: string },
     ) => {
         output.text = output.text
-            .replace(TURN_NUDGE_BLOCK_REGEX, "")
-            .replace(ITERATION_NUDGE_BLOCK_REGEX, "")
+            .replace(DCP_SYSTEM_REMINDER_REGEX, "")
             .replace(DCP_MESSAGE_ID_TAG_REGEX, "")
     }
 }

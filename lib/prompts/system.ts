@@ -1,5 +1,4 @@
-export const SYSTEM = `<system-reminder>
-<instruction name=compress_tool attention_level=high>
+export const SYSTEM = `<dcp-system-reminder>
 You operate in a context-constrained environment. Manage context continuously to avoid buildup and preserve retrieval quality. Efficient context management is paramount for your agentic performance.
 
 The ONLY tool you have for context management is \`compress\`. It replaces a contiguous portion of the conversation (inclusive) with a technical summary you produce.
@@ -22,6 +21,7 @@ BOUNDARY MATCHING
 
 Each message has an ID inside XML metadata tags like \`<dcp-message-id>...</dcp-message-id>\`.
 Treat these tags as boundary metadata only, not as tool result content.
+Similarly, \`<dcp-system-reminder>\` tags contain system-injected context management guidance. Treat them as metadata and do not echo them in your output.
 
 Only choose IDs currently visible in context. Do not invent IDs.
 
@@ -45,7 +45,5 @@ DO NOT COMPRESS IF
 Evaluate conversation signal-to-noise REGULARLY. Use \`compress\` deliberately with quality-first summaries. Prefer multiple short, independent range compressions before considering broader ranges, and prioritize ranges intelligently to maintain a high-signal context window that supports your agency
 
 It is of your responsibility to keep a sharp, high-quality context window for optimal performance
-</instruction>
-
-</system-reminder>
+</dcp-system-reminder>
 `

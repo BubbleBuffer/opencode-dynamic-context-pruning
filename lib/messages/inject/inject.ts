@@ -3,7 +3,7 @@ import type { Logger } from "../../logger"
 import type { PluginConfig } from "../../config"
 import type { RuntimePrompts } from "../../prompts/store"
 import { formatMessageIdTag } from "../../message-ids"
-import { getLastUserMessage } from "../../shared-utils"
+import { compressPermission, getLastUserMessage } from "../../shared-utils"
 import { saveSessionState } from "../../state/persistence"
 import {
     appendIdToTool,
@@ -30,7 +30,7 @@ export const injectCompressNudges = (
     messages: WithParts[],
     prompts: RuntimePrompts,
 ): void => {
-    if (config.compress.permission === "deny") {
+    if (compressPermission(state, config) === "deny") {
         return
     }
 
@@ -139,7 +139,7 @@ export const injectMessageIds = (
     config: PluginConfig,
     messages: WithParts[],
 ): void => {
-    if (config.compress.permission === "deny") {
+    if (compressPermission(state, config) === "deny") {
         return
     }
 

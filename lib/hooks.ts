@@ -21,6 +21,8 @@ import { handleSweepCommand } from "./commands/sweep"
 import { handleManualToggleCommand, handleManualTriggerCommand } from "./commands/manual"
 import { handleDecompressCommand } from "./commands/decompress"
 import { handleRecompressCommand } from "./commands/recompress"
+import { type HostPermissionSnapshot } from "./host-permissions"
+import { compressPermission, syncCompressPermissionState } from "./shared-utils"
 import { ensureSessionInitialized } from "./state/state"
 import { cacheSystemPromptTokens } from "./ui/utils"
 import type { PromptStore } from "./prompts/store"
@@ -32,9 +34,7 @@ const INTERNAL_AGENT_SIGNATURES = [
 ]
 
 const DCP_MESSAGE_ID_TAG_REGEX = /<dcp-message-id>(?:m\d+|b\d+)<\/dcp-message-id>/g
-const TURN_NUDGE_BLOCK_REGEX = /<instruction\s+name=turn_nudge\b[^>]*>[\s\S]*?<\/instruction>/g
-const ITERATION_NUDGE_BLOCK_REGEX =
-    /<instruction\s+name=iteration_nudge\b[^>]*>[\s\S]*?<\/instruction>/g
+const DCP_SYSTEM_REMINDER_REGEX = /<dcp-system-reminder\b[^>]*>[\s\S]*?<\/dcp-system-reminder>/g
 
 function applyManualPrompt(state: SessionState, messages: WithParts[], logger: Logger): void {
     const pending = state.pendingManualTrigger
@@ -93,7 +93,12 @@ export function createSystemPromptHandler(
             return
         }
 
-        if (config.compress.permission === "deny") {
+        const effectivePermission =
+            input.sessionID && state.sessionId === input.sessionID
+                ? compressPermission(state, config)
+                : config.compress.permission
+
+        if (effectivePermission === "deny") {
             return
         }
 
@@ -118,9 +123,12 @@ export function createChatMessageTransformHandler(
     logger: Logger,
     config: PluginConfig,
     prompts: PromptStore,
+    hostPermissions: HostPermissionSnapshot,
 ) {
     return async (input: {}, output: { messages: WithParts[] }) => {
         await checkSession(client, state, logger, output.messages, config.manualMode.enabled)
+
+        syncCompressPermissionState(state, config, hostPermissions, output.messages)
 
         if (state.isSubAgent && !config.experimental.allowSubAgents) {
             return
@@ -158,6 +166,7 @@ export function createCommandExecuteHandler(
     logger: Logger,
     config: PluginConfig,
     workingDirectory: string,
+    hostPermissions: HostPermissionSnapshot,
 ) {
     return async (
         input: { command: string; sessionID: string; arguments: string },
@@ -181,6 +190,10 @@ export function createCommandExecuteHandler(
                 messages,
                 config.manualMode.enabled,
             )
+
+            syncCompressPermissionState(state, config, hostPermissions, messages)
+
+            const effectivePermission = compressPermission(state, config)
 
             const args = (input.arguments || "").trim().split(/\s+/).filter(Boolean)
             const subcommand = args[0]?.toLowerCase() || ""
@@ -219,7 +232,7 @@ export function createCommandExecuteHandler(
                 throw new Error("__DCP_MANUAL_HANDLED__")
             }
 
-            if (subcommand === "compress" && config.compress.permission !== "deny") {
+            if (subcommand === "compress" && effectivePermission !== "deny") {
                 const userFocus = subArgs.join(" ").trim()
                 const prompt = await handleManualTriggerCommand(commandCtx, "compress", userFocus)
                 if (!prompt) {
@@ -240,7 +253,7 @@ export function createCommandExecuteHandler(
                 return
             }
 
-            if (subcommand === "decompress" && config.compress.permission !== "deny") {
+            if (subcommand === "decompress" && effectivePermission !== "deny") {
                 await handleDecompressCommand({
                     ...commandCtx,
                     args: subArgs,
@@ -248,7 +261,7 @@ export function createCommandExecuteHandler(
                 throw new Error("__DCP_DECOMPRESS_HANDLED__")
             }
 
-            if (subcommand === "recompress" && config.compress.permission !== "deny") {
+            if (subcommand === "recompress" && effectivePermission !== "deny") {
                 await handleRecompressCommand({
                     ...commandCtx,
                     args: subArgs,
@@ -268,8 +281,7 @@ export function createTextCompleteHandler() {
         output: { text: string },
     ) => {
         output.text = output.text
-            .replace(TURN_NUDGE_BLOCK_REGEX, "")
-            .replace(ITERATION_NUDGE_BLOCK_REGEX, "")
+            .replace(DCP_SYSTEM_REMINDER_REGEX, "")
             .replace(DCP_MESSAGE_ID_TAG_REGEX, "")
     }
 }

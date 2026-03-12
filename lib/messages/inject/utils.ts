@@ -184,8 +184,8 @@ export function buildCompressedBlockGuidance(state: SessionState): string {
     ].join("\n")
 }
 
-function appendGuidanceToInstructionXml(hintText: string, guidance: string): string {
-    const closeTag = "</instruction>"
+function appendGuidanceToDcpTag(hintText: string, guidance: string): string {
+    const closeTag = "</dcp-system-reminder>"
     const closeTagIndex = hintText.lastIndexOf(closeTag)
 
     if (closeTagIndex === -1) {
@@ -240,7 +240,7 @@ export function applyAnchoredNudges(
 ): void {
     const compressedBlockGuidance = buildCompressedBlockGuidance(state)
 
-    const contextLimitNudge = appendGuidanceToInstructionXml(
+    const contextLimitNudge = appendGuidanceToDcpTag(
         prompts.contextLimitNudge,
         compressedBlockGuidance,
     )
@@ -249,7 +249,7 @@ export function applyAnchoredNudges(
 
     const turnNudgeAnchors = new Set<string>()
     const targetRole = config.compress.nudgeForce === "strong" ? "user" : "assistant"
-    const turnNudge = appendGuidanceToInstructionXml(prompts.turnNudge, compressedBlockGuidance)
+    const turnNudge = appendGuidanceToDcpTag(prompts.turnNudge, compressedBlockGuidance)
 
     for (const message of messages) {
         if (!state.nudges.turnNudgeAnchors.has(message.info.id)) continue
@@ -261,9 +261,6 @@ export function applyAnchoredNudges(
 
     applyAnchoredNudge(turnNudgeAnchors, messages, turnNudge)
 
-    const iterationNudge = appendGuidanceToInstructionXml(
-        prompts.iterationNudge,
-        compressedBlockGuidance,
-    )
+    const iterationNudge = appendGuidanceToDcpTag(prompts.iterationNudge, compressedBlockGuidance)
     applyAnchoredNudge(state.nudges.iterationNudgeAnchors, messages, iterationNudge)
 }

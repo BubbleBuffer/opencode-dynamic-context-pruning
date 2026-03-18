@@ -133,39 +133,6 @@ export async function sendUnifiedNotification(
     return true
 }
 
-export async function sendCompressNotification(
-    client: any,
-    logger: Logger,
-    config: PluginConfig,
-    state: SessionState,
-    sessionId: string,
-    compressionId: number,
-    summary: string,
-    summaryTokens: number,
-    totalSessionTokens: number,
-    sessionMessageIds: string[],
-    params: any,
-): Promise<boolean> {
-    return sendCompressBatchNotification(
-        client,
-        logger,
-        config,
-        state,
-        sessionId,
-        [
-            {
-                blockId: compressionId,
-                summary,
-                summaryTokens,
-            },
-        ],
-        undefined,
-        totalSessionTokens,
-        sessionMessageIds,
-        params,
-    )
-}
-
 function buildCompressionSummary(
     entries: CompressionNotificationEntry[],
     state: SessionState,
@@ -196,7 +163,7 @@ function getCompressionLabel(entries: CompressionNotificationEntry[]): string {
     return `Compression #${firstBlockId}`
 }
 
-export async function sendCompressBatchNotification(
+export async function sendCompressNotification(
     client: any,
     logger: Logger,
     config: PluginConfig,

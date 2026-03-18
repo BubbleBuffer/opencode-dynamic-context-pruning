@@ -20,7 +20,7 @@ import { assignMessageRefs } from "../message-ids"
 import { getCurrentParams, getCurrentTokenUsage, countTokens } from "../strategies/utils"
 import { deduplicate, purgeErrors } from "../strategies"
 import { saveSessionState } from "../state/persistence"
-import { sendCompressBatchNotification } from "../ui/notification"
+import { sendCompressNotification } from "../ui/notification"
 
 // Non-primitive arrays are hidden in the TUI, so keep the schema simple and explicit.
 function buildSchema() {
@@ -156,7 +156,7 @@ export function createCompressMessageTool(ctx: ToolContext): ReturnType<typeof t
                 .filter((msg) => !(msg.info.role === "user" && isIgnoredUserMessage(msg)))
                 .map((msg) => msg.info.id)
 
-            await sendCompressBatchNotification(
+            await sendCompressNotification(
                 ctx.client,
                 ctx.logger,
                 ctx.config,

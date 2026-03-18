@@ -204,6 +204,13 @@ export function createCompressRangeTool(ctx: ToolContext): ReturnType<typeof too
             const sessionMessageIds = rawMessages
                 .filter((msg) => !(msg.info.role === "user" && isIgnoredUserMessage(msg)))
                 .map((msg) => msg.info.id)
+            const notificationEntries = [
+                {
+                    blockId,
+                    summary: compressRangeArgs.content.summary,
+                    summaryTokens,
+                },
+            ]
 
             await sendCompressNotification(
                 ctx.client,
@@ -211,9 +218,8 @@ export function createCompressRangeTool(ctx: ToolContext): ReturnType<typeof too
                 ctx.config,
                 ctx.state,
                 toolCtx.sessionID,
-                blockId,
-                compressRangeArgs.content.summary,
-                summaryTokens,
+                notificationEntries,
+                undefined,
                 totalSessionTokens,
                 sessionMessageIds,
                 params,

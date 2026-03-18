@@ -3,7 +3,7 @@ import test from "node:test"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
 import { mkdirSync } from "node:fs"
-import { createCompressTool } from "../lib/tools/compress"
+import { createCompressMessageTool } from "../lib/tools/compress-message"
 import { createSessionState, type WithParts } from "../lib/state"
 import type { PluginConfig } from "../lib/config"
 import { Logger } from "../lib/logger"
@@ -149,7 +149,7 @@ test("compress message mode batches individual message summaries", async () => {
     const rawMessages = buildMessages(sessionID)
     const state = createSessionState()
     const logger = new Logger(false)
-    const tool = createCompressTool({
+    const tool = createCompressMessageTool({
         client: {
             session: {
                 messages: async () => ({ data: rawMessages }),
@@ -216,7 +216,7 @@ test("compress message mode rejects compressed block ids", async () => {
     const rawMessages = buildMessages(sessionID)
     const state = createSessionState()
     const logger = new Logger(false)
-    const tool = createCompressTool({
+    const tool = createCompressMessageTool({
         client: {
             session: {
                 messages: async () => ({ data: rawMessages }),
@@ -287,7 +287,7 @@ test("compress message mode allows messages containing compress tool parts", asy
 
     const state = createSessionState()
     const logger = new Logger(false)
-    const tool = createCompressTool({
+    const tool = createCompressMessageTool({
         client: {
             session: {
                 messages: async () => ({ data: rawMessages }),
@@ -340,7 +340,7 @@ test("compress message mode sends one aggregated notification for batched messag
     config.pruneNotificationType = "toast"
 
     const toastCalls: string[] = []
-    const tool = createCompressTool({
+    const tool = createCompressMessageTool({
         client: {
             session: {
                 messages: async () => ({ data: rawMessages }),
@@ -398,7 +398,7 @@ test("compress message mode skips invalid batch entries and reports issues", asy
     const rawMessages = buildMessages(sessionID)
     const state = createSessionState()
     const logger = new Logger(false)
-    const tool = createCompressTool({
+    const tool = createCompressMessageTool({
         client: {
             session: {
                 messages: async () => ({ data: rawMessages }),
@@ -463,7 +463,7 @@ test("compress message mode reports issues when every batch entry is skipped", a
     const rawMessages = buildMessages(sessionID)
     const state = createSessionState()
     const logger = new Logger(false)
-    const tool = createCompressTool({
+    const tool = createCompressMessageTool({
         client: {
             session: {
                 messages: async () => ({ data: rawMessages }),

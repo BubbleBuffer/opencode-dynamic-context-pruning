@@ -1,6 +1,6 @@
 import type { Plugin } from "@opencode-ai/plugin"
 import { getConfig } from "./lib/config"
-import { createCompressMessageTool, createCompressRangeTool } from "./lib/tools"
+import { createCompressMessageTool, createCompressRangeTool } from "./lib/compress"
 import {
     compressDisabledByOpencode,
     hasExplicitToolPermission,

@@ -6,9 +6,9 @@ import {
     injectBlockPlaceholders,
     parseBlockPlaceholders,
     validateSummaryPlaceholders,
-    wrapCompressedSummary,
-    type BoundaryReference,
-} from "../lib/tools/utils"
+} from "../lib/compress/range-utils"
+import { wrapCompressedSummary } from "../lib/compress/state"
+import type { BoundaryReference } from "../lib/compress/types"
 
 function createBlock(blockId: number, body: string): CompressionBlock {
     return {

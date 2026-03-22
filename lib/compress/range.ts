@@ -1,30 +1,25 @@
 import { tool } from "@opencode-ai/plugin"
 import type { ToolContext } from "./types"
-import { ensureSessionInitialized } from "../state"
+import { countTokens } from "../strategies/utils"
+import { RANGE_FORMAT_OVERLAY } from "../prompts/internal-overlays"
+import { finalizeSession, prepareSession, type NotificationEntry } from "./pipeline"
+import { appendProtectedTools, appendProtectedUserMessages } from "./protected-content"
 import {
     appendMissingBlockSummaries,
-    appendProtectedUserMessages,
-    appendProtectedTools,
-    wrapCompressedSummary,
-    allocateBlockId,
-    applyCompressionState,
-    buildSearchContext,
-    fetchSessionMessages,
-    COMPRESSED_BLOCK_HEADER,
     injectBlockPlaceholders,
     parseBlockPlaceholders,
-    resolveRangeCompressions,
-    validateNonOverlappingRangeCompressions,
-    validateCompressRangeArgs,
+    resolveRanges,
+    validateArgs,
+    validateNonOverlapping,
     validateSummaryPlaceholders,
-} from "./utils"
-import { isIgnoredUserMessage } from "../messages/utils"
-import { assignMessageRefs } from "../message-ids"
-import { getCurrentParams, getCurrentTokenUsage, countTokens } from "../strategies/utils"
-import { deduplicate, purgeErrors } from "../strategies"
-import { saveSessionState } from "../state/persistence"
-import { sendCompressNotification } from "../ui/notification"
-import { RANGE_FORMAT_OVERLAY } from "../prompts/internal-overlays"
+} from "./range-utils"
+import {
+    COMPRESSED_BLOCK_HEADER,
+    allocateBlockId,
+    applyCompressionState,
+    wrapCompressedSummary,
+} from "./state"
+import type { CompressRangeToolArgs } from "./types"
 
 function buildSchema() {
     return {
@@ -61,55 +56,18 @@ export function createCompressRangeTool(ctx: ToolContext): ReturnType<typeof too
         description: runtimePrompts.compressRange + RANGE_FORMAT_OVERLAY,
         args: buildSchema(),
         async execute(args, toolCtx) {
-            if (ctx.state.manualMode && ctx.state.manualMode !== "compress-pending") {
-                throw new Error(
-                    "Manual mode: compress blocked. Do not retry until `<compress triggered manually>` appears in user context.",
-                )
-            }
+            const input = args as CompressRangeToolArgs
+            validateArgs(input)
 
-            await toolCtx.ask({
-                permission: "compress",
-                patterns: ["*"],
-                always: ["*"],
-                metadata: {},
-            })
-
-            const compressRangeArgs = args
-            validateCompressRangeArgs(compressRangeArgs)
-
-            toolCtx.metadata({
-                title: `Compress Range: ${compressRangeArgs.topic}`,
-            })
-
-            const rawMessages = await fetchSessionMessages(ctx.client, toolCtx.sessionID)
-
-            await ensureSessionInitialized(
-                ctx.client,
-                ctx.state,
-                toolCtx.sessionID,
-                ctx.logger,
-                rawMessages,
-                ctx.config.manualMode.enabled,
+            const { rawMessages, searchContext } = await prepareSession(
+                ctx,
+                toolCtx,
+                `Compress Range: ${input.topic}`,
             )
+            const resolvedPlans = resolveRanges(input, searchContext, ctx.state)
+            validateNonOverlapping(resolvedPlans)
 
-            assignMessageRefs(ctx.state, rawMessages)
-
-            deduplicate(ctx.state, ctx.logger, ctx.config, rawMessages)
-            purgeErrors(ctx.state, ctx.logger, ctx.config, rawMessages)
-
-            const searchContext = buildSearchContext(ctx.state, rawMessages)
-            const resolvedPlans = resolveRangeCompressions(
-                compressRangeArgs,
-                searchContext,
-                ctx.state,
-            )
-            validateNonOverlappingRangeCompressions(resolvedPlans)
-
-            const notificationEntries: Array<{
-                blockId: number
-                summary: string
-                summaryTokens: number
-            }> = []
+            const notifications: NotificationEntry[] = []
             const preparedPlans: Array<{
                 entry: (typeof resolvedPlans)[number]["entry"]
                 range: (typeof resolvedPlans)[number]["range"]
@@ -121,7 +79,7 @@ export function createCompressRangeTool(ctx: ToolContext): ReturnType<typeof too
 
             for (const plan of resolvedPlans) {
                 const parsedPlaceholders = parseBlockPlaceholders(plan.entry.summary)
-                const missingRequiredBlockIds = validateSummaryPlaceholders(
+                const missingBlockIds = validateSummaryPlaceholders(
                     parsedPlaceholders,
                     plan.range.requiredBlockIds,
                     plan.range.startReference,
@@ -137,7 +95,7 @@ export function createCompressRangeTool(ctx: ToolContext): ReturnType<typeof too
                     plan.range.endReference,
                 )
 
-                const summaryWithUserMessages = appendProtectedUserMessages(
+                const summaryWithUsers = appendProtectedUserMessages(
                     injected.expandedSummary,
                     plan.range,
                     searchContext,
@@ -145,32 +103,30 @@ export function createCompressRangeTool(ctx: ToolContext): ReturnType<typeof too
                     ctx.config.compress.protectUserMessages,
                 )
 
-                const summaryWithProtectedTools = await appendProtectedTools(
+                const summaryWithTools = await appendProtectedTools(
                     ctx.client,
                     ctx.state,
                     ctx.config.experimental.allowSubAgents,
-                    summaryWithUserMessages,
+                    summaryWithUsers,
                     plan.range,
                     searchContext,
                     ctx.config.compress.protectedTools,
                     ctx.config.protectedFilePatterns,
                 )
 
-                const finalSummaryResult = appendMissingBlockSummaries(
-                    summaryWithProtectedTools,
-                    missingRequiredBlockIds,
+                const completedSummary = appendMissingBlockSummaries(
+                    summaryWithTools,
+                    missingBlockIds,
                     searchContext.summaryByBlockId,
                     injected.consumedBlockIds,
                 )
-
-                const finalSummary = finalSummaryResult.expandedSummary
 
                 preparedPlans.push({
                     entry: plan.entry,
                     range: plan.range,
                     anchorMessageId: plan.anchorMessageId,
-                    finalSummary,
-                    consumedBlockIds: finalSummaryResult.consumedBlockIds,
+                    finalSummary: completedSummary.expandedSummary,
+                    consumedBlockIds: completedSummary.consumedBlockIds,
                 })
             }
 
@@ -182,7 +138,7 @@ export function createCompressRangeTool(ctx: ToolContext): ReturnType<typeof too
                 const applied = applyCompressionState(
                     ctx.state,
                     {
-                        topic: compressRangeArgs.topic,
+                        topic: input.topic,
                         startId: preparedPlan.entry.startId,
                         endId: preparedPlan.entry.endId,
                         compressMessageId: toolCtx.messageID,
@@ -196,34 +152,14 @@ export function createCompressRangeTool(ctx: ToolContext): ReturnType<typeof too
 
                 totalCompressedMessages += applied.messageIds.length
 
-                notificationEntries.push({
+                notifications.push({
                     blockId,
                     summary: preparedPlan.finalSummary,
                     summaryTokens,
                 })
             }
 
-            ctx.state.manualMode = ctx.state.manualMode ? "active" : false
-            await saveSessionState(ctx.state, ctx.logger)
-
-            const params = getCurrentParams(ctx.state, rawMessages, ctx.logger)
-            const totalSessionTokens = getCurrentTokenUsage(rawMessages)
-            const sessionMessageIds = rawMessages
-                .filter((msg) => !(msg.info.role === "user" && isIgnoredUserMessage(msg)))
-                .map((msg) => msg.info.id)
-
-            await sendCompressNotification(
-                ctx.client,
-                ctx.logger,
-                ctx.config,
-                ctx.state,
-                toolCtx.sessionID,
-                notificationEntries,
-                compressRangeArgs.topic,
-                totalSessionTokens,
-                sessionMessageIds,
-                params,
-            )
+            await finalizeSession(ctx, toolCtx, rawMessages, notifications, input.topic)
 
             return `Compressed ${totalCompressedMessages} messages into ${COMPRESSED_BLOCK_HEADER}.`
         },

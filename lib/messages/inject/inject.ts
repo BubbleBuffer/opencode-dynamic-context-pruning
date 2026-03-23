@@ -3,6 +3,7 @@ import type { Logger } from "../../logger"
 import type { PluginConfig } from "../../config"
 import type { RuntimePrompts } from "../../prompts/store"
 import { formatMessageIdTag } from "../../message-ids"
+import type { CompressionPriorityMap } from "../priority"
 import { compressPermission, getLastUserMessage } from "../../shared-utils"
 import { saveSessionState } from "../../state/persistence"
 import {
@@ -29,6 +30,7 @@ export const injectCompressNudges = (
     logger: Logger,
     messages: WithParts[],
     prompts: RuntimePrompts,
+    compressionPriorities?: CompressionPriorityMap,
 ): void => {
     if (compressPermission(state, config) === "deny") {
         return
@@ -127,7 +129,7 @@ export const injectCompressNudges = (
         }
     }
 
-    applyAnchoredNudges(state, config, messages, prompts)
+    applyAnchoredNudges(state, config, messages, prompts, compressionPriorities)
 
     if (anchorsChanged) {
         void saveSessionState(state, logger)
@@ -138,6 +140,7 @@ export const injectMessageIds = (
     state: SessionState,
     config: PluginConfig,
     messages: WithParts[],
+    compressionPriorities?: CompressionPriorityMap,
 ): void => {
     if (compressPermission(state, config) === "deny") {
         return
@@ -153,7 +156,11 @@ export const injectMessageIds = (
             continue
         }
 
-        const tag = formatMessageIdTag(messageRef)
+        const priority =
+            config.compress.mode === "message"
+                ? compressionPriorities?.get(message.info.id)?.priority
+                : undefined
+        const tag = formatMessageIdTag(messageRef, priority ? { priority } : undefined)
 
         if (message.info.role === "user") {
             message.parts.push(createSyntheticTextPart(message, tag))

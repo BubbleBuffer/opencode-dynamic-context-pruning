@@ -19,13 +19,15 @@ You specify individual raw messages by ID using the injected IDs visible in the 
 
 - \`mNNNN\` IDs identify raw messages
 
-Each message has an ID inside XML metadata tags like \`<dcp-message-id>...</dcp-message-id>\`.
-Treat these tags as message metadata only, not as content to summarize.
+Each message has an ID inside XML metadata tags like \`<dcp-message-id priority="high">m0007</dcp-message-id>\`.
+Treat these tags as message metadata only, not as content to summarize. Use only the inner \`mNNNN\` value as the \`messageId\`.
+The \`priority\` attribute indicates relative context cost. Prefer higher-priority closed messages before lower-priority ones.
 
 Rules:
 
 - Pick each \`messageId\` directly from injected IDs visible in context.
 - Only use raw message IDs of the form \`mNNNN\`.
+- Ignore XML attributes such as \`priority\` when copying the ID; use only the inner \`mNNNN\` value.
 - Do NOT use compressed block IDs like \`bN\`.
 - Do not invent IDs. Use only IDs that are present in context.
 - Do not target prior compressed blocks or block summaries.
@@ -45,7 +47,7 @@ The target is a prior compressed block or block summary rather than a raw messag
 Before compressing, ask: _"Is this message closed enough to become summary-only right now?"_
 
 BATCHING
-Do not call the tool once per message. Select MANY messages in a single tool call when they are independently safe to compress.
+Select MANY messages in a single tool call when they are independently safe to compress.
 Each entry should summarize exactly one message, and the tool can receive as many entries as needed in one batch.
 
 Because each message is compressed independently:

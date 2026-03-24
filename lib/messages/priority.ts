@@ -1,6 +1,6 @@
 import type { PluginConfig } from "../config"
 import { countAllMessageTokens } from "../strategies/utils"
-import { isMessageCompacted } from "../shared-utils"
+import { isMessageCompacted, messageHasCompress } from "../shared-utils"
 import type { SessionState, WithParts } from "../state"
 import { isIgnoredUserMessage, isProtectedUserMessage } from "./utils"
 
@@ -54,7 +54,7 @@ export function buildPriorityMap(
         priorities.set(rawMessageId, {
             ref,
             tokenCount,
-            priority: classifyMessagePriority(tokenCount),
+            priority: messageHasCompress(message) ? "high" : classifyMessagePriority(tokenCount),
         })
     }
 

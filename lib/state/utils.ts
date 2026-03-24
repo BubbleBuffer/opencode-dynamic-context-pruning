@@ -5,7 +5,7 @@ import type {
     SessionState,
     WithParts,
 } from "./types"
-import { isMessageCompacted } from "../shared-utils"
+import { isMessageCompacted, messageHasCompress } from "../shared-utils"
 import { isIgnoredUserMessage } from "../messages/utils"
 
 interface PersistedPruneMessagesState {
@@ -236,18 +236,6 @@ export function loadPruneMessagesState(
     return state
 }
 
-function hasCompletedCompress(message: WithParts): boolean {
-    if (message.info.role !== "assistant") {
-        return false
-    }
-
-    const parts = Array.isArray(message.parts) ? message.parts : []
-    return parts.some(
-        (part) =>
-            part.type === "tool" && part.tool === "compress" && part.state?.status === "completed",
-    )
-}
-
 export function collectTurnNudgeAnchors(messages: WithParts[]): Set<string> {
     const anchors = new Set<string>()
     let pendingUserMessageId: string | null = null
@@ -255,7 +243,7 @@ export function collectTurnNudgeAnchors(messages: WithParts[]): Set<string> {
     for (let i = messages.length - 1; i >= 0; i--) {
         const message = messages[i]
 
-        if (hasCompletedCompress(message)) {
+        if (messageHasCompress(message)) {
             break
         }
 

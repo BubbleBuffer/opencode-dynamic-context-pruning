@@ -58,14 +58,6 @@ export function countMessagesAfterIndex(messages: WithParts[], index: number): n
     return count
 }
 
-export function messageHasCompress(message: WithParts): boolean {
-    const parts = Array.isArray(message.parts) ? message.parts : []
-    return parts.some(
-        (part) =>
-            part.type === "tool" && part.state.status === "completed" && part.tool === "compress",
-    )
-}
-
 export function getModelInfo(messages: WithParts[]): LastUserModelContext {
     const lastUserMessage = getLastUserMessage(messages)
     if (!lastUserMessage) {

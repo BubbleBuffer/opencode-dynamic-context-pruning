@@ -4,7 +4,7 @@ import type { PluginConfig } from "../../config"
 import type { RuntimePrompts } from "../../prompts/store"
 import { formatMessageIdTag } from "../../message-ids"
 import type { CompressionPriorityMap } from "../priority"
-import { compressPermission, getLastUserMessage } from "../../shared-utils"
+import { compressPermission, getLastUserMessage, messageHasCompress } from "../../shared-utils"
 import { saveSessionState } from "../../state/persistence"
 import {
     appendToTextPart,
@@ -22,7 +22,6 @@ import {
     getNudgeFrequency,
     getModelInfo,
     isContextOverLimits,
-    messageHasCompress,
 } from "./utils"
 
 export const injectCompressNudges = (

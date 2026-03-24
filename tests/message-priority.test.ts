@@ -333,6 +333,53 @@ test("injectMessageIds tags every text part and tool output in range mode", () =
     assert.match((assistantToolTwo as any).state.output, /<dcp-message-id>m0002<\/dcp-message-id>/)
 })
 
+test("message mode marks compress tool messages as high priority even when short", () => {
+    const sessionID = "ses_message_compress_high_priority"
+    const messages: WithParts[] = [
+        buildMessage("msg-user-1", "user", sessionID, "Please compress this chunk.", 1),
+        {
+            info: {
+                id: "msg-assistant-1",
+                role: "assistant",
+                sessionID,
+                agent: "assistant",
+                time: { created: 2 },
+            } as WithParts["info"],
+            parts: [
+                textPart("msg-assistant-1", sessionID, "msg-assistant-1-part-1", "Done."),
+                toolPart(
+                    "msg-assistant-1",
+                    sessionID,
+                    "call-compress-1",
+                    "compress",
+                    "[Compressed conversation section]",
+                ),
+            ],
+        },
+    ]
+    const state = createSessionState()
+    const config = buildConfig()
+
+    assignMessageRefs(state, messages)
+    const compressionPriorities = buildPriorityMap(config, state, messages)
+
+    assert.equal(compressionPriorities.get("msg-assistant-1")?.priority, "high")
+
+    injectMessageIds(state, config, messages, compressionPriorities)
+
+    const assistantText = messages[1]?.parts[0]
+    const assistantTool = messages[1]?.parts[1]
+
+    assert.match(
+        (assistantText as any).text,
+        /\n\n<dcp-message-id priority="high">m0002<\/dcp-message-id>/,
+    )
+    assert.match(
+        (assistantTool as any).state.output,
+        /<dcp-message-id priority="high">m0002<\/dcp-message-id>/,
+    )
+})
+
 test("message-mode nudges append to existing text parts and list only earlier visible high-priority message IDs", () => {
     const sessionID = "ses_message_priority_nudges"
     const messages: WithParts[] = [

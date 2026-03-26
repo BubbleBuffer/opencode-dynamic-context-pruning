@@ -8,6 +8,7 @@ import {
 } from "./utils"
 import { ToolParameterEntry } from "../state"
 import { PluginConfig } from "../config"
+import { getActiveSummaryTokenUsage } from "../state/utils"
 
 export type PruneReason = "completion" | "noise" | "extraction"
 export const PRUNE_REASON_LABELS: Record<PruneReason, string> = {
@@ -233,11 +234,18 @@ export async function sendCompressNotification(
               "(unknown topic)")
             : "(unknown topic)")
 
+    const totalActiveSummaryTkns = getActiveSummaryTokenUsage(state)
+    const totalGross = state.stats.totalPruneTokens + state.stats.pruneTokenCounter
+    const totalNet = Math.max(0, totalGross - totalActiveSummaryTkns)
+    const netSavedHeader =
+        totalActiveSummaryTkns > 0
+            ? `▣ DCP | ~${formatTokenCount(totalNet, true)} net saved (~${formatTokenCount(totalActiveSummaryTkns, true)} in active summaries)`
+            : `▣ DCP | ~${formatTokenCount(totalNet, true)} net saved total`
+
     if (config.pruneNotification === "minimal") {
-        message = formatStatsHeader(state.stats.totalPruneTokens, state.stats.pruneTokenCounter)
-        message += ` — ${compressionLabel}`
+        message = `${netSavedHeader} — ${compressionLabel}`
     } else {
-        message = formatStatsHeader(state.stats.totalPruneTokens, state.stats.pruneTokenCounter)
+        message = netSavedHeader
 
         const pruneTokenCounterStr = `~${formatTokenCount(compressedTokens)}`
 
@@ -255,8 +263,15 @@ export async function sendCompressNotification(
         const reduction =
             totalSessionTokens > 0 ? Math.round((compressedTokens / totalSessionTokens) * 100) : 0
 
+        const netSavings = Math.max(0, compressedTokens - summaryTokens)
+        const compressionPct =
+            compressedTokens > 0
+                ? Math.max(0, Math.round((1 - summaryTokens / compressedTokens) * 100))
+                : 0
+
         message += `\n\n${progressBar}`
         message += `\n▣ ${compressionLabel} (${pruneTokenCounterStr} removed, ${reduction}% reduction)`
+        message += `\n→ Net: ~${formatTokenCount(netSavings, true)} saved (~${formatTokenCount(summaryTokens, true)} summary, ${compressionPct}% compression)`
         message += `\n→ Topic: ${topic}`
         message += `\n→ Items: ${newlyCompressedMessageIds.length} messages`
         if (newlyCompressedToolIds.length > 0) {

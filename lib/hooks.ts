@@ -14,7 +14,6 @@ import {
 } from "./messages"
 import {
     buildToolIdList,
-    isIgnoredUserMessage,
     stripHallucinations,
     stripHallucinationsFromString,
 } from "./messages/utils"
@@ -24,7 +23,11 @@ import { handleStatsCommand } from "./commands/stats"
 import { handleContextCommand } from "./commands/context"
 import { handleHelpCommand } from "./commands/help"
 import { handleSweepCommand } from "./commands/sweep"
-import { handleManualToggleCommand, handleManualTriggerCommand } from "./commands/manual"
+import {
+    applyPendingManualTrigger,
+    handleManualToggleCommand,
+    handleManualTriggerCommand,
+} from "./commands/manual"
 import { handleDecompressCommand } from "./commands/decompress"
 import { handleRecompressCommand } from "./commands/recompress"
 import { type HostPermissionSnapshot } from "./host-permissions"
@@ -38,38 +41,6 @@ const INTERNAL_AGENT_SIGNATURES = [
     "You are a helpful AI assistant tasked with summarizing conversations",
     "Summarize what was done in this conversation",
 ]
-
-function applyManualPrompt(state: SessionState, messages: WithParts[], logger: Logger): void {
-    const pending = state.pendingManualTrigger
-    if (!pending) {
-        return
-    }
-
-    if (!state.sessionId || pending.sessionId !== state.sessionId) {
-        state.pendingManualTrigger = null
-        return
-    }
-
-    for (let i = messages.length - 1; i >= 0; i--) {
-        const msg = messages[i]
-        if (msg.info.role !== "user" || isIgnoredUserMessage(msg)) {
-            continue
-        }
-
-        for (const part of msg.parts) {
-            if (part.type !== "text" || part.ignored || part.synthetic) {
-                continue
-            }
-
-            part.text = pending.prompt
-            state.pendingManualTrigger = null
-            logger.debug("Applied manual prompt", { sessionId: pending.sessionId })
-            return
-        }
-    }
-
-    state.pendingManualTrigger = null
-}
 
 export function createSystemPromptHandler(
     state: SessionState,
@@ -162,7 +133,7 @@ export function createChatMessageTransformHandler(
             compressionPriorities,
         )
         injectMessageIds(state, config, output.messages, compressionPriorities)
-        applyManualPrompt(state, output.messages, logger)
+        applyPendingManualTrigger(state, output.messages, logger)
         stripStaleMetadata(output.messages)
 
         if (state.sessionId) {

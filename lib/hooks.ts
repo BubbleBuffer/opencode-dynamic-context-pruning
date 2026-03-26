@@ -2,39 +2,34 @@ import type { SessionState, WithParts } from "./state"
 import type { Logger } from "./logger"
 import type { PluginConfig } from "./config"
 import { assignMessageRefs } from "./message-ids"
-import { buildPriorityMap } from "./messages/priority"
-import { syncToolCache } from "./state/tool-cache"
 import {
-    prune,
-    syncCompressionBlocks,
-    injectCompressNudges,
-    injectMessageIds,
-    injectExtendedSubAgentResults,
-    stripStaleMetadata,
-} from "./messages"
-import {
+    buildPriorityMap,
     buildToolIdList,
+    injectCompressNudges,
+    injectExtendedSubAgentResults,
+    injectMessageIds,
+    prune,
     stripHallucinations,
     stripHallucinationsFromString,
-} from "./messages/utils"
-import { checkSession } from "./state"
-import { renderSystemPrompt } from "./prompts"
-import { handleStatsCommand } from "./commands/stats"
-import { handleContextCommand } from "./commands/context"
-import { handleHelpCommand } from "./commands/help"
-import { handleSweepCommand } from "./commands/sweep"
+    stripStaleMetadata,
+    syncCompressionBlocks,
+} from "./messages"
+import { renderSystemPrompt, type PromptStore } from "./prompts"
 import {
     applyPendingManualTrigger,
+    handleContextCommand,
+    handleDecompressCommand,
+    handleHelpCommand,
     handleManualToggleCommand,
     handleManualTriggerCommand,
-} from "./commands/manual"
-import { handleDecompressCommand } from "./commands/decompress"
-import { handleRecompressCommand } from "./commands/recompress"
+    handleRecompressCommand,
+    handleStatsCommand,
+    handleSweepCommand,
+} from "./commands"
 import { type HostPermissionSnapshot } from "./host-permissions"
 import { compressPermission, syncCompressPermissionState } from "./shared-utils"
-import { ensureSessionInitialized } from "./state/state"
+import { checkSession, ensureSessionInitialized, syncToolCache } from "./state"
 import { cacheSystemPromptTokens } from "./ui/utils"
-import type { PromptStore } from "./prompts/store"
 
 const INTERNAL_AGENT_SIGNATURES = [
     "You are a title generator",

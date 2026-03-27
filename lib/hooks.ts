@@ -103,7 +103,7 @@ export function createChatMessageTransformHandler(
             return
         }
 
-        stripHallucinations(output.messages, state, config)
+        stripHallucinations(output.messages)
         cacheSystemPromptTokens(state, output.messages)
         assignMessageRefs(state, output.messages)
         syncCompressionBlocks(state, logger, output.messages)
@@ -255,15 +255,11 @@ export function createCommandExecuteHandler(
     }
 }
 
-export function createTextCompleteHandler(state: SessionState, config: PluginConfig) {
+export function createTextCompleteHandler() {
     return async (
         _input: { sessionID: string; messageID: string; partID: string },
         output: { text: string },
     ) => {
-        if (compressPermission(state, config) === "deny") {
-            return
-        }
-
         output.text = stripHallucinationsFromString(output.text)
     }
 }

@@ -80,7 +80,7 @@ function buildMessage(id: string, role: "user" | "assistant", text: string): Wit
     }
 }
 
-test("chat message transform leaves messages untouched when compress is denied", async () => {
+test("chat message transform strips hallucinated tags even when compress is denied", async () => {
     const state = createSessionState()
     const logger = new Logger(false)
     const config = buildConfig("deny")
@@ -104,7 +104,7 @@ test("chat message transform leaves messages untouched when compress is denied",
     await handler({}, output)
 
     assert.equal(output.messages[0]?.parts[0]?.type, "text")
-    assert.equal((output.messages[0]?.parts[0] as any).text, "alpha <dcp>beta</dcp> omega")
+    assert.equal((output.messages[0]?.parts[0] as any).text, "alpha  omega")
 })
 
 test("command execute exits after effective permission resolves to deny", async () => {
@@ -144,11 +144,11 @@ test("chat message hook caches variant even when effective permission is denied"
     assert.equal(state.variant, "danger")
 })
 
-test("text complete leaves output untouched when compress is denied", async () => {
+test("text complete strips hallucinated metadata tags", async () => {
     const output = { text: "alpha <dcp>beta</dcp> omega" }
-    const handler = createTextCompleteHandler(createSessionState(), buildConfig("deny"))
+    const handler = createTextCompleteHandler()
 
     await handler({ sessionID: "session-1", messageID: "message-1", partID: "part-1" }, output)
 
-    assert.equal(output.text, "alpha <dcp>beta</dcp> omega")
+    assert.equal(output.text, "alpha  omega")
 })

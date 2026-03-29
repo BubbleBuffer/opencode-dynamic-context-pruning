@@ -78,6 +78,28 @@ export function estimateTokensBatch(texts: string[]): number {
     return countTokens(texts.join(" "))
 }
 
+export const COMPACTED_TOOL_OUTPUT_PLACEHOLDER = "[Old tool result content cleared]"
+
+function stringifyToolContent(value: unknown): string {
+    return typeof value === "string" ? value : JSON.stringify(value)
+}
+
+export function extractCompletedToolOutput(part: any): string | undefined {
+    if (
+        part?.type !== "tool" ||
+        part.state?.status !== "completed" ||
+        part.state?.output === undefined
+    ) {
+        return undefined
+    }
+
+    if (part.state?.time?.compacted) {
+        return COMPACTED_TOOL_OUTPUT_PLACEHOLDER
+    }
+
+    return stringifyToolContent(part.state.output)
+}
+
 export function extractToolContent(part: any): string[] {
     const contents: string[] = []
 
@@ -86,25 +108,14 @@ export function extractToolContent(part: any): string[] {
     }
 
     if (part.state?.input !== undefined) {
-        const inputContent =
-            typeof part.state.input === "string"
-                ? part.state.input
-                : JSON.stringify(part.state.input)
-        contents.push(inputContent)
+        contents.push(stringifyToolContent(part.state.input))
     }
 
-    if (part.state?.status === "completed" && part.state?.output) {
-        const content =
-            typeof part.state.output === "string"
-                ? part.state.output
-                : JSON.stringify(part.state.output)
-        contents.push(content)
+    const completedOutput = extractCompletedToolOutput(part)
+    if (completedOutput !== undefined) {
+        contents.push(completedOutput)
     } else if (part.state?.status === "error" && part.state?.error) {
-        const content =
-            typeof part.state.error === "string"
-                ? part.state.error
-                : JSON.stringify(part.state.error)
-        contents.push(content)
+        contents.push(stringifyToolContent(part.state.error))
     }
 
     return contents

@@ -2,9 +2,11 @@ import assert from "node:assert/strict"
 import test from "node:test"
 import type { WithParts } from "../lib/state"
 import {
+    COMPACTED_TOOL_OUTPUT_PLACEHOLDER,
     countAllMessageTokens,
     countToolTokens,
     estimateTokensBatch,
+    extractCompletedToolOutput,
     extractToolContent,
 } from "../lib/token-utils"
 
@@ -152,4 +154,21 @@ test("counting includes input for errored custom tools", () => {
     })
 
     assertCounted(part, [JSON.stringify(customInput), "Tool execution failed"])
+})
+
+test("counting uses the compacted tool placeholder for completed outputs", () => {
+    const input = { filePath: "/tmp/large.log" }
+    const part = buildToolPart("read", {
+        status: "completed",
+        input,
+        output: "full original output that is no longer visible to the model",
+        time: {
+            start: 1,
+            end: 2,
+            compacted: 3,
+        },
+    })
+
+    assert.equal(extractCompletedToolOutput(part), COMPACTED_TOOL_OUTPUT_PLACEHOLDER)
+    assertCounted(part, [JSON.stringify(input), COMPACTED_TOOL_OUTPUT_PLACEHOLDER])
 })

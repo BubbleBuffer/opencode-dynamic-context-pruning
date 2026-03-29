@@ -86,5 +86,10 @@
         "tui/index.tsx",
         "README.md",
         "LICENSE"
-    ]
+    ],
+    "directories": {
+        "doc": "docs",
+        "lib": "lib",
+        "test": "tests"
+    }
 }

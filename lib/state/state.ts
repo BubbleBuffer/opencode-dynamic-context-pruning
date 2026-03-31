@@ -1,8 +1,8 @@
 import type { CompressionTimingState, SessionState, ToolParameterEntry, WithParts } from "./types"
 import type { Logger } from "../logger"
+import { attachCompressionDuration } from "../compress/state"
 import { loadSessionState, saveSessionState } from "./persistence"
 import {
-    attachCompressionDuration,
     isSubAgentSession,
     findLastCompactionTimestamp,
     countTurns,

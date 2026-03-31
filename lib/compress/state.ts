@@ -1,4 +1,4 @@
-import type { CompressionBlock, SessionState } from "../state"
+import type { CompressionBlock, PruneMessagesState, SessionState } from "../state"
 import { formatBlockRef, formatMessageIdTag } from "../message-ids"
 import type { AppliedCompressionResult, CompressionStateInput, SelectionResolution } from "./types"
 
@@ -24,6 +24,31 @@ export function allocateRunId(state: SessionState): number {
 
     state.prune.messages.nextRunId = next + 1
     return next
+}
+
+export function attachCompressionDuration(
+    messagesState: PruneMessagesState,
+    callId: string,
+    messageId: string,
+    durationMs: number,
+): number {
+    if (typeof durationMs !== "number" || !Number.isFinite(durationMs)) {
+        return 0
+    }
+
+    let updates = 0
+    for (const block of messagesState.blocksById.values()) {
+        const matchesCall = block.compressCallId === callId
+        const matchesMessage = !block.compressCallId && block.compressMessageId === messageId
+        if (!matchesCall && !matchesMessage) {
+            continue
+        }
+
+        block.durationMs = durationMs
+        updates++
+    }
+
+    return updates
 }
 
 export function wrapCompressedSummary(blockId: number, summary: string): string {

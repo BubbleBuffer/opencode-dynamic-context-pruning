@@ -8,31 +8,6 @@ import type {
 import { isIgnoredUserMessage, messageHasCompress } from "../messages/query"
 import { countTokens } from "../token-utils"
 
-export function attachCompressionDuration(
-    messagesState: PruneMessagesState,
-    callId: string,
-    messageId: string,
-    durationMs: number,
-): number {
-    if (typeof durationMs !== "number" || !Number.isFinite(durationMs)) {
-        return 0
-    }
-
-    let updates = 0
-    for (const block of messagesState.blocksById.values()) {
-        const matchesCall = block.compressCallId === callId
-        const matchesMessage = !block.compressCallId && block.compressMessageId === messageId
-        if (!matchesCall && !matchesMessage) {
-            continue
-        }
-
-        block.durationMs = durationMs
-        updates++
-    }
-
-    return updates
-}
-
 export const isMessageCompacted = (state: SessionState, msg: WithParts): boolean => {
     if (msg.info.time.created < state.lastCompaction) {
         return true

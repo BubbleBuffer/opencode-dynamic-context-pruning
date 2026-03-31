@@ -276,12 +276,6 @@ export function createTextCompleteHandler() {
 
 export function createEventHandler(state: SessionState, logger: Logger) {
     return async (input: { event: any }) => {
-        const eventSessionId =
-            typeof input.event?.properties?.sessionID === "string"
-                ? input.event.properties.sessionID
-                : typeof input.event?.properties?.part?.sessionID === "string"
-                  ? input.event.properties.part.sessionID
-                  : undefined
         const eventTime =
             typeof input.event?.time === "number" && Number.isFinite(input.event.time)
                 ? input.event.time
@@ -300,41 +294,23 @@ export function createEventHandler(state: SessionState, logger: Logger) {
         }
 
         if (part.state.status === "pending") {
-            if (
-                typeof part.callID !== "string" ||
-                typeof part.messageID !== "string" ||
-                typeof eventSessionId !== "string"
-            ) {
+            if (typeof part.callID !== "string") {
                 return
             }
 
             const startedAt = eventTime ?? Date.now()
-            if (
-                !recordCompressionStart(
-                    state,
-                    part.callID,
-                    eventSessionId,
-                    part.messageID,
-                    startedAt,
-                )
-            ) {
+            if (!recordCompressionStart(state, part.callID, startedAt)) {
                 return
             }
             logger.debug("Recorded compression start", {
-                sessionID: eventSessionId,
                 callID: part.callID,
-                messageID: part.messageID,
                 startedAt,
             })
             return
         }
 
         if (part.state.status === "completed") {
-            if (
-                typeof part.callID !== "string" ||
-                typeof part.messageID !== "string" ||
-                typeof eventSessionId !== "string"
-            ) {
+            if (typeof part.callID !== "string") {
                 return
             }
 
@@ -344,12 +320,9 @@ export function createEventHandler(state: SessionState, logger: Logger) {
                 return
             }
 
-            queueCompressionDuration(state, eventSessionId, part.callID, part.messageID, durationMs)
+            queueCompressionDuration(state, part.callID, durationMs)
 
-            const updates =
-                state.sessionId === eventSessionId
-                    ? applyPendingCompressionDurations(state, eventSessionId)
-                    : 0
+            const updates = applyPendingCompressionDurations(state)
             if (updates === 0) {
                 return
             }
@@ -357,9 +330,7 @@ export function createEventHandler(state: SessionState, logger: Logger) {
             await saveSessionState(state, logger)
 
             logger.info("Attached compression time to blocks", {
-                sessionID: eventSessionId,
                 callID: part.callID,
-                messageID: part.messageID,
                 blocks: updates,
                 durationMs,
             })

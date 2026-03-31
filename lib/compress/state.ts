@@ -29,7 +29,6 @@ export function allocateRunId(state: SessionState): number {
 export function attachCompressionDuration(
     messagesState: PruneMessagesState,
     callId: string,
-    messageId: string,
     durationMs: number,
 ): number {
     if (typeof durationMs !== "number" || !Number.isFinite(durationMs)) {
@@ -38,9 +37,7 @@ export function attachCompressionDuration(
 
     let updates = 0
     for (const block of messagesState.blocksById.values()) {
-        const matchesCall = block.compressCallId === callId
-        const matchesMessage = !block.compressCallId && block.compressMessageId === messageId
-        if (!matchesCall && !matchesMessage) {
+        if (block.compressCallId !== callId) {
             continue
         }
 

@@ -51,17 +51,6 @@ export const checkSession = async (
         }
     }
 
-    if (state.sessionId === lastSessionId) {
-        const applied = applyPendingCompressionDurations(state, lastSessionId)
-        if (applied > 0) {
-            saveSessionState(state, logger).catch((error) => {
-                logger.warn("Failed to persist queued compression time updates", {
-                    error: error instanceof Error ? error.message : String(error),
-                })
-            })
-        }
-    }
-
     const lastCompactionTimestamp = findLastCompactionTimestamp(messages)
     if (lastCompactionTimestamp > state.lastCompaction) {
         state.lastCompaction = lastCompactionTimestamp

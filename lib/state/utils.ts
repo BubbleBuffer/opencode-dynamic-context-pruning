@@ -8,6 +8,31 @@ import type {
 import { isIgnoredUserMessage, messageHasCompress } from "../messages/query"
 import { countTokens } from "../token-utils"
 
+export function attachCompressionDuration(
+    messagesState: PruneMessagesState,
+    callId: string,
+    messageId: string,
+    durationMs: number,
+): number {
+    if (typeof durationMs !== "number" || !Number.isFinite(durationMs)) {
+        return 0
+    }
+
+    let updates = 0
+    for (const block of messagesState.blocksById.values()) {
+        const matchesCall = block.compressCallId === callId
+        const matchesMessage = !block.compressCallId && block.compressMessageId === messageId
+        if (!matchesCall && !matchesMessage) {
+            continue
+        }
+
+        block.durationMs = durationMs
+        updates++
+    }
+
+    return updates
+}
+
 export const isMessageCompacted = (state: SessionState, msg: WithParts): boolean => {
     if (msg.info.time.created < state.lastCompaction) {
         return true
@@ -20,12 +45,30 @@ export const isMessageCompacted = (state: SessionState, msg: WithParts): boolean
 }
 
 interface PersistedPruneMessagesState {
-    byMessageId?: Record<string, PrunedMessageEntry>
-    blocksById?: Record<string, CompressionBlock>
-    activeBlockIds?: number[]
-    activeByAnchorMessageId?: Record<string, number>
-    nextBlockId?: number
-    nextRunId?: number
+    byMessageId: Record<string, PrunedMessageEntry>
+    blocksById: Record<string, CompressionBlock>
+    activeBlockIds: number[]
+    activeByAnchorMessageId: Record<string, number>
+    nextBlockId: number
+    nextRunId: number
+}
+
+export function serializePruneMessagesState(
+    messagesState: PruneMessagesState,
+): PersistedPruneMessagesState {
+    return {
+        byMessageId: Object.fromEntries(messagesState.byMessageId),
+        blocksById: Object.fromEntries(
+            Array.from(messagesState.blocksById.entries()).map(([blockId, block]) => [
+                String(blockId),
+                block,
+            ]),
+        ),
+        activeBlockIds: Array.from(messagesState.activeBlockIds),
+        activeByAnchorMessageId: Object.fromEntries(messagesState.activeByAnchorMessageId),
+        nextBlockId: messagesState.nextBlockId,
+        nextRunId: messagesState.nextRunId,
+    }
 }
 
 export async function isSubAgentSession(client: any, sessionID: string): Promise<boolean> {

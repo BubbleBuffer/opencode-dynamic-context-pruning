@@ -1,4 +1,4 @@
-import type { CompressionTimingState, SessionState, ToolParameterEntry, WithParts } from "./types"
+import type { SessionState, ToolParameterEntry, WithParts } from "./types"
 import type { Logger } from "../logger"
 import { attachCompressionDuration } from "../compress/state"
 import { loadSessionState, saveSessionState } from "./persistence"
@@ -13,13 +13,6 @@ import {
     collectTurnNudgeAnchors,
 } from "./utils"
 import { getLastUserMessage } from "../messages/query"
-
-function createCompressionTimingState(): CompressionTimingState {
-    return {
-        startsByCallId: new Map(),
-        pendingBySessionId: new Map(),
-    }
-}
 
 export const checkSession = async (
     client: any,
@@ -89,7 +82,10 @@ export function createSessionState(): SessionState {
             pruneTokenCounter: 0,
             totalPruneTokens: 0,
         },
-        compressionTiming: createCompressionTimingState(),
+        compressionTiming: {
+            startsByCallId: new Map(),
+            pendingBySessionId: new Map(),
+        },
         toolParameters: new Map<string, ToolParameterEntry>(),
         subAgentResultCache: new Map<string, string>(),
         toolIdList: [],

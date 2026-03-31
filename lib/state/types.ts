@@ -22,8 +22,20 @@ export interface SessionStats {
 }
 
 export interface CompressionStart {
+    sessionId: string
     messageId: string
     startedAt: number
+}
+
+export interface PendingCompressionDuration {
+    callId: string
+    messageId: string
+    durationMs: number
+}
+
+export interface CompressionTimingState {
+    startsByCallId: Map<string, CompressionStart>
+    pendingBySessionId: Map<string, PendingCompressionDuration[]>
 }
 
 export interface PrunedMessageEntry {
@@ -103,7 +115,7 @@ export interface SessionState {
     prune: Prune
     nudges: Nudges
     stats: SessionStats
-    compressionStarts: Map<string, CompressionStart>
+    compressionTiming: CompressionTimingState
     toolParameters: Map<string, ToolParameterEntry>
     subAgentResultCache: Map<string, string>
     toolIdList: string[]

@@ -1,7 +1,8 @@
-import type { CompressionStart, SessionState, ToolParameterEntry, WithParts } from "./types"
+import type { CompressionTimingState, SessionState, ToolParameterEntry, WithParts } from "./types"
 import type { Logger } from "../logger"
 import { loadSessionState, saveSessionState } from "./persistence"
 import {
+    attachCompressionDuration,
     isSubAgentSession,
     findLastCompactionTimestamp,
     countTurns,
@@ -12,6 +13,13 @@ import {
     collectTurnNudgeAnchors,
 } from "./utils"
 import { getLastUserMessage } from "../messages/query"
+
+function createCompressionTimingState(): CompressionTimingState {
+    return {
+        startsByCallId: new Map(),
+        pendingBySessionId: new Map(),
+    }
+}
 
 export const checkSession = async (
     client: any,
@@ -40,6 +48,17 @@ export const checkSession = async (
             )
         } catch (err: any) {
             logger.error("Failed to initialize session state", { error: err.message })
+        }
+    }
+
+    if (state.sessionId === lastSessionId) {
+        const applied = applyPendingCompressionDurations(state, lastSessionId)
+        if (applied > 0) {
+            saveSessionState(state, logger).catch((error) => {
+                logger.warn("Failed to persist queued compression time updates", {
+                    error: error instanceof Error ? error.message : String(error),
+                })
+            })
         }
     }
 
@@ -81,7 +100,7 @@ export function createSessionState(): SessionState {
             pruneTokenCounter: 0,
             totalPruneTokens: 0,
         },
-        compressionStarts: new Map<string, CompressionStart>(),
+        compressionTiming: createCompressionTimingState(),
         toolParameters: new Map<string, ToolParameterEntry>(),
         subAgentResultCache: new Map<string, string>(),
         toolIdList: [],
@@ -178,4 +197,53 @@ export async function ensureSessionInitialized(
         pruneTokenCounter: persisted.stats?.pruneTokenCounter || 0,
         totalPruneTokens: persisted.stats?.totalPruneTokens || 0,
     }
+
+    const applied = applyPendingCompressionDurations(state, sessionId)
+    if (applied > 0) {
+        await saveSessionState(state, logger)
+    }
+}
+
+export function queueCompressionDuration(
+    state: SessionState,
+    sessionId: string,
+    callId: string,
+    messageId: string,
+    durationMs: number,
+): void {
+    const queued = state.compressionTiming.pendingBySessionId.get(sessionId) || []
+    const filtered = queued.filter((entry) => entry.callId !== callId)
+    filtered.push({ callId, messageId, durationMs })
+    state.compressionTiming.pendingBySessionId.set(sessionId, filtered)
+}
+
+export function applyPendingCompressionDurations(state: SessionState, sessionId: string): number {
+    const queued = state.compressionTiming.pendingBySessionId.get(sessionId)
+    if (!queued || queued.length === 0) {
+        return 0
+    }
+
+    let updates = 0
+    const remaining = []
+    for (const entry of queued) {
+        const applied = attachCompressionDuration(
+            state.prune.messages,
+            entry.callId,
+            entry.messageId,
+            entry.durationMs,
+        )
+        if (applied > 0) {
+            updates += applied
+            continue
+        }
+        remaining.push(entry)
+    }
+
+    if (remaining.length > 0) {
+        state.compressionTiming.pendingBySessionId.set(sessionId, remaining)
+    } else {
+        state.compressionTiming.pendingBySessionId.delete(sessionId)
+    }
+
+    return updates
 }

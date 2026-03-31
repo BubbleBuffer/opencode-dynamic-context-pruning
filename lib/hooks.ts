@@ -16,7 +16,6 @@ import {
 } from "./messages"
 import { renderSystemPrompt, type PromptStore } from "./prompts"
 import { buildProtectedToolsExtension } from "./prompts/extensions/system"
-import { attachCompressionDuration } from "./compress/state"
 import {
     applyPendingManualTrigger,
     handleContextCommand,
@@ -30,7 +29,14 @@ import {
 } from "./commands"
 import { type HostPermissionSnapshot } from "./host-permissions"
 import { compressPermission, syncCompressPermissionState } from "./compress-permission"
-import { checkSession, ensureSessionInitialized, saveSessionState, syncToolCache } from "./state"
+import {
+    checkSession,
+    ensureSessionInitialized,
+    applyPendingCompressionDurations,
+    queueCompressionDuration,
+    saveSessionState,
+    syncToolCache,
+} from "./state"
 import { cacheSystemPromptTokens } from "./ui/utils"
 
 const INTERNAL_AGENT_SIGNATURES = [
@@ -269,6 +275,12 @@ export function createTextCompleteHandler() {
 
 export function createEventHandler(state: SessionState, logger: Logger) {
     return async (input: { event: any }) => {
+        const eventSessionId =
+            typeof input.event?.properties?.sessionID === "string"
+                ? input.event.properties.sessionID
+                : typeof input.event?.properties?.part?.sessionID === "string"
+                  ? input.event.properties.part.sessionID
+                  : undefined
         const eventTime =
             typeof input.event?.time === "number" && Number.isFinite(input.event.time)
                 ? input.event.time
@@ -287,20 +299,26 @@ export function createEventHandler(state: SessionState, logger: Logger) {
         }
 
         if (part.state.status === "pending") {
-            if (typeof part.callID !== "string" || typeof part.messageID !== "string") {
+            if (
+                typeof part.callID !== "string" ||
+                typeof part.messageID !== "string" ||
+                typeof eventSessionId !== "string"
+            ) {
                 return
             }
 
-            if (state.compressionStarts.has(part.callID)) {
+            if (state.compressionTiming.startsByCallId.has(part.callID)) {
                 return
             }
 
             const startedAt = eventTime ?? Date.now()
-            state.compressionStarts.set(part.callID, {
+            state.compressionTiming.startsByCallId.set(part.callID, {
+                sessionId: eventSessionId,
                 messageId: part.messageID,
                 startedAt,
             })
             logger.debug("Recorded compression start", {
+                sessionID: eventSessionId,
                 callID: part.callID,
                 messageID: part.messageID,
                 startedAt,
@@ -309,12 +327,16 @@ export function createEventHandler(state: SessionState, logger: Logger) {
         }
 
         if (part.state.status === "completed") {
-            if (typeof part.callID !== "string" || typeof part.messageID !== "string") {
+            if (
+                typeof part.callID !== "string" ||
+                typeof part.messageID !== "string" ||
+                typeof eventSessionId !== "string"
+            ) {
                 return
             }
 
-            const start = state.compressionStarts.get(part.callID)
-            state.compressionStarts.delete(part.callID)
+            const start = state.compressionTiming.startsByCallId.get(part.callID)
+            state.compressionTiming.startsByCallId.delete(part.callID)
 
             const runningAt =
                 typeof part.state.time?.start === "number" && Number.isFinite(part.state.time.start)
@@ -341,27 +363,24 @@ export function createEventHandler(state: SessionState, logger: Logger) {
                 return
             }
 
-            const updates = attachCompressionDuration(
-                state,
-                part.callID,
-                part.messageID,
-                durationMs,
-            )
+            queueCompressionDuration(state, eventSessionId, part.callID, part.messageID, durationMs)
+
+            const updates =
+                state.sessionId === eventSessionId
+                    ? applyPendingCompressionDurations(state, eventSessionId)
+                    : 0
             if (updates === 0) {
                 return
             }
 
+            await saveSessionState(state, logger)
+
             logger.info("Attached compression time to blocks", {
+                sessionID: eventSessionId,
                 callID: part.callID,
                 messageID: part.messageID,
                 blocks: updates,
                 durationMs,
-            })
-
-            saveSessionState(state, logger).catch((error) => {
-                logger.warn("Failed to persist compression time update", {
-                    error: error instanceof Error ? error.message : String(error),
-                })
             })
             return
         }
@@ -371,7 +390,7 @@ export function createEventHandler(state: SessionState, logger: Logger) {
         }
 
         if (typeof part.callID === "string") {
-            state.compressionStarts.delete(part.callID)
+            state.compressionTiming.startsByCallId.delete(part.callID)
         }
     }
 }

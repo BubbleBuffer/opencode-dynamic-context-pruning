@@ -9,7 +9,12 @@ import {
     createTextCompleteHandler,
 } from "../lib/hooks"
 import { Logger } from "../lib/logger"
-import { createSessionState, type WithParts } from "../lib/state"
+import {
+    createSessionState,
+    ensureSessionInitialized,
+    saveSessionState,
+    type WithParts,
+} from "../lib/state"
 
 function buildConfig(permission: "allow" | "ask" | "deny" = "allow"): PluginConfig {
     return {
@@ -403,4 +408,117 @@ test("event hook falls back to completed runtime when running duration missing",
     })
 
     assert.equal(state.prune.messages.blocksById.get(1)?.durationMs, 440)
+})
+
+test("event hook queues duration updates until the matching session is loaded", async () => {
+    const logger = new Logger(false)
+    const targetSessionId = `session-target-${process.pid}-${Date.now()}`
+    const otherSessionId = `session-other-${process.pid}-${Date.now()}`
+    const persistedState = createSessionState()
+    persistedState.sessionId = targetSessionId
+    persistedState.prune.messages.blocksById.set(1, {
+        blockId: 1,
+        runId: 1,
+        active: true,
+        deactivatedByUser: false,
+        compressedTokens: 0,
+        summaryTokens: 0,
+        durationMs: 0,
+        mode: "message",
+        topic: "one",
+        batchTopic: "one",
+        startId: "m0001",
+        endId: "m0001",
+        anchorMessageId: "msg-a",
+        compressMessageId: "message-1",
+        compressCallId: "call-remote",
+        includedBlockIds: [],
+        consumedBlockIds: [],
+        parentBlockIds: [],
+        directMessageIds: [],
+        directToolIds: [],
+        effectiveMessageIds: ["msg-a"],
+        effectiveToolIds: [],
+        createdAt: 1,
+        summary: "a",
+    })
+    await saveSessionState(persistedState, logger)
+
+    const liveState = createSessionState()
+    liveState.sessionId = otherSessionId
+    const handler = createEventHandler(liveState, logger)
+
+    await handler({
+        event: {
+            type: "message.part.updated",
+            properties: {
+                sessionID: targetSessionId,
+                part: {
+                    type: "tool",
+                    tool: "compress",
+                    callID: "call-remote",
+                    messageID: "message-1",
+                    state: {
+                        status: "pending",
+                        input: {},
+                        raw: "",
+                    },
+                },
+            },
+            time: 100,
+        },
+    })
+
+    await handler({
+        event: {
+            type: "message.part.updated",
+            properties: {
+                sessionID: targetSessionId,
+                part: {
+                    type: "tool",
+                    tool: "compress",
+                    callID: "call-remote",
+                    messageID: "message-1",
+                    state: {
+                        status: "completed",
+                        input: {},
+                        output: "done",
+                        title: "",
+                        metadata: {},
+                        time: { start: 350, end: 500 },
+                    },
+                },
+            },
+        },
+    })
+
+    assert.equal(liveState.compressionTiming.pendingBySessionId.get(targetSessionId)?.length, 1)
+    assert.equal(liveState.compressionTiming.startsByCallId.has("call-remote"), false)
+
+    await ensureSessionInitialized(
+        {
+            session: {
+                get: async () => ({ data: { parentID: null } }),
+            },
+        } as any,
+        liveState,
+        targetSessionId,
+        logger,
+        [
+            {
+                info: {
+                    id: "msg-user-1",
+                    role: "user",
+                    sessionID: targetSessionId,
+                    agent: "assistant",
+                    time: { created: 1 },
+                } as WithParts["info"],
+                parts: [],
+            },
+        ],
+        false,
+    )
+
+    assert.equal(liveState.prune.messages.blocksById.get(1)?.durationMs, 250)
+    assert.equal(liveState.compressionTiming.pendingBySessionId.has(targetSessionId), false)
 })

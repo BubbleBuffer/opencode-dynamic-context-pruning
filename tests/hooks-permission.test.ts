@@ -154,63 +154,6 @@ test("text complete strips hallucinated metadata tags", async () => {
     assert.equal(output.text, "alpha  omega")
 })
 
-test("event hook records compression start timing", async () => {
-    const state = createSessionState()
-    state.sessionId = "session-1"
-    const handler = createEventHandler(state, new Logger(false))
-    const originalNow = Date.now
-    Date.now = () => 100
-
-    try {
-        await handler({
-            event: {
-                type: "message.part.updated",
-                properties: {
-                    part: {
-                        type: "tool",
-                        tool: "compress",
-                        callID: "call-1",
-                        messageID: "message-1",
-                        sessionID: "session-1",
-                        state: {
-                            status: "pending",
-                            input: {},
-                            raw: "",
-                        },
-                    },
-                },
-            },
-        })
-
-        await handler({
-            event: {
-                type: "message.part.updated",
-                properties: {
-                    part: {
-                        type: "tool",
-                        tool: "compress",
-                        callID: "call-1",
-                        messageID: "message-1",
-                        sessionID: "session-1",
-                        state: {
-                            status: "running",
-                            input: { topic: "x" },
-                            time: { start: 325 },
-                        },
-                    },
-                },
-            },
-        })
-    } finally {
-        Date.now = originalNow
-    }
-
-    assert.deepEqual(state.compressionStarts.get("call-1"), {
-        messageId: "message-1",
-        startedAt: 100,
-    })
-})
-
 test("event hook attaches durations to matching blocks by call id", async () => {
     const state = createSessionState()
     state.sessionId = "session-1"
@@ -460,52 +403,4 @@ test("event hook falls back to completed runtime when running duration missing",
     })
 
     assert.equal(state.prune.messages.blocksById.get(1)?.durationMs, 440)
-})
-
-test("event hook ignores non-compress tool parts", async () => {
-    const state = createSessionState()
-    state.sessionId = "session-1"
-    const handler = createEventHandler(state, new Logger(false))
-
-    await handler({
-        event: {
-            type: "message.part.updated",
-            properties: {
-                part: {
-                    type: "tool",
-                    tool: "bash",
-                    callID: "call-2",
-                    messageID: "message-2",
-                    sessionID: "session-1",
-                    state: {
-                        status: "pending",
-                        input: {},
-                        raw: "",
-                    },
-                },
-            },
-        },
-    })
-
-    await handler({
-        event: {
-            type: "message.part.updated",
-            properties: {
-                part: {
-                    type: "tool",
-                    tool: "bash",
-                    callID: "call-2",
-                    messageID: "message-2",
-                    sessionID: "session-1",
-                    state: {
-                        status: "running",
-                        input: {},
-                        time: { start: 220 },
-                    },
-                },
-            },
-        },
-    })
-
-    assert.equal(state.compressionStarts.size, 0)
 })

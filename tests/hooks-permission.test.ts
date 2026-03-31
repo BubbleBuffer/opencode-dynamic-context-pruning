@@ -372,7 +372,7 @@ test("event hook falls back to completed runtime when running duration missing",
         endId: "m0001",
         anchorMessageId: "msg-a",
         compressMessageId: "message-1",
-        compressCallId: undefined,
+        compressCallId: "call-3",
         includedBlockIds: [],
         consumedBlockIds: [],
         parentBlockIds: [],
@@ -492,7 +492,7 @@ test("event hook queues duration updates until the matching session is loaded", 
         },
     })
 
-    assert.equal(liveState.compressionTiming.pendingBySessionId.get(targetSessionId)?.length, 1)
+    assert.equal(liveState.compressionTiming.pendingByCallId.has("call-remote"), true)
     assert.equal(liveState.compressionTiming.startsByCallId.has("call-remote"), false)
 
     await ensureSessionInitialized(
@@ -520,5 +520,5 @@ test("event hook queues duration updates until the matching session is loaded", 
     )
 
     assert.equal(liveState.prune.messages.blocksById.get(1)?.durationMs, 250)
-    assert.equal(liveState.compressionTiming.pendingBySessionId.has(targetSessionId), false)
+    assert.equal(liveState.compressionTiming.pendingByCallId.has("call-remote"), false)
 })

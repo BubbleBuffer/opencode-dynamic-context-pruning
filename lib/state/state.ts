@@ -180,7 +180,7 @@ export async function ensureSessionInitialized(
         totalPruneTokens: persisted.stats?.totalPruneTokens || 0,
     }
 
-    const applied = applyPendingCompressionDurations(state, sessionId)
+    const applied = applyPendingCompressionDurations(state)
     if (applied > 0) {
         await saveSessionState(state, logger)
     }

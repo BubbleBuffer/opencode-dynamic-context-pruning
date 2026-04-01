@@ -44,9 +44,9 @@ import type { Logger } from "../logger"
 import type { SessionState, WithParts } from "../state"
 import { sendIgnoredMessage } from "../ui/notification"
 import { formatTokenCount } from "../ui/utils"
-import { isMessageCompacted } from "../shared-utils"
-import { isIgnoredUserMessage } from "../messages/utils"
-import { countTokens, getCurrentParams } from "../strategies/utils"
+import { isIgnoredUserMessage } from "../messages/query"
+import { isMessageCompacted } from "../state/utils"
+import { countTokens, extractCompletedToolOutput, getCurrentParams } from "../token-utils"
 import type { AssistantMessage, TextPart, ToolPart } from "@opencode-ai/sdk/v2"
 
 export interface ContextCommandContext {
@@ -159,11 +159,8 @@ function analyzeTokens(state: SessionState, messages: WithParts[]): TokenBreakdo
                         toolInputParts.push(inputStr)
                     }
 
-                    if (toolPart.state?.status === "completed" && toolPart.state?.output) {
-                        const outputStr =
-                            typeof toolPart.state.output === "string"
-                                ? toolPart.state.output
-                                : JSON.stringify(toolPart.state.output)
+                    const outputStr = extractCompletedToolOutput(toolPart)
+                    if (outputStr !== undefined) {
                         toolOutputParts.push(outputStr)
                     }
                 }

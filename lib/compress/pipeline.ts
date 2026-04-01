@@ -2,13 +2,14 @@ import type { WithParts } from "../state"
 import { ensureSessionInitialized } from "../state"
 import { saveSessionState } from "../state/persistence"
 import { assignMessageRefs } from "../message-ids"
-import { isIgnoredUserMessage } from "../messages/utils"
+import { isIgnoredUserMessage } from "../messages/query"
 import { deduplicate, purgeErrors } from "../strategies"
-import { getCurrentParams, getCurrentTokenUsage } from "../strategies/utils"
+import { getCurrentParams, getCurrentTokenUsage } from "../token-utils"
 import { sendCompressNotification } from "../ui/notification"
 import type { ToolContext } from "./types"
 import { buildSearchContext, fetchSessionMessages } from "./search"
 import type { SearchContext } from "./types"
+import { applyPendingCompressionDurations } from "./timing"
 
 interface RunContext {
     ask(input: {
@@ -83,6 +84,7 @@ export async function finalizeSession(
     batchTopic: string | undefined,
 ): Promise<void> {
     ctx.state.manualMode = ctx.state.manualMode ? "active" : false
+    applyPendingCompressionDurations(ctx.state)
     await saveSessionState(ctx.state, ctx.logger)
 
     const params = getCurrentParams(ctx.state, rawMessages, ctx.logger)

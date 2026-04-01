@@ -1,7 +1,7 @@
 import { tool } from "@opencode-ai/plugin"
 import type { ToolContext } from "./types"
-import { countTokens } from "../strategies/utils"
-import { MESSAGE_FORMAT_OVERLAY } from "../prompts/internal-overlays"
+import { countTokens } from "../token-utils"
+import { MESSAGE_FORMAT_EXTENSION } from "../prompts/extensions/tool"
 import { formatIssues, formatResult, resolveMessages, validateArgs } from "./message-utils"
 import { finalizeSession, prepareSession, type NotificationEntry } from "./pipeline"
 import { appendProtectedTools } from "./protected-content"
@@ -43,26 +43,30 @@ export function createCompressMessageTool(ctx: ToolContext): ReturnType<typeof t
     const runtimePrompts = ctx.prompts.getRuntimePrompts()
 
     return tool({
-        description: runtimePrompts.compressMessage + MESSAGE_FORMAT_OVERLAY,
+        description: runtimePrompts.compressMessage + MESSAGE_FORMAT_EXTENSION,
         args: buildSchema(),
         async execute(args, toolCtx) {
             const input = args as CompressMessageToolArgs
             validateArgs(input)
+            const callId =
+                typeof (toolCtx as unknown as { callID?: unknown }).callID === "string"
+                    ? (toolCtx as unknown as { callID: string }).callID
+                    : undefined
 
             const { rawMessages, searchContext } = await prepareSession(
                 ctx,
                 toolCtx,
                 `Compress Message: ${input.topic}`,
             )
-            const { plans, skippedIssues } = resolveMessages(
+            const { plans, skippedIssues, skippedCount } = resolveMessages(
                 input,
                 searchContext,
                 ctx.state,
                 ctx.config,
             )
 
-            if (plans.length === 0 && skippedIssues.length > 0) {
-                throw new Error(formatIssues(skippedIssues))
+            if (plans.length === 0 && skippedCount > 0) {
+                throw new Error(formatIssues(skippedIssues, skippedCount))
             }
 
             const notifications: NotificationEntry[] = []
@@ -107,6 +111,7 @@ export function createCompressMessageTool(ctx: ToolContext): ReturnType<typeof t
                         mode: "message",
                         runId,
                         compressMessageId: toolCtx.messageID,
+                        compressCallId: callId,
                         summaryTokens,
                     },
                     plan.selection,
@@ -126,7 +131,7 @@ export function createCompressMessageTool(ctx: ToolContext): ReturnType<typeof t
 
             await finalizeSession(ctx, toolCtx, rawMessages, notifications, input.topic)
 
-            return formatResult(plans.length, skippedIssues)
+            return formatResult(plans.length, skippedIssues, skippedCount)
         },
     })
 }

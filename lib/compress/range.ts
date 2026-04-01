@@ -1,7 +1,7 @@
 import { tool } from "@opencode-ai/plugin"
 import type { ToolContext } from "./types"
-import { countTokens } from "../strategies/utils"
-import { RANGE_FORMAT_OVERLAY } from "../prompts/internal-overlays"
+import { countTokens } from "../token-utils"
+import { RANGE_FORMAT_EXTENSION } from "../prompts/extensions/tool"
 import { finalizeSession, prepareSession, type NotificationEntry } from "./pipeline"
 import { appendProtectedTools, appendProtectedUserMessages } from "./protected-content"
 import {
@@ -54,11 +54,15 @@ export function createCompressRangeTool(ctx: ToolContext): ReturnType<typeof too
     const runtimePrompts = ctx.prompts.getRuntimePrompts()
 
     return tool({
-        description: runtimePrompts.compressRange + RANGE_FORMAT_OVERLAY,
+        description: runtimePrompts.compressRange + RANGE_FORMAT_EXTENSION,
         args: buildSchema(),
         async execute(args, toolCtx) {
             const input = args as CompressRangeToolArgs
             validateArgs(input)
+            const callId =
+                typeof (toolCtx as unknown as { callID?: unknown }).callID === "string"
+                    ? (toolCtx as unknown as { callID: string }).callID
+                    : undefined
 
             const { rawMessages, searchContext } = await prepareSession(
                 ctx,
@@ -148,6 +152,7 @@ export function createCompressRangeTool(ctx: ToolContext): ReturnType<typeof too
                         mode: "range",
                         runId,
                         compressMessageId: toolCtx.messageID,
+                        compressCallId: callId,
                         summaryTokens,
                     },
                     preparedPlan.selection,

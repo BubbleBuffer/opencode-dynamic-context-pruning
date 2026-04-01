@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto"
-import type { PluginConfig } from "../config"
-import { isMessageCompacted } from "../shared-utils"
 import type { SessionState, WithParts } from "../state"
+import { isMessageCompacted } from "../state/utils"
 import type { UserMessage } from "@opencode-ai/sdk/v2"
 
 const SUMMARY_ID_HASH_LENGTH = 16
@@ -108,24 +107,14 @@ export const appendToTextPart = (part: TextPart, injection: string): boolean => 
     return true
 }
 
-export const appendToLastToolPart = (message: WithParts, tag: string): boolean => {
-    const toolPart = findLastToolPart(message)
-    if (!toolPart) {
-        return false
-    }
-
-    return appendToToolPart(toolPart, tag)
-}
-
-const findLastToolPart = (message: WithParts): ToolPart | null => {
-    for (let i = message.parts.length - 1; i >= 0; i--) {
-        const part = message.parts[i]
+export const appendToAllToolParts = (message: WithParts, tag: string): boolean => {
+    let injected = false
+    for (const part of message.parts) {
         if (part.type === "tool") {
-            return part
+            injected = appendToToolPart(part, tag) || injected
         }
     }
-
-    return null
+    return injected
 }
 
 export const appendToToolPart = (part: ToolPart, tag: string): boolean => {
@@ -169,34 +158,6 @@ export function buildToolIdList(state: SessionState, messages: WithParts[]): str
     }
     state.toolIdList = toolIds
     return toolIds
-}
-
-export const isIgnoredUserMessage = (message: WithParts): boolean => {
-    if (message.info.role !== "user") {
-        return false
-    }
-
-    const parts = Array.isArray(message.parts) ? message.parts : []
-    if (parts.length === 0) {
-        return true
-    }
-
-    for (const part of parts) {
-        if (!(part as any).ignored) {
-            return false
-        }
-    }
-
-    return true
-}
-
-export function isProtectedUserMessage(config: PluginConfig, message: WithParts): boolean {
-    return (
-        config.compress.mode === "message" &&
-        config.compress.protectUserMessages &&
-        message.info.role === "user" &&
-        !isIgnoredUserMessage(message)
-    )
 }
 
 export const replaceBlockIdsWithBlocked = (text: string): string => {

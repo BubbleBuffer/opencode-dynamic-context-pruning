@@ -9,18 +9,13 @@ Automatically reduces token usage in OpenCode by managing conversation context.
 
 ## Installation
 
-Add to your OpenCode config:
+Install from the CLI:
 
-```jsonc
-// opencode.jsonc
-{
-    "plugin": ["@tarquinen/opencode-dcp@latest"],
-}
+```bash
+opencode plugin @tarquinen/opencode-dcp@latest --global
 ```
 
-Using `@latest` ensures you always get the newest version automatically when OpenCode starts.
-
-Restart OpenCode. The plugin will automatically start optimizing your sessions.
+This installs the package and adds it to your global OpenCode config.
 
 ## How It Works
 

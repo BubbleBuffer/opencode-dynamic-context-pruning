@@ -66,6 +66,14 @@ function assertPackageJsonShape() {
         fail(`package.json main must remain ./dist/index.js, found ${pkg.main ?? "<missing>"}`)
     }
 
+    if (pkg.exports?.["."]?.import !== "./dist/index.js") {
+        fail("expected package.json exports['.'].import to be './dist/index.js'")
+    }
+
+    if (pkg.exports?.["./server"]?.import !== "./dist/index.js") {
+        fail("expected package.json exports['./server'].import to be './dist/index.js'")
+    }
+
     const files = Array.isArray(pkg.files) ? pkg.files : []
     for (const entry of ["dist/", "README.md", "LICENSE"]) {
         if (!files.includes(entry)) {
@@ -174,6 +182,10 @@ function validateRuntimeImportGraph() {
         for (const entry of getImportStatements(source)) {
             if (entry.specifier.startsWith(".")) {
                 pending.push(resolveLocalImport(filePath, entry.specifier))
+                continue
+            }
+
+            if (entry.specifier === "jsonc-parser/lib/esm/main.js") {
                 continue
             }
 

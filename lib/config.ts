@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, statSync } from "fs"
 import { join, dirname } from "path"
 import { homedir } from "os"
-import * as jsoncParser from "jsonc-parser"
+import { parse } from "jsonc-parser/lib/esm/main.js"
 import type { PluginInput } from "@opencode-ai/plugin"
 
 type Permission = "ask" | "allow" | "deny"
@@ -773,7 +773,7 @@ function loadConfigFile(configPath: string): ConfigLoadResult {
     }
 
     try {
-        const parsed = jsoncParser.parse(fileContent, undefined, { allowTrailingComma: true })
+        const parsed = parse(fileContent, undefined, { allowTrailingComma: true })
         if (parsed === undefined || parsed === null) {
             return { data: null, parseError: "Config file is empty or invalid" }
         }

@@ -135,7 +135,11 @@ const server: Plugin = (async (ctx) => {
     }
 }) satisfies Plugin
 
-export default {
+const plugin = {
     id,
     server,
 }
+
+// Export both the object format (Claude Code plugins) and direct function (Opencode native)
+export { id, server }
+export default Object.assign(server, plugin)

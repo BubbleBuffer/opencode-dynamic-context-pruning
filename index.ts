@@ -135,7 +135,4 @@ const server: Plugin = (async (ctx) => {
     }
 }) satisfies Plugin
 
-export default {
-    id,
-    server,
-}
+export default server

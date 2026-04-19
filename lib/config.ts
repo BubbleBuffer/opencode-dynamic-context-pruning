@@ -26,6 +26,7 @@ export interface CompressConfig {
     nudgeForce: "strong" | "soft"
     protectedTools: string[]
     protectUserMessages: boolean
+    summarizationModel?: string
 }
 
 export interface Commands {
@@ -122,6 +123,7 @@ export const VALID_CONFIG_KEYS = new Set([
     "compress.nudgeForce",
     "compress.protectedTools",
     "compress.protectUserMessages",
+    "compress.summarizationModel",
     "strategies",
     "strategies.deduplication",
     "strategies.deduplication.enabled",
@@ -424,6 +426,17 @@ export function validateConfigTypes(config: Record<string, any>): ValidationErro
                     key: "compress.protectUserMessages",
                     expected: "boolean",
                     actual: typeof compress.protectUserMessages,
+                })
+            }
+
+            if (
+                compress.summarizationModel !== undefined &&
+                typeof compress.summarizationModel !== "string"
+            ) {
+                errors.push({
+                    key: "compress.summarizationModel",
+                    expected: "string",
+                    actual: typeof compress.summarizationModel,
                 })
             }
 
@@ -836,6 +849,7 @@ function mergeCompress(
         nudgeForce: override.nudgeForce ?? base.nudgeForce,
         protectedTools: [...new Set([...base.protectedTools, ...(override.protectedTools ?? [])])],
         protectUserMessages: override.protectUserMessages ?? base.protectUserMessages,
+        summarizationModel: override.summarizationModel ?? base.summarizationModel,
     }
 }
 
@@ -896,6 +910,7 @@ function deepCloneConfig(config: PluginConfig): PluginConfig {
             modelMaxLimits: { ...config.compress.modelMaxLimits },
             modelMinLimits: { ...config.compress.modelMinLimits },
             protectedTools: [...config.compress.protectedTools],
+            summarizationModel: config.compress.summarizationModel,
         },
         strategies: {
             deduplication: {

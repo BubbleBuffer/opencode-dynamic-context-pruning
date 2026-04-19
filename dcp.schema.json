@@ -236,6 +236,11 @@
                     "type": "boolean",
                     "default": false,
                     "description": "When enabled, your messages are never lost during compression"
+                },
+                "summarizationModel": {
+                    "type": "string",
+                    "description": "Dedicated model for compression summarization (provider/model format, e.g., 'anthropic/claude-haiku-3.5-20250514'). When set, this model generates summaries instead of the main conversation model.",
+                    "default": null
                 }
             },
             "default": {

@@ -22,6 +22,7 @@ export interface HelpCommandContext {
 const BASE_COMMANDS: [string, string][] = [
     ["/dcp context", "Show token usage breakdown for current session"],
     ["/dcp stats", "Show DCP pruning statistics"],
+    ["/dcp model", "Set or show summarization model"],
     ["/dcp sweep [n]", "Prune tools since last user message, or last n tools"],
     ["/dcp manual [on|off]", "Toggle manual mode or set explicit state"],
 ]

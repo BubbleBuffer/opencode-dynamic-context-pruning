@@ -271,7 +271,7 @@ export function createCommandExecuteHandler(
                 throw new Error("__DCP_RECOMPRESS_HANDLED__")
             }
 
-            if (subcommand === "summarization-model") {
+            if (subcommand === "model") {
                 const result = await handleSummarizationModelCommand(
                     {
                         ...commandCtx,

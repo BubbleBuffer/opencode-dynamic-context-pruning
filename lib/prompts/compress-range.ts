@@ -56,5 +56,5 @@ Rules:
 - Do not invent IDs. Use only IDs that are present in context.
 
 BATCHING
-When multiple independent ranges are ready and their boundaries do not overlap, include all of them as separate entries in the \`content\` array of a single tool call. Each entry should have its own \`startId\`, \`endId\`, and \`summary\`.
+When multiple independent ranges are ready and their boundaries do not overlap, include all of them as separate entries in the `content` array of a single tool call. Each entry should have its own `startId` and `endId`. The system will automatically generate summaries.
 `

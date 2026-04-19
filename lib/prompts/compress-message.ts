@@ -31,13 +31,5 @@ Rules:
 
 BATCHING
 Select MANY messages in a single tool call when they are safe to compress.
-Each entry should summarize exactly one message, and the tool can receive as many entries as needed in one batch.
-
-GENERAL CLEANUP
-Use the topic "general cleanup" for broad cleanup passes.
-During general cleanup, compress all medium and high-priority messages that are not relevant to the active task.
-Optimize for reducing context footprint, not for grouping messages by topic.
-Do not compress away still-active instructions, unresolved questions, or constraints that are likely to matter soon.
-Prioritize the earliest messages in the context as they will be the least relevant to the active task.
-General cleanup should be done periodically between other normal compression tool passes, not as the primary form of compression.
+Each entry should identify exactly one message, and the tool can receive as many entries as needed in one batch. The system will automatically generate summaries.
 `

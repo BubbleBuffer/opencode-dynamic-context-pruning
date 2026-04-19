@@ -213,7 +213,10 @@ export function createCommandExecuteHandler(
             }
 
             if (subcommand === "stats") {
-                await handleStatsCommand(commandCtx)
+                await handleStatsCommand({
+                    ...commandCtx,
+                    config,
+                })
                 throw new Error("__DCP_STATS_HANDLED__")
             }
 

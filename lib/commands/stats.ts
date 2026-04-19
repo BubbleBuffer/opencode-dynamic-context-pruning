@@ -17,6 +17,7 @@ export interface StatsCommandContext {
     logger: Logger
     sessionId: string
     messages: WithParts[]
+    config: any
 }
 
 function formatStatsMessage(
@@ -26,6 +27,7 @@ function formatStatsMessage(
     sessionMessages: number,
     sessionDurationMs: number,
     allTime: AggregatedStats,
+    summarizationModel?: string,
 ): string {
     const lines: string[] = []
 
@@ -42,6 +44,9 @@ function formatStatsMessage(
     lines.push(`  Time:             ${formatCompressionTime(sessionDurationMs)}`)
     lines.push(`  Messages:         ${sessionMessages}`)
     lines.push(`  Tools:            ${sessionTools}`)
+    if (summarizationModel) {
+        lines.push(`  Summarization:    ${summarizationModel}`)
+    }
     lines.push("")
     lines.push("All-time:")
     lines.push("─".repeat(60))
@@ -90,7 +95,7 @@ function formatCompressionTime(ms: number): string {
 }
 
 export async function handleStatsCommand(ctx: StatsCommandContext): Promise<void> {
-    const { client, state, logger, sessionId, messages } = ctx
+    const { client, state, logger, sessionId, messages, config } = ctx
 
     // Session stats from in-memory state
     const sessionTokens = state.stats.totalPruneTokens
@@ -130,6 +135,7 @@ export async function handleStatsCommand(ctx: StatsCommandContext): Promise<void
         sessionMessages,
         sessionDurationMs,
         allTime,
+        config.compress.summarizationModel,
     )
 
     const params = getCurrentParams(state, messages, logger)

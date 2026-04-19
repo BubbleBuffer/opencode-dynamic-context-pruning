@@ -33,6 +33,7 @@ import {
     handleRecompressCommand,
     handleStatsCommand,
     handleSweepCommand,
+    handleSummarizationModelCommand,
 } from "./commands"
 import { type HostPermissionSnapshot } from "./host-permissions"
 import { compressPermission, syncCompressPermissionState } from "./compress-permission"
@@ -265,6 +266,24 @@ export function createCommandExecuteHandler(
                     args: subArgs,
                 })
                 throw new Error("__DCP_RECOMPRESS_HANDLED__")
+            }
+
+            if (subcommand === "summarization-model") {
+                const result = await handleSummarizationModelCommand({
+                    ...commandCtx,
+                    config,
+                    args: subArgs,
+                })
+                if (result.output) {
+                    await client.session.prompt({
+                        path: { id: input.sessionID },
+                        body: {
+                            noReply: true,
+                            parts: [{ type: "text", text: result.output }],
+                        },
+                    })
+                }
+                throw new Error("__DCP_HELP_HANDLED__")
             }
 
             await handleHelpCommand(commandCtx)

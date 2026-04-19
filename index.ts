@@ -16,6 +16,7 @@ import {
     createSystemPromptHandler,
     createTextCompleteHandler,
 } from "./lib/hooks"
+import { createSummarizationHook } from "./lib/hooks/summarization"
 import { configureClientAuth, isSecureMode } from "./lib/auth"
 
 const id = "opencode-dynamic-context-pruning"
@@ -76,6 +77,7 @@ const server: Plugin = (async (ctx) => {
             ctx.directory,
             hostPermissions,
         ),
+        "tool.execute.before": createSummarizationHook(config, logger),
         event: createEventHandler(state, logger),
         tool: {
             ...(config.compress.permission !== "deny" && {

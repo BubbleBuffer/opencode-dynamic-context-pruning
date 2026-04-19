@@ -3,7 +3,7 @@ import type { PluginConfig } from "../config"
 import type { ModelInfo } from "../summarization/types"
 import { generateSummariesForRanges, parseModelString } from "../summarization/generate"
 
-export function createSummarizationHook(config: PluginConfig, logger: Logger) {
+export function createSummarizationHook(client: any, config: PluginConfig, logger: Logger) {
     return async (
         input: { tool: string; sessionID: string; callID: string },
         output: { args: any },
@@ -38,7 +38,7 @@ export function createSummarizationHook(config: PluginConfig, logger: Logger) {
 
         try {
             const summaries = await generateSummariesForRanges(
-                output._client,
+                client,
                 input.sessionID,
                 model,
                 ranges,
@@ -53,7 +53,7 @@ export function createSummarizationHook(config: PluginConfig, logger: Logger) {
                 ? "Haiku"
                 : model.modelID.split("-")[0]
 
-            await output._client.session.prompt({
+            await client.session.prompt({
                 path: { id: input.sessionID },
                 body: {
                     noReply: true,

@@ -29,6 +29,9 @@ function buildSchema() {
                     topic: tool.schema
                         .string()
                         .describe("Short label (3-5 words) for this one message summary"),
+                    summary: tool.schema
+                        .string()
+                        .describe("Complete technical summary replacing that one message"),
                 }),
             )
             .describe("Batch of individual message summaries to create in one tool call"),
@@ -78,7 +81,7 @@ export function createCompressMessageTool(ctx: ToolContext): ReturnType<typeof t
                     ctx.client,
                     ctx.state,
                     ctx.config.experimental.allowSubAgents,
-                    plan.entry.summary,
+                    plan.entry.summary!,
                     plan.selection,
                     searchContext,
                     ctx.config.compress.protectedTools,

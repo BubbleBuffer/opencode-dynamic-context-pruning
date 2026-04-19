@@ -38,6 +38,9 @@ function buildSchema() {
                     endId: tool.schema
                         .string()
                         .describe("Message or block ID marking the end of range (e.g. m0012, b5)"),
+                    summary: tool.schema
+                        .string()
+                        .describe("Complete technical summary replacing all content in range"),
                 }),
             )
             .describe(
@@ -80,7 +83,7 @@ export function createCompressRangeTool(ctx: ToolContext): ReturnType<typeof too
             let totalCompressedMessages = 0
 
             for (const plan of resolvedPlans) {
-                const parsedPlaceholders = parseBlockPlaceholders(plan.entry.summary)
+                const parsedPlaceholders = parseBlockPlaceholders(plan.entry.summary!)
                 const missingBlockIds = validateSummaryPlaceholders(
                     parsedPlaceholders,
                     plan.selection.requiredBlockIds,
@@ -90,7 +93,7 @@ export function createCompressRangeTool(ctx: ToolContext): ReturnType<typeof too
                 )
 
                 const injected = injectBlockPlaceholders(
-                    plan.entry.summary,
+                    plan.entry.summary!,
                     parsedPlaceholders,
                     searchContext.summaryByBlockId,
                     plan.selection.startReference,

@@ -77,7 +77,7 @@ const server: Plugin = (async (ctx) => {
             ctx.directory,
             hostPermissions,
         ),
-        "tool.execute.before": createSummarizationHook(config, logger),
+        "tool.execute.before": createSummarizationHook(ctx.client, config, logger),
         event: createEventHandler(state, logger),
         tool: {
             ...(config.compress.permission !== "deny" && {

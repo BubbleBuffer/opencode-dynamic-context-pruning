@@ -272,11 +272,13 @@ export function createCommandExecuteHandler(
             }
 
             if (subcommand === "summarization-model") {
-                const result = await handleSummarizationModelCommand({
-                    ...commandCtx,
-                    config,
-                    args: subArgs,
-                })
+                const result = await handleSummarizationModelCommand(
+                    {
+                        ...commandCtx,
+                        config,
+                    },
+                    subArgs,
+                )
                 if (result.output) {
                     await client.session.prompt({
                         path: { id: input.sessionID },

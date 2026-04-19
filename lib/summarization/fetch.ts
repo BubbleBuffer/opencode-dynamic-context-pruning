@@ -14,9 +14,10 @@ export async function fetchMessagesUpToRange(
 
     const endIndex = allMessages.findIndex(
         (m: WithParts) =>
-            m.info.id === endId ||
-            m.info.id === `msg_${endId}` ||
-            m.info.id === endId.replace("msg_", ""),
+            m?.info?.id &&
+            (m.info.id === endId ||
+                m.info.id === `msg_${endId}` ||
+                m.info.id === endId.replace("msg_", "")),
     )
 
     if (endIndex === -1) {
@@ -29,8 +30,8 @@ export async function fetchMessagesUpToRange(
 export function formatMessagesForSummarization(messages: WithParts[]): string {
     return messages
         .map((msg) => {
-            const role = msg.info.role.toUpperCase()
-            const parts = msg.parts
+            const role = msg.info?.role?.toUpperCase() || "UNKNOWN"
+            const parts = (msg.parts || [])
                 .filter((p: any) => p.type === "text" && !p.ignored)
                 .map((p: any) => p.text)
                 .join("\n")

@@ -53,21 +53,27 @@ export function createSummarizationHook(client: any, config: PluginConfig, logge
                 ? "Haiku"
                 : model.modelID.split("-")[0]
 
-            await client.session.prompt({
-                path: { id: input.sessionID },
-                body: {
-                    noReply: true,
-                    parts: [
-                        {
-                            type: "text",
-                            text: `[Compression completed using ${modelDisplay} model]`,
-                        },
-                    ],
-                },
-            })
+            try {
+                await client.session.prompt({
+                    path: { id: input.sessionID },
+                    body: {
+                        noReply: true,
+                        parts: [
+                            {
+                                type: "text",
+                                text: `[Compression completed using ${modelDisplay} model]`,
+                            },
+                        ],
+                    },
+                })
+            } catch (notifyError) {
+                logger.debug("Failed to send summarization notification", { error: notifyError })
+            }
         } catch (error) {
             logger.error("Summarization failed", { error })
-            throw new Error(`Summarization failed: ${(error as Error).message}`)
+            output.args.content.forEach((range: { summary?: string }) => {
+                range.summary = range.summary || "Summary unavailable"
+            })
         }
     }
 }

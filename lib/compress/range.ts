@@ -38,9 +38,6 @@ function buildSchema() {
                     endId: tool.schema
                         .string()
                         .describe("Message or block ID marking the end of range (e.g. m0012, b5)"),
-                    summary: tool.schema
-                        .string()
-                        .describe("Complete technical summary replacing all content in range"),
                 }),
             )
             .describe(
